@@ -1,0 +1,162 @@
+name: asup-roanoke-prod
+
+services:
+  postgres:
+    build:
+      context: ./infra/postgis-arm64
+      dockerfile: Dockerfile
+    platform: linux/arm64
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-asup_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?err}
+      POSTGRES_DB: ${POSTGRES_DB:-asup_roanoke}
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=1GB"
+      - "-c"
+      - "effective_cache_size=3GB"
+      - "-c"
+      - "work_mem=32MB"
+      - "-c"
+      - "maintenance_work_mem=256MB"
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+      - ./services/api/migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - asup_internal
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-asup_admin} -d ${POSTGRES_DB:-asup_roanoke}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    platform: linux/arm64
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?err}", "--maxmemory", "512mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_aof:/data
+    networks:
+      - asup_internal
+    deploy:
+      resources:
+        limits:
+          memory: 640M
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?err}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  fastapi:
+    image: ghcr.io/${GITHUB_REPOSITORY:-family-office/asup-roanoke}/asup-api:${IMAGE_TAG:-latest}
+    platform: linux/arm64
+    restart: unless-stopped
+    env_file: .env.prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - asup_internal
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  celery-worker:
+    image: ghcr.io/${GITHUB_REPOSITORY:-family-office/asup-roanoke}/asup-worker:${IMAGE_TAG:-latest}
+    platform: linux/arm64
+    restart: unless-stopped
+    env_file: .env.prod
+    command: ["celery", "-A", "services.worker.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    volumes:
+      - bronze_vault:/var/asup/bronze_vault
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - asup_internal
+    deploy:
+      resources:
+        limits:
+          memory: 2560M
+
+  celery-beat:
+    image: ghcr.io/${GITHUB_REPOSITORY:-family-office/asup-roanoke}/asup-worker:${IMAGE_TAG:-latest}
+    platform: linux/arm64
+    restart: unless-stopped
+    env_file: .env.prod
+    command: ["celery", "-A", "services.worker.celery_app", "beat", "--loglevel=INFO"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - asup_internal
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  nextjs:
+    image: ghcr.io/${GITHUB_REPOSITORY:-family-office/asup-roanoke}/asup-web:${IMAGE_TAG:-latest}
+    platform: linux/arm64
+    restart: unless-stopped
+    env_file: .env.prod
+    depends_on:
+      - fastapi
+    networks:
+      - asup_internal
+    deploy:
+      resources:
+        limits:
+          memory: 1280M
+
+  caddy:
+    image: caddy:2.8-alpine
+    platform: linux/arm64
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ASUP_DOMAIN: ${ASUP_DOMAIN:-localhost}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - fastapi
+      - nextjs
+    networks:
+      - asup_internal
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+networks:
+  asup_internal:
+    driver: bridge
+
+volumes:
+  pgdata_prod:
+  redis_aof:
+  bronze_vault:
+  caddy_data:
+  caddy_config:

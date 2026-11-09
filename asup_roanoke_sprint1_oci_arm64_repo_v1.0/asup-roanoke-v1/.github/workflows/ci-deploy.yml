@@ -1,0 +1,47 @@
+name: ASUP Roanoke v1.0 — 5-Stage CI Gate & OCI ARM64 Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify-and-test:
+    name: "Stages 1–4: AST Air-Gap, Decimal Unit Suite & 50-Deal Golden Backtest"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+      - name: Stage 1 & 2 — Run AST Air-Gap Audit & 100% Coverage Decimal Unit Tests
+        run: |
+          PYTHONPATH=. pytest tests/unit/ -v
+      - name: Stage 4 — Run 50-Deal Roanoke Golden Suite & 200-Filing Noise Backtest
+        run: |
+          PYTHONPATH=. python3 scripts/run_golden_backtest.py
+
+  deploy-oci-arm64:
+    name: "Stage 5: Native ARM64 Build & SSH Deploy to Oracle OCI VPS"
+    needs: verify-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy via SSH to Oracle OCI 12GB ARM64 VPS
+        if: ${{ env.VPS_HOST != '' }}
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          ssh "$VPS_USER@$VPS_HOST" "cd /opt/asup && git pull origin main && IMAGE_TAG=${GITHUB_SHA} docker compose -f docker-compose.prod.yml up -d --build --remove-orphans"
