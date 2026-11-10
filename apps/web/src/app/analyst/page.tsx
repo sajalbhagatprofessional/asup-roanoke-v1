@@ -1,0 +1,240 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import {
+  Upload,
+  Plus,
+  RefreshCw,
+  Search,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  Layers,
+} from "lucide-react";
+import DealCard from "../../components/DealCard";
+import ManualDocketModal from "../../components/ManualDocketModal";
+import { fetchDeals, verifyAndPromoteDeal } from "../../lib/api";
+import { Deal, DealStage } from "../../lib/types";
+
+export default function AnalystPipelinePage() {
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedStage, setSelectedStage] = useState<string>("ALL");
+  const [verifyModalDeal, setVerifyModalDeal] = useState<Deal | null>(null);
+  const [secondSourceUrl, setSecondSourceUrl] = useState(
+    "https://open-data-portal-roanokeva.hub.arcgis.com/datasets/parcels"
+  );
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  const loadPipeline = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchDeals("ANALYST");
+      setDeals(data);
+    } catch (err: any) {
+      console.error("Failed to load pipeline:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPipeline();
+  }, []);
+
+  const handleVerifyPromote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyModalDeal) return;
+
+    try {
+      await verifyAndPromoteDeal(
+        verifyModalDeal.deal_id,
+        secondSourceUrl ? [secondSourceUrl] : undefined,
+        "analyst_1"
+      );
+      setActionMessage(
+        `Deal ${verifyModalDeal.deal_id} successfully verified and promoted to Principal Digest!`
+      );
+      setVerifyModalDeal(null);
+      loadPipeline();
+    } catch (err: any) {
+      setActionMessage(`Verification failed: ${err.message}`);
+    }
+  };
+
+  const filteredDeals =
+    selectedStage === "ALL"
+      ? deals
+      : deals.filter((d) => d.stage === selectedStage);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-5">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center space-x-3">
+            <span>Analyst Pipeline &amp; Verification Queue</span>
+            <span className="text-xs font-mono font-normal px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+              Role: ANALYST
+            </span>
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">
+            Stage 1 Distress Stream Triage, Freshness SLA Monitoring &amp; Dual-Source Promotion.
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Drop Ingest Filing</span>
+          </button>
+          <button
+            onClick={loadPipeline}
+            disabled={loading}
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Feedback Banner */}
+      {actionMessage && (
+        <div className="p-4 rounded-xl bg-slate-900 border border-emerald-700 text-emerald-300 text-xs flex items-center justify-between">
+          <span>{actionMessage}</span>
+          <button
+            onClick={() => setActionMessage(null)}
+            className="text-slate-400 hover:text-white font-mono"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Stage Filter Tabs */}
+      <div className="flex flex-wrap gap-2 text-xs font-medium">
+        {["ALL", "ANALYST_REVIEW_PENDING", "VERIFIED_READY_FOR_PRINCIPAL", "COUNSEL_DILIGENCE", "LOI_LENDER_PACK"].map(
+          (st) => (
+            <button
+              key={st}
+              onClick={() => setSelectedStage(st)}
+              className={`px-3 py-1.5 rounded-lg border transition ${
+                selectedStage === st
+                  ? "bg-slate-800 text-white border-emerald-500"
+                  : "bg-slate-900/60 text-slate-400 border-slate-800 hover:text-white"
+              }`}
+            >
+              {st === "ALL" ? "All Deals" : st.replace(/_/g, " ")}
+            </button>
+          )
+        )}
+      </div>
+
+      {/* Deals List */}
+      {loading ? (
+        <div className="p-12 text-center text-slate-400 font-mono text-sm">
+          Loading pipeline...
+        </div>
+      ) : filteredDeals.length === 0 ? (
+        <div className="bg-slate-900/40 border border-dashed border-slate-800 rounded-2xl p-12 text-center">
+          <Layers className="w-10 h-10 text-slate-600 mx-auto" />
+          <h3 className="text-base font-semibold text-white mt-3">
+            No Deals in Selected Stage
+          </h3>
+          <p className="text-xs text-slate-400 mt-1">
+            Drop new filings into the docket dropzone to trigger the Mandate ROA-SMB-01 evaluation gate.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredDeals.map((deal) => (
+            <div key={deal.deal_id} className="relative">
+              <DealCard
+                deal={deal}
+                currentRole="ANALYST"
+                actionButtonText={
+                  deal.stage === "ANALYST_REVIEW_PENDING"
+                    ? "Verify & Promote to Principal"
+                    : undefined
+                }
+                onActionClick={
+                  deal.stage === "ANALYST_REVIEW_PENDING"
+                    ? (d) => setVerifyModalDeal(d)
+                    : undefined
+                }
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Ingest Modal */}
+      <ManualDocketModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => {
+          setIsModalOpen(false);
+          loadPipeline();
+        }}
+      />
+
+      {/* Verify & Promote Modal */}
+      {verifyModalDeal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+            <h2 className="text-base font-bold text-white tracking-tight">
+              Analyst Lead Verification Gate
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Verify Deal: <span className="font-mono text-emerald-400">{verifyModalDeal.deal_id}</span> ({verifyModalDeal.entity_name})
+            </p>
+
+            <form onSubmit={handleVerifyPromote} className="mt-4 space-y-4 text-xs">
+              <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700 space-y-1">
+                <div className="text-slate-300 font-semibold">Verification Pre-conditions:</div>
+                <div className="text-slate-400">1. Active docket freshness SLA &lt;= 48 hours</div>
+                <div className="text-slate-400">2. GIS / SCC tax record SLA &lt;= 14 days</div>
+                <div className="text-slate-400">3. Base DSCR &gt;= 1.35x &amp; Stressed DSCR &gt;= 1.15x</div>
+                <div className="text-slate-400">4. &gt;= 2 Independent public record domains required</div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium uppercase tracking-wider">
+                  Attach Second Independent Public Source Domain URL
+                </label>
+                <input
+                  type="url"
+                  value={secondSourceUrl}
+                  onChange={(e) => setSecondSourceUrl(e.target.value)}
+                  placeholder="https://open-data-portal-roanokeva.hub.arcgis.com/datasets/parcels"
+                  className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setVerifyModalDeal(null)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold text-white shadow-sm"
+                >
+                  Confirm Sign-Off &amp; Promote
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
