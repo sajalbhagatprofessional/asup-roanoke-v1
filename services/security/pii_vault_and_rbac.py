@@ -269,6 +269,9 @@ class RBACPipelineStore:
         results: List[Dict[str, Any]] = []
 
         for d in self._deals.values():
+            primary_url = d.independent_source_urls[0] if d.independent_source_urls else None
+            sources_copy = list(d.independent_source_urls) if d.independent_source_urls else []
+
             if actor_role == TeamRole.PRINCIPAL:
                 # RLS Policy: Principal NEVER sees unverified, stale, near-miss, or hard-killed deals
                 if d.stage not in (
@@ -280,13 +283,20 @@ class RBACPipelineStore:
                     continue
                 results.append({
                     "deal_id": d.deal_id,
+                    "mandate_code": d.mandate_code,
+                    "fips_code": d.fips_code,
+                    "parcel_id": d.parcel_id,
                     "entity_name": d.entity_name,
+                    "naics_code": d.naics_code,
                     "stage": d.stage.value,
                     "asking_or_cure_price_usd": str(d.asking_or_cure_price_usd),
+                    "assessed_or_replacement_usd": str(d.assessed_or_replacement_usd),
                     "internal_max_bid_usd": str(d.internal_max_bid_usd),
                     "base_dscr": str(d.base_dscr),
                     "stress_dscr": str(d.stress_dscr),
                     "independent_source_count": len(d.independent_source_urls),
+                    "independent_source_urls": sources_copy,
+                    "primary_source_url": primary_url,
                 })
             elif actor_role == TeamRole.LENDER_BROKER:
                 # Lender/Broker sees ONLY deals in LOI_LENDER_PACK stage and NEVER sees internal_max_bid_usd
@@ -294,20 +304,38 @@ class RBACPipelineStore:
                     continue
                 results.append({
                     "deal_id": d.deal_id,
+                    "mandate_code": d.mandate_code,
+                    "fips_code": d.fips_code,
+                    "parcel_id": d.parcel_id,
                     "entity_name": d.entity_name,
+                    "naics_code": d.naics_code,
                     "stage": d.stage.value,
                     "asking_or_cure_price_usd": str(d.asking_or_cure_price_usd),
+                    "assessed_or_replacement_usd": str(d.assessed_or_replacement_usd),
                     "base_dscr": str(d.base_dscr),
+                    "stress_dscr": str(d.stress_dscr),
+                    "independent_source_count": len(d.independent_source_urls),
+                    "independent_source_urls": sources_copy,
+                    "primary_source_url": primary_url,
                 })
             else:
                 # ANALYST, COUNSEL, CPA see full pipeline audit view
                 results.append({
                     "deal_id": d.deal_id,
+                    "mandate_code": d.mandate_code,
+                    "fips_code": d.fips_code,
+                    "parcel_id": d.parcel_id,
                     "entity_name": d.entity_name,
+                    "naics_code": d.naics_code,
                     "stage": d.stage.value,
                     "asking_or_cure_price_usd": str(d.asking_or_cure_price_usd),
+                    "assessed_or_replacement_usd": str(d.assessed_or_replacement_usd),
                     "internal_max_bid_usd": str(d.internal_max_bid_usd),
                     "base_dscr": str(d.base_dscr),
+                    "stress_dscr": str(d.stress_dscr),
+                    "independent_source_count": len(d.independent_source_urls),
+                    "independent_source_urls": sources_copy,
+                    "primary_source_url": primary_url,
                 })
 
         if actor_role == TeamRole.PRINCIPAL:

@@ -28,6 +28,7 @@ export interface Deal {
   stress_dscr?: string;
   independent_source_count?: number;
   independent_source_urls?: string[];
+  primary_source_url?: string;
   docket_verified_at?: string;
   gis_verified_at?: string;
   analyst_verified_by?: string;
