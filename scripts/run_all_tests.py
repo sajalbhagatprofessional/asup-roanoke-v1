@@ -12,10 +12,12 @@ import tests.unit.test_sba_sop_50_10_8_1 as u2
 import tests.unit.test_va_foreclosure_and_addbacks as u3
 import tests.unit.test_mandate_and_provenance as u4
 import tests.integration.test_sprint2_connectors_and_breaker as i1
+import tests.integration.test_sprint3_enrichment_rbac_security as i2
+import tests.integration.test_sprint4_to_6_memo_outreach_lender_pack as i3
 
 
 def main() -> int:
-    modules = [u1, u2, u3, u4, i1]
+    modules = [u1, u2, u3, u4, i1, i2, i3]
     passed = 0
     for mod in modules:
         for attr in sorted(dir(mod)):
@@ -26,7 +28,7 @@ def main() -> int:
                     passed += 1
                     print(f"[PASS] {mod.__name__}.{attr}")
 
-    print(f"\nAll {passed}/{passed} Sprint 1 & Sprint 2 Unit + Integration Tests PASSED!")
+    print(f"\nAll {passed}/{passed} Sprint 1-6 Unit, Integration, RBAC, Security & Compliance Tests PASSED!")
     env = os.environ.copy()
     env["PYTHONPATH"] = str(REPO_ROOT) + (os.pathsep + env["PYTHONPATH"] if "PYTHONPATH" in env else "")
     res = subprocess.run(
@@ -40,4 +42,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

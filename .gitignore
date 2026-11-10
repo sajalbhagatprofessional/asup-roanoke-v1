@@ -2,3 +2,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+asup_roanoke_complete_v1.0_autonomous_handoff/
+node_modules/
+.next/
+dist/
+
