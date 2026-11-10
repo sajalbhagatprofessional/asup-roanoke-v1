@@ -1,0 +1,12 @@
+.git
+.github
+.next
+node_modules
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.vscode
+.idea
+asup_roanoke_complete_v1.0_autonomous_handoff
