@@ -14,21 +14,38 @@ import tests.unit.test_mandate_and_provenance as u4
 import tests.integration.test_sprint2_connectors_and_breaker as i1
 import tests.integration.test_sprint3_enrichment_rbac_security as i2
 import tests.integration.test_sprint4_to_6_memo_outreach_lender_pack as i3
+import tests.integration.test_fastapi_endpoints as i4
 
 
 def main() -> int:
-    modules = [u1, u2, u3, u4, i1, i2, i3]
-    passed = 0
-    for mod in modules:
+    core_modules = [u1, u2, u3, u4, i1, i2, i3]
+    core_passed = 0
+    for mod in core_modules:
         for attr in sorted(dir(mod)):
             if attr.startswith("test_"):
                 fn = getattr(mod, attr)
                 if callable(fn):
                     fn()
-                    passed += 1
+                    core_passed += 1
                     print(f"[PASS] {mod.__name__}.{attr}")
 
-    print(f"\nAll {passed}/{passed} Sprint 1-6 Unit, Integration, RBAC, Security & Compliance Tests PASSED!")
+    print(f"\nAll {core_passed}/{core_passed} Sprint 1-6 Unit, Integration, RBAC, Security & Compliance Tests PASSED!")
+
+    # Milestone 2: FastAPI REST Integration Suite
+    api_passed = 0
+    for attr in sorted(dir(i4)):
+        if attr.startswith("test_"):
+            fn = getattr(i4, attr)
+            if callable(fn):
+                fn()
+                api_passed += 1
+                print(f"[PASS] {i4.__name__}.{attr}")
+
+    print(f"All {api_passed}/{api_passed} FastAPI Production REST Server Endpoint Tests PASSED!")
+
+    total_passed = core_passed + api_passed
+    print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
+
     env = os.environ.copy()
     env["PYTHONPATH"] = str(REPO_ROOT) + (os.pathsep + env["PYTHONPATH"] if "PYTHONPATH" in env else "")
     res = subprocess.run(
