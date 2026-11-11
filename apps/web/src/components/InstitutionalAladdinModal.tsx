@@ -2,6 +2,18 @@
 
 import React, { useEffect, useState } from "react";
 import {
+  X,
+  TrendingUp,
+  ShieldAlert,
+  Layers,
+  Zap,
+  Activity,
+  ArrowRight,
+  ExternalLink,
+  Info,
+  DollarSign,
+} from "lucide-react";
+import {
   InstitutionalWaterfallResult,
   LiquidationFloorResult,
   RollUpClusterOpportunity,
@@ -42,6 +54,7 @@ export default function InstitutionalAladdinModal({
   const [equipAssessed, setEquipAssessed] = useState("750000.00");
   const [liquidationResult, setLiquidationResult] =
     useState<LiquidationFloorResult | null>(null);
+  const [liquidationLoading, setLiquidationLoading] = useState(false);
 
   // Roll-Up Clusters State
   const [clusters, setClusters] = useState<RollUpClusterOpportunity[]>([]);
@@ -50,6 +63,23 @@ export default function InstitutionalAladdinModal({
   // Shadow Pipeline State
   const [shadowOpps, setShadowOpps] = useState<ShadowDistressOpportunity[]>([]);
   const [shadowLoading, setShadowLoading] = useState(false);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -77,7 +107,7 @@ export default function InstitutionalAladdinModal({
         preferred_equity_share_pct: "0.05",
         preferred_hurdle_rate_pct: "0.08",
         buyer_common_equity_usd: (
-          (parseFloat(purchasePrice) + 250000) *
+          (parseFloat(purchasePrice || "0") + 250000) *
           0.1
         ).toFixed(2),
       });
@@ -90,6 +120,7 @@ export default function InstitutionalAladdinModal({
   };
 
   const loadLiquidation = async () => {
+    setLiquidationLoading(true);
     try {
       const res = await runLiquidationFloor({
         purchase_or_cure_price_usd: purchasePrice,
@@ -103,6 +134,8 @@ export default function InstitutionalAladdinModal({
       setLiquidationResult(res);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLiquidationLoading(false);
     }
   };
 
@@ -133,17 +166,26 @@ export default function InstitutionalAladdinModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-      <div className="relative w-full max-w-5xl max-h-[94vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden font-sans">
-        {/* Top Terminal Header */}
-        <div className="p-5 border-b border-zinc-800 bg-gradient-to-r from-zinc-900 via-zinc-950 to-black flex items-center justify-between">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Modal Dialog Card - Strictly Clamped to max-h-[86vh] */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-5xl max-h-[86vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden font-sans"
+      >
+        {/* Fixed Top Terminal Header */}
+        <div className="shrink-0 p-4 sm:p-5 border-b border-zinc-800 bg-gradient-to-r from-zinc-900 via-zinc-950 to-black flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-              <span className="text-emerald-400 font-bold text-sm">BLK</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+              <span className="text-emerald-400 font-bold text-xs tracking-wider">BLK</span>
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h2 className="text-base font-bold text-white tracking-wide">
+                <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">
                   ALADDIN INSTITUTIONAL TERMINAL
                 </h2>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-950/80 border border-emerald-800 text-emerald-300">
@@ -157,63 +199,68 @@ export default function InstitutionalAladdinModal({
           </div>
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-white p-2 rounded-lg hover:bg-zinc-800 transition"
+            aria-label="Close terminal"
+            className="text-zinc-400 hover:text-white p-2 rounded-lg bg-zinc-900/60 hover:bg-zinc-800 transition"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex items-center space-x-2 px-6 pt-3 border-b border-zinc-800 bg-zinc-950">
+        {/* Fixed Tab Switcher */}
+        <div className="shrink-0 flex items-center space-x-1 px-4 sm:px-6 pt-2.5 border-b border-zinc-800 bg-zinc-950 overflow-x-auto custom-scrollbar">
           <button
             onClick={() => setActiveTab("WATERFALL")}
-            className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 ${
+            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "WATERFALL"
-                ? "border-emerald-500 text-white bg-zinc-900/60"
-                : "border-transparent text-zinc-400 hover:text-zinc-200"
+                ? "border-emerald-500 text-white bg-zinc-900/80"
+                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
             }`}
           >
-            📈 Waterfall &amp; SOFR Matrix
+            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Waterfall &amp; SOFR Stress</span>
           </button>
           <button
             onClick={() => setActiveTab("LIQUIDATION")}
-            className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 ${
+            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "LIQUIDATION"
-                ? "border-emerald-500 text-white bg-zinc-900/60"
-                : "border-transparent text-zinc-400 hover:text-zinc-200"
+                ? "border-emerald-500 text-white bg-zinc-900/80"
+                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
             }`}
           >
-            🛡️ Liquidation Floor (FLV/OLV)
+            <ShieldAlert className="w-3.5 h-3.5 text-blue-400" />
+            <span>Liquidation Floor (FLV/OLV)</span>
           </button>
           <button
             onClick={() => setActiveTab("ROLLUP")}
-            className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 ${
+            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "ROLLUP"
-                ? "border-emerald-500 text-white bg-zinc-900/60"
-                : "border-transparent text-zinc-400 hover:text-zinc-200"
+                ? "border-emerald-500 text-white bg-zinc-900/80"
+                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
             }`}
           >
-            🏢 Roll-Up Synthesizer ({clusters.length})
+            <Layers className="w-3.5 h-3.5 text-purple-400" />
+            <span>Roll-Up Synthesizer ({clusters.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("SHADOW")}
-            className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 ${
+            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "SHADOW"
-                ? "border-emerald-500 text-white bg-zinc-900/60"
-                : "border-transparent text-zinc-400 hover:text-zinc-200"
+                ? "border-emerald-500 text-white bg-zinc-900/80"
+                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
             }`}
           >
-            ⚡ Pre-Distress Shadow Pipeline ({shadowOpps.length})
+            <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <span>Pre-Distress Pipeline ({shadowOpps.length})</span>
           </button>
         </div>
 
-        {/* Body Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Scrollable Content Body Container */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-6">
           {/* TAB 1: WATERFALL & SOFR */}
           {activeTab === "WATERFALL" && (
             <div className="space-y-6">
-              {/* Quick Config Inputs */}
-              <div className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 grid grid-cols-1 sm:grid-cols-4 gap-3">
+              {/* Parameter Inputs */}
+              <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="text-[11px] font-semibold text-zinc-400 block mb-1">
                     Purchase Price ($)
@@ -251,22 +298,29 @@ export default function InstitutionalAladdinModal({
                   <button
                     onClick={loadWaterfall}
                     disabled={waterfallLoading}
-                    className="w-full py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs transition disabled:opacity-50"
+                    className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs transition disabled:opacity-50 cursor-pointer flex items-center justify-center space-x-1.5"
                   >
-                    {waterfallLoading ? "Recalculating..." : "Run Aladdin Waterfall"}
+                    {waterfallLoading ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <span>Solving...</span>
+                      </>
+                    ) : (
+                      <span>Run Aladdin Waterfall</span>
+                    )}
                   </button>
                 </div>
               </div>
 
               {waterfallResult && (
                 <>
-                  {/* Tranche Breakdown */}
+                  {/* Tranche Breakdown Cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     <div className="p-3 bg-zinc-900/80 border border-zinc-800 rounded-xl">
                       <div className="text-[10px] text-zinc-400 uppercase font-semibold">
                         Total Project Cost
                       </div>
-                      <div className="text-lg font-bold text-white font-mono mt-1">
+                      <div className="text-base sm:text-lg font-bold text-white font-mono mt-1">
                         ${parseFloat(waterfallResult.total_project_cost_usd).toLocaleString()}
                       </div>
                       <div className="text-[10px] text-zinc-500 mt-1">Incl. $200k NWC Peg</div>
@@ -275,7 +329,7 @@ export default function InstitutionalAladdinModal({
                       <div className="text-[10px] text-blue-400 uppercase font-semibold">
                         Senior Debt (75%)
                       </div>
-                      <div className="text-lg font-bold text-blue-300 font-mono mt-1">
+                      <div className="text-base sm:text-lg font-bold text-blue-300 font-mono mt-1">
                         ${parseFloat(waterfallResult.senior_debt_amount_usd).toLocaleString()}
                       </div>
                       <div className="text-[10px] text-blue-500/80 mt-1">
@@ -286,7 +340,7 @@ export default function InstitutionalAladdinModal({
                       <div className="text-[10px] text-amber-400 uppercase font-semibold">
                         Seller Note (10%)
                       </div>
-                      <div className="text-lg font-bold text-amber-300 font-mono mt-1">
+                      <div className="text-base sm:text-lg font-bold text-amber-300 font-mono mt-1">
                         ${parseFloat(waterfallResult.seller_note_amount_usd).toLocaleString()}
                       </div>
                       <div className="text-[10px] text-amber-500/80 mt-1">36m Standby Lock</div>
@@ -295,7 +349,7 @@ export default function InstitutionalAladdinModal({
                       <div className="text-[10px] text-purple-400 uppercase font-semibold">
                         Preferred Equity (5%)
                       </div>
-                      <div className="text-lg font-bold text-purple-300 font-mono mt-1">
+                      <div className="text-base sm:text-lg font-bold text-purple-300 font-mono mt-1">
                         ${parseFloat(waterfallResult.preferred_equity_amount_usd).toLocaleString()}
                       </div>
                       <div className="text-[10px] text-purple-500/80 mt-1">8% Compounding Hurdle</div>
@@ -304,7 +358,7 @@ export default function InstitutionalAladdinModal({
                       <div className="text-[10px] text-emerald-400 uppercase font-semibold">
                         Common Equity (10%)
                       </div>
-                      <div className="text-lg font-bold text-emerald-300 font-mono mt-1">
+                      <div className="text-base sm:text-lg font-bold text-emerald-300 font-mono mt-1">
                         ${parseFloat(waterfallResult.sponsor_common_equity_usd).toLocaleString()}
                       </div>
                       <div className="text-[10px] text-emerald-500/80 mt-1">
@@ -313,16 +367,16 @@ export default function InstitutionalAladdinModal({
                     </div>
                   </div>
 
-                  {/* SOFR Forward Curve Sensitivity */}
+                  {/* CME SOFR Forward Curve Sensitivity Matrix */}
                   <div className="space-y-2">
-                    <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                    <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider font-mono">
                       CME SOFR Forward Curve Macro Stress Matrix
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {waterfallResult.stress_scenarios.map((sc, i) => (
                         <div
                           key={i}
-                          className={`p-4 rounded-xl border ${
+                          className={`p-3.5 rounded-xl border ${
                             sc.is_solvent
                               ? "bg-zinc-900/60 border-zinc-800"
                               : "bg-rose-950/30 border-rose-800/50"
@@ -333,7 +387,7 @@ export default function InstitutionalAladdinModal({
                               {sc.scenario_name}
                             </span>
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              className={`px-2 py-0.5 rounded text-[10px] font-semibold font-mono ${
                                 sc.is_solvent
                                   ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
                                   : "bg-rose-950 text-rose-300 border border-rose-800"
@@ -379,36 +433,36 @@ export default function InstitutionalAladdinModal({
 
                   {/* Exit Multiples & Equity Return Heatmap */}
                   <div className="space-y-2">
-                    <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                    <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider font-mono">
                       Equity Return Sensitivity Grid (MOIC / Annualized IRR)
                     </h4>
-                    <div className="overflow-x-auto border border-zinc-800 rounded-xl">
+                    <div className="overflow-x-auto border border-zinc-800 rounded-xl custom-scrollbar">
                       <table className="w-full text-left text-xs font-mono">
                         <thead className="bg-zinc-900/90 text-zinc-400 border-b border-zinc-800">
                           <tr>
-                            <th className="p-3">Exit Horizon</th>
-                            <th className="p-3">Exit Multiple</th>
-                            <th className="p-3">Enterprise Value</th>
-                            <th className="p-3">Common Proceeds</th>
-                            <th className="p-3 text-emerald-400 font-bold">MOIC</th>
-                            <th className="p-3 text-emerald-400 font-bold">Equity IRR</th>
+                            <th className="p-2.5 sm:p-3">Exit Horizon</th>
+                            <th className="p-2.5 sm:p-3">Exit Multiple</th>
+                            <th className="p-2.5 sm:p-3">Enterprise Value</th>
+                            <th className="p-2.5 sm:p-3">Common Proceeds</th>
+                            <th className="p-2.5 sm:p-3 text-emerald-400 font-bold">MOIC</th>
+                            <th className="p-2.5 sm:p-3 text-emerald-400 font-bold">Equity IRR</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-800/60 bg-zinc-950">
                           {waterfallResult.returns_matrix.map((c, idx) => (
                             <tr key={idx} className="hover:bg-zinc-900/40 transition">
-                              <td className="p-3 text-white font-semibold">
+                              <td className="p-2.5 sm:p-3 text-white font-semibold">
                                 Year {c.exit_year}
                               </td>
-                              <td className="p-3 text-zinc-300">{c.exit_multiple}x</td>
-                              <td className="p-3 text-zinc-300">
+                              <td className="p-2.5 sm:p-3 text-zinc-300">{c.exit_multiple}x</td>
+                              <td className="p-2.5 sm:p-3 text-zinc-300">
                                 ${parseFloat(c.exit_enterprise_value_usd).toLocaleString()}
                               </td>
-                              <td className="p-3 text-zinc-300">
+                              <td className="p-2.5 sm:p-3 text-zinc-300">
                                 ${parseFloat(c.common_equity_proceeds_usd).toLocaleString()}
                               </td>
-                              <td className="p-3 font-bold text-emerald-300">{c.moic}x</td>
-                              <td className="p-3 font-bold text-emerald-400">
+                              <td className="p-2.5 sm:p-3 font-bold text-emerald-300">{c.moic}x</td>
+                              <td className="p-2.5 sm:p-3 font-bold text-emerald-400">
                                 {c.annualized_irr_pct}%
                               </td>
                             </tr>
@@ -425,7 +479,7 @@ export default function InstitutionalAladdinModal({
           {/* TAB 2: LIQUIDATION FLOOR */}
           {activeTab === "LIQUIDATION" && (
             <div className="space-y-6">
-              <div className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-[11px] font-semibold text-zinc-400 block mb-1">
                     Real Estate Assessed ($)
@@ -451,9 +505,17 @@ export default function InstitutionalAladdinModal({
                 <div className="flex items-end">
                   <button
                     onClick={loadLiquidation}
-                    className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg text-xs transition"
+                    disabled={liquidationLoading}
+                    className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg text-xs transition cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-50"
                   >
-                    Solve Downside FLV Floor
+                    {liquidationLoading ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <span>Solving...</span>
+                      </>
+                    ) : (
+                      <span>Solve Downside FLV Floor</span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -462,7 +524,7 @@ export default function InstitutionalAladdinModal({
                 <div className="space-y-4">
                   {/* Protection Banner */}
                   <div
-                    className={`p-4 rounded-xl border flex items-center justify-between ${
+                    className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                       liquidationResult.is_100pct_principal_protected
                         ? "bg-emerald-950/40 border-emerald-800 text-emerald-200"
                         : "bg-amber-950/40 border-amber-800 text-amber-200"
@@ -478,7 +540,7 @@ export default function InstitutionalAladdinModal({
                             ? "100% PRINCIPAL DOWNSIDE PROTECTION CONFIRMED"
                             : "UNPROTECTED PRINCIPAL BASIS AT RISK"}
                         </h3>
-                        <p className="text-xs opacity-90">
+                        <p className="text-xs opacity-90 mt-0.5">
                           {liquidationResult.is_100pct_principal_protected
                             ? "Purchase basis is 100% covered by 60-day forced auction values (FLV) of real estate and machinery floors."
                             : `Purchase basis exceeds forced liquidation auction recovery by $${parseFloat(
@@ -487,7 +549,7 @@ export default function InstitutionalAladdinModal({
                         </p>
                       </div>
                     </div>
-                    <div className="text-right font-mono">
+                    <div className="text-left sm:text-right font-mono shrink-0">
                       <div className="text-xs text-zinc-400">FLV Coverage</div>
                       <div className="text-lg font-bold">
                         {liquidationResult.flv_downside_coverage_ratio}x
@@ -498,10 +560,10 @@ export default function InstitutionalAladdinModal({
                   {/* FLV & OLV Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-3">
-                      <div className="text-xs font-bold text-zinc-300 uppercase">
+                      <div className="text-xs font-bold text-zinc-300 uppercase font-mono">
                         Forced Liquidation Value (FLV - 60 Day Auction)
                       </div>
-                      <div className="space-y-1.5 font-mono text-xs">
+                      <div className="space-y-2 font-mono text-xs">
                         <div className="flex justify-between">
                           <span className="text-zinc-400">Real Estate FLV (65% factor):</span>
                           <span className="text-white">
@@ -514,7 +576,7 @@ export default function InstitutionalAladdinModal({
                             ${parseFloat(liquidationResult.equipment_flv_usd).toLocaleString()}
                           </span>
                         </div>
-                        <div className="border-t border-zinc-800 pt-1.5 flex justify-between font-bold text-emerald-400">
+                        <div className="border-t border-zinc-800 pt-2 flex justify-between font-bold text-emerald-400">
                           <span>Total Forced Liquidation Floor:</span>
                           <span>
                             ${parseFloat(liquidationResult.total_forced_liquidation_usd).toLocaleString()}
@@ -524,10 +586,10 @@ export default function InstitutionalAladdinModal({
                     </div>
 
                     <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-3">
-                      <div className="text-xs font-bold text-zinc-300 uppercase">
+                      <div className="text-xs font-bold text-zinc-300 uppercase font-mono">
                         Orderly Liquidation Value (OLV - 6 Month Sale)
                       </div>
-                      <div className="space-y-1.5 font-mono text-xs">
+                      <div className="space-y-2 font-mono text-xs">
                         <div className="flex justify-between">
                           <span className="text-zinc-400">Real Estate OLV (80% factor):</span>
                           <span className="text-white">
@@ -540,7 +602,7 @@ export default function InstitutionalAladdinModal({
                             ${parseFloat(liquidationResult.equipment_olv_usd).toLocaleString()}
                           </span>
                         </div>
-                        <div className="border-t border-zinc-800 pt-1.5 flex justify-between font-bold text-blue-400">
+                        <div className="border-t border-zinc-800 pt-2 flex justify-between font-bold text-blue-400">
                           <span>Total Orderly Liquidation Floor:</span>
                           <span>
                             ${parseFloat(liquidationResult.total_orderly_liquidation_usd).toLocaleString()}
@@ -557,10 +619,13 @@ export default function InstitutionalAladdinModal({
           {/* TAB 3: ROLL-UP SYNTHESIZER */}
           {activeTab === "ROLLUP" && (
             <div className="space-y-4">
-              <div className="p-3 bg-blue-950/20 border border-blue-900/30 rounded-xl text-xs text-blue-300">
-                💡 <strong>Aladdin Platform Aggregation Engine:</strong> Automatically groups
-                active targets within regional clusters sharing complementary NAICS prefixes to
-                model multiple arbitrage on consolidated exit.
+              <div className="p-3 bg-blue-950/20 border border-blue-900/30 rounded-xl text-xs text-blue-300 flex items-center space-x-2">
+                <Info className="w-4 h-4 text-blue-400 shrink-0" />
+                <span>
+                  <strong>Aladdin Platform Aggregation Engine:</strong> Automatically groups
+                  active targets within regional clusters sharing complementary NAICS prefixes to
+                  model multiple arbitrage on consolidated exit.
+                </span>
               </div>
 
               {clustersLoading ? (
@@ -568,7 +633,7 @@ export default function InstitutionalAladdinModal({
                   Scanning regional deal clusters...
                 </div>
               ) : clusters.length === 0 ? (
-                <div className="p-8 text-center text-zinc-500 font-mono text-xs">
+                <div className="p-8 text-center text-zinc-500 font-mono text-xs border border-dashed border-zinc-800 rounded-xl">
                   No multi-deal clusters identified yet. Ingest more filings to synthesize roll-up platforms.
                 </div>
               ) : (
@@ -622,7 +687,7 @@ export default function InstitutionalAladdinModal({
                       </div>
 
                       <p className="text-xs text-zinc-400 italic bg-zinc-950/60 p-2.5 rounded border border-zinc-800/80">
-                        "{c.synergy_thesis}"
+                        &quot;{c.synergy_thesis}&quot;
                       </p>
                     </div>
                   ))}
@@ -634,9 +699,12 @@ export default function InstitutionalAladdinModal({
           {/* TAB 4: SHADOW PIPELINE */}
           {activeTab === "SHADOW" && (
             <div className="space-y-4">
-              <div className="p-3 bg-amber-950/20 border border-amber-900/30 rounded-xl text-xs text-amber-300">
-                ⚡ <strong>Pre-Distress Signal Intelligence:</strong> Identifies opportunities
-                3 to 9 months before bankruptcy or foreclosure dockets are formally published.
+              <div className="p-3 bg-amber-950/20 border border-amber-900/30 rounded-xl text-xs text-amber-300 flex items-center space-x-2">
+                <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  <strong>Pre-Distress Signal Intelligence:</strong> Identifies opportunities
+                  3 to 9 months before bankruptcy or foreclosure dockets are formally published.
+                </span>
               </div>
 
               {shadowLoading ? (
@@ -644,7 +712,7 @@ export default function InstitutionalAladdinModal({
                   Scanning UCC-1 and tax lien dockets...
                 </div>
               ) : shadowOpps.length === 0 ? (
-                <div className="p-8 text-center text-zinc-500 font-mono text-xs">
+                <div className="p-8 text-center text-zinc-500 font-mono text-xs border border-dashed border-zinc-800 rounded-xl">
                   No pre-distress filings detected in active target counties.
                 </div>
               ) : (
@@ -695,14 +763,15 @@ export default function InstitutionalAladdinModal({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-zinc-800 bg-zinc-900/90 flex items-center justify-between">
-          <div className="text-xs text-zinc-500 font-mono">
-            Powered by Aladdin-Grade Deterministic Math (Zero Floats, Zero Hallucination)
+        {/* Fixed Sticky Footer - Always Visible on Any Viewport */}
+        <div className="shrink-0 p-3.5 sm:p-4 border-t border-zinc-800 bg-zinc-900/95 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-xs text-zinc-500 font-mono flex items-center space-x-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Deterministic Pure Decimal Math • Zero Floats • SBA SOP 50 10 8.1 Compliant</span>
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white transition"
+            className="px-5 py-2 text-xs font-semibold rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white transition cursor-pointer"
           >
             Close Terminal
           </button>

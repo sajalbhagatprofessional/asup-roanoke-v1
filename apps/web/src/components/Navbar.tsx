@@ -13,8 +13,9 @@ import {
   Activity,
   Compass,
   MapPin,
-  Sliders,
   Radio,
+  ChevronDown,
+  Sparkles,
 } from "lucide-react";
 import { fetchActiveMandate, fetchHealth } from "../lib/api";
 import { HealthStatus, MandateProfile, TeamRole } from "../lib/types";
@@ -30,11 +31,11 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { name: "Principal Digest", role: "PRINCIPAL", href: "/", icon: Briefcase },
-  { name: "Analyst Pipeline", role: "ANALYST", href: "/analyst", icon: TrendingUp },
-  { name: "Counsel Review", role: "COUNSEL", href: "/counsel", icon: Scale },
-  { name: "CPA Audit", role: "CPA", href: "/cpa", icon: FileCheck2 },
-  { name: "Lender Pack", role: "LENDER_BROKER", href: "/lender", icon: Building2 },
+  { name: "Principal", role: "PRINCIPAL", href: "/", icon: Briefcase },
+  { name: "Analyst", role: "ANALYST", href: "/analyst", icon: TrendingUp },
+  { name: "Counsel", role: "COUNSEL", href: "/counsel", icon: Scale },
+  { name: "CPA", role: "CPA", href: "/cpa", icon: FileCheck2 },
+  { name: "Lender", role: "LENDER_BROKER", href: "/lender", icon: Building2 },
 ];
 
 export default function Navbar() {
@@ -54,56 +55,65 @@ export default function Navbar() {
     loadMandateAndHealth();
   }, []);
 
+  const formatPriceCeiling = (priceStr?: string) => {
+    if (!priceStr) return "$5.0M";
+    const num = parseFloat(priceStr);
+    if (num >= 1000000) {
+      return `$${(num / 1000000).toFixed(1)}M`;
+    }
+    return `$${(num / 1000).toFixed(0)}k`;
+  };
+
   return (
-    <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo & Platform Title */}
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-lg bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-emerald-400" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-bold tracking-tight text-white text-base">
-                  ASUP NATIONWIDE
-                </span>
-                {/* Interactive Mandate & Budget Switcher */}
-                <button
-                  type="button"
-                  onClick={() => setIsMandateModalOpen(true)}
-                  className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-800/80 transition cursor-pointer text-[11px] font-mono group"
-                  title="Click to change target state, counties, or budget box"
-                >
-                  <MapPin className="w-3 h-3 text-emerald-400 group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold">
-                    {activeMandate?.target_states.join(",") || "VA"} Market
-                  </span>
-                  <span className="text-slate-500">•</span>
-                  <span className="text-slate-300">
-                    &lt;= ${(parseFloat(activeMandate?.max_price_usd || "5000000") / 1000000).toFixed(1)}M Box
-                  </span>
-                  <span className="text-[10px] text-emerald-300 underline ml-1">Change</span>
-                </button>
-                {/* Source & Resource Connectivity Button */}
-                <button
-                  type="button"
-                  onClick={() => setIsSourceModalOpen(true)}
-                  className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-950/70 hover:bg-blue-900/80 text-blue-300 border border-blue-700/80 transition cursor-pointer text-[11px] font-mono group"
-                  title="View active sources, connectivity health, and access barriers for this location"
-                >
-                  <Radio className="w-3 h-3 text-blue-400 group-hover:scale-110 transition-transform animate-pulse" />
-                  <span className="font-semibold">Sources</span>
-                </button>
+    <header className="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-40 select-none">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 gap-2">
+          {/* 1. Left Group: Brand & Active Market Selector */}
+          <div className="flex items-center space-x-3 shrink-0">
+            {/* Brand Logo & Title */}
+            <Link href="/" className="flex items-center space-x-2.5 group">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center group-hover:border-emerald-500/60 transition">
+                <Shield className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
               </div>
-              <p className="text-[11px] text-slate-400 truncate max-w-xs sm:max-w-md">
-                {activeMandate?.mandate_name || "Target Acquisition Mandate & Strategic Budget Engine"}
-              </p>
-            </div>
+              <div className="hidden sm:block">
+                <div className="flex items-center space-x-1.5">
+                  <span className="font-bold tracking-tight text-white text-sm">
+                    ASUP
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-400 font-semibold px-1.5 py-0.2 rounded bg-emerald-950/70 border border-emerald-800/80">
+                    PRO
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400 -mt-0.5 tracking-tight font-medium">
+                  Institutional Sourcing
+                </div>
+              </div>
+            </Link>
+
+            {/* Interactive Target Location & Budget Pill */}
+            <button
+              type="button"
+              onClick={() => setIsMandateModalOpen(true)}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 hover:border-emerald-500/60 transition cursor-pointer text-xs group shadow-sm"
+              title="Click to configure target state, counties, budget bounds & underwriting hurdles"
+            >
+              <MapPin className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
+              <span className="font-semibold text-white">
+                {activeMandate?.target_states.join(", ") || "VA"} Market
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="text-emerald-300 font-mono text-[11px]">
+                ≤ {formatPriceCeiling(activeMandate?.max_price_usd)}
+              </span>
+              <span className="hidden md:inline text-slate-500 font-mono text-[10px]">
+                ({activeMandate?.target_fips.length || 7} Co.)
+              </span>
+              <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-emerald-300 transition-colors shrink-0 ml-0.5" />
+            </button>
           </div>
 
-          {/* Role Navigation */}
-          <nav className="flex space-x-1 sm:space-x-2">
+          {/* 2. Center Group: 5-Role Segmented Workspace Navigation */}
+          <nav className="flex items-center space-x-1 overflow-x-auto custom-scrollbar py-1">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive =
@@ -115,49 +125,45 @@ export default function Navbar() {
                 <Link
                   key={item.role}
                   href={item.href}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                  className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition whitespace-nowrap ${
                     isActive
-                      ? "bg-emerald-600 text-white shadow-sm"
-                      : "text-slate-300 hover:text-white hover:bg-slate-800"
+                      ? "bg-slate-800 text-white shadow-sm border border-slate-700 font-semibold"
+                      : "text-slate-400 hover:text-white hover:bg-slate-900/60"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{item.name}</span>
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-400" : "text-slate-400"}`} />
+                  <span className="hidden md:inline">{item.name}</span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* Mandate Health Pill */}
-          <div className="hidden lg:flex items-center space-x-3 text-xs font-mono">
+          {/* 3. Right Group: Institutional Tools & Real-Time Status */}
+          <div className="flex items-center space-x-2 shrink-0">
+            {/* BlackRock Aladdin Institutional Terminal Button */}
             <button
               onClick={() => setIsAladdinModalOpen(true)}
-              className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-800 text-emerald-300 transition"
-              title="BlackRock Aladdin Institutional Terminal"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-950/90 to-zinc-900 hover:from-emerald-900/80 hover:to-zinc-800 border border-emerald-600/50 hover:border-emerald-500 text-emerald-300 text-xs font-semibold transition cursor-pointer shadow-sm group"
+              title="Open BlackRock Aladdin Institutional Risk & Portfolio Intelligence Terminal"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="font-semibold">Aladdin Terminal</span>
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400 group-hover:rotate-12 transition-transform" />
+              <span className="hidden lg:inline">Aladdin Terminal</span>
+              <span className="lg:hidden">Aladdin</span>
             </button>
-            <span className="text-slate-500">|</span>
+
+            {/* Source Connectivity Health Button */}
             <button
               onClick={() => setIsSourceModalOpen(true)}
-              className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-blue-950/60 hover:bg-blue-900/60 border border-blue-800 text-blue-300 transition"
-              title="Track data sources and connectivity for this location"
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/60 hover:bg-blue-900/60 border border-blue-800/80 text-blue-300 text-xs font-medium transition cursor-pointer"
+              title="Track data sources, connectivity status, and access keys for this location"
             >
-              <Radio className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
-              <span>Source Tracker</span>
+              <Radio className="w-3.5 h-3.5 text-blue-400 animate-pulse shrink-0" />
+              <span className="hidden sm:inline">Sources</span>
             </button>
-            <span className="text-slate-500">|</span>
-            <button
-              onClick={() => setIsMandateModalOpen(true)}
-              className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition"
-            >
-              <Compass className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Mandate Box</span>
-            </button>
-            <span className="text-slate-500">|</span>
-            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-300">
-              <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+
+            {/* Compliance Badge */}
+            <div className="hidden xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               <span>SOP 50 10 8.1</span>
             </div>
           </div>
@@ -170,7 +176,6 @@ export default function Navbar() {
         onClose={() => setIsMandateModalOpen(false)}
         onSuccess={(profile) => {
           setActiveMandate(profile);
-          // Reload window to refresh all page components with new market deals
           if (typeof window !== "undefined") {
             window.location.reload();
           }

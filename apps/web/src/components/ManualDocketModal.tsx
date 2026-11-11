@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Upload,
   X,
@@ -8,6 +8,8 @@ import {
   AlertOctagon,
   HelpCircle,
   FileText,
+  ArrowRight,
+  ShieldCheck,
 } from "lucide-react";
 import { ingestDocket } from "../lib/api";
 import { DocketIngestResponse } from "../lib/types";
@@ -35,9 +37,35 @@ export default function ManualDocketModal({
   const [result, setResult] = useState<DocketIngestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen && !loading) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, loading, onClose]);
+
   if (!isOpen) return null;
 
-  const handlePreFill = (type: "IN_BOX" | "NEAR_MISS" | "BOTETOURT" | "FRANKLIN" | "BEDFORD" | "HARD_KILL" | "LUST_BLOCK") => {
+  const handlePreFill = (
+    type:
+      | "IN_BOX"
+      | "NEAR_MISS"
+      | "BOTETOURT"
+      | "FRANKLIN"
+      | "BEDFORD"
+      | "HARD_KILL"
+      | "LUST_BLOCK"
+  ) => {
     setResult(null);
     setError(null);
     if (type === "IN_BOX") {
@@ -78,23 +106,23 @@ export default function ManualDocketModal({
       setParcelId("SALEM-099");
       setEntityName("Salem Industrial Fabrication LLC");
       setNaicsCode("332312");
-      setPrice("1950000.00");
+      setPrice("5200000.00"); // In $5.0M - $5.75M near-miss band
       setHasFloor(true);
     } else if (type === "HARD_KILL") {
       setDocketId("ROA-RESID-" + Math.floor(Math.random() * 1000));
       setFipsCode("51770");
-      setParcelId("RES-001");
-      setEntityName("Roanoke Residential Apartments LLC");
-      setNaicsCode("531110"); // Hard Kill Residential
-      setPrice("2200000.00");
+      setParcelId("4019999");
+      setEntityName("Oakwood Single Family Rental Portfolio");
+      setNaicsCode("531110"); // Pure residential - HARD KILL
+      setPrice("1200000.00");
       setHasFloor(false);
     } else if (type === "LUST_BLOCK") {
       setDocketId("ROA-GAS-" + Math.floor(Math.random() * 1000));
       setFipsCode("51161"); // Roanoke County
-      setParcelId("065.11-02-09");
-      setEntityName("Peters Creek Fuel & Mart LLC");
-      setNaicsCode("447110"); // Gas station
-      setPrice("1850000.00");
+      setParcelId("ROA-GAS-01");
+      setEntityName("Midway Fuel & Petroleum Distribution");
+      setNaicsCode("447110");
+      setPrice("1800000.00");
       setHasFloor(true);
     }
   };
@@ -108,14 +136,15 @@ export default function ManualDocketModal({
     try {
       const res = await ingestDocket({
         docket_id: docketId,
+        mandate_code: mandateCode,
         fips_code: fipsCode,
         parcel_id: parcelId,
         entity_name: entityName,
         naics_code: naicsCode,
         asking_or_cure_price_usd: price,
-        mandate_code: mandateCode,
         has_real_estate_or_equipment_floor: hasFloor,
         is_predatory_personal_distress: false,
+        source_url: "https://manual.input.local/dockets",
       });
       setResult(res);
       if (res.disposition === "IN_BOX") {
@@ -129,278 +158,249 @@ export default function ManualDocketModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center">
-            <Upload className="w-5 h-5 text-emerald-400" />
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-2xl max-h-[86vh] flex flex-col bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden font-sans text-slate-100"
+      >
+        {/* Fixed Header */}
+        <div className="shrink-0 p-4 sm:p-5 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center">
+              <Upload className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white tracking-tight">
+                Manual Docket Dropzone &amp; Ingestion Gate
+              </h2>
+              <p className="text-xs text-slate-400">
+                Stage 1 Distress Parsing &amp; Zero-Cost Mandate Gate
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-white tracking-tight">
-              Manual Docket Dropzone & Ingestion Gate
-            </h2>
-            <p className="text-xs text-slate-400">
-              Stage 1 Distress Parsing & Zero-Cost Mandate Filter (ROA-SMB-01)
-            </p>
-          </div>
-        </div>
-
-        {/* Quick Pre-fill Buttons */}
-        <div className="mt-4 pt-3 border-t border-slate-800 flex flex-wrap gap-2 text-xs">
-          <span className="text-slate-400 self-center font-mono">Presets:</span>
           <button
-            type="button"
-            onClick={() => handlePreFill("IN_BOX")}
-            className="px-2.5 py-1 rounded bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800"
+            onClick={onClose}
+            aria-label="Close modal"
+            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
           >
-            Roanoke Machining
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePreFill("BOTETOURT")}
-            className="px-2.5 py-1 rounded bg-blue-950/80 hover:bg-blue-900/80 text-blue-300 border border-blue-800"
-          >
-            Botetourt CNC (51023)
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePreFill("FRANKLIN")}
-            className="px-2.5 py-1 rounded bg-indigo-950/80 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800"
-          >
-            Franklin HVAC (51067)
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePreFill("BEDFORD")}
-            className="px-2.5 py-1 rounded bg-cyan-950/80 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800"
-          >
-            Bedford Fleet (51019)
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePreFill("NEAR_MISS")}
-            className="px-2.5 py-1 rounded bg-amber-950/80 hover:bg-amber-900/80 text-amber-300 border border-amber-800"
-          >
-            Salem (51775)
-          </button>
-          <button
-            type="button"
-            onClick={() => handlePreFill("HARD_KILL")}
-            className="px-2.5 py-1 rounded bg-red-950/80 hover:bg-red-900/80 text-red-300 border border-red-800"
-          >
-            Residential 531110 (Kill)
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Submission Form */}
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Mandate Policy
-              </label>
-              <select
-                value={mandateCode}
-                onChange={(e) => setMandateCode(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
+        {/* Scrollable Body Container */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-4">
+          {/* Quick Pre-fill Presets */}
+          <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
+            <div className="text-[11px] text-slate-400 font-mono flex items-center justify-between">
+              <span>Quick Test Presets:</span>
+              <span className="text-slate-500">1-click test filings</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-xs">
+              <button
+                type="button"
+                onClick={() => handlePreFill("IN_BOX")}
+                className="px-2.5 py-1 rounded-md bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 font-mono transition"
               >
-                <option value="ROA-REGIONAL-01">ROA-REGIONAL-01 (Roanoke Valley + Neighboring Counties)</option>
-                <option value="ROA-SMB-01">ROA-SMB-01 (Strict Core City & County Only)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Docket / Notice ID
-              </label>
-              <input
-                type="text"
-                value={docketId}
-                onChange={(e) => setDocketId(e.target.value)}
-                required
-                className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Entity / Debtor Name
-              </label>
-              <input
-                type="text"
-                value={entityName}
-                onChange={(e) => setEntityName(e.target.value)}
-                required
-                className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Jurisdiction FIPS Code
-              </label>
-              <select
-                value={fipsCode}
-                onChange={(e) => setFipsCode(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
+                In-Box Machining
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePreFill("BOTETOURT")}
+                className="px-2.5 py-1 rounded-md bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 font-mono transition"
               >
-                <optgroup label="Core Roanoke Valley">
-                  <option value="51770">51770 — City of Roanoke (Core)</option>
-                  <option value="51161">51161 — Roanoke County (Core)</option>
-                  <option value="51775">51775 — City of Salem (Immediate Neighbor)</option>
-                </optgroup>
-                <optgroup label="Neighboring Regional Counties">
-                  <option value="51023">51023 — Botetourt County (North I-81 Corridor)</option>
-                  <option value="51067">51067 — Franklin County (South Rocky Mount / SML)</option>
-                  <option value="51019">51019 — Bedford County (East US-460 Corridor)</option>
-                  <option value="51121">51121 — Montgomery County (West Tech & Machining)</option>
-                  <option value="51750">51750 — City of Radford (West Manufacturing)</option>
-                  <option value="51045">51045 — Craig County (Northwest Fleet/Timber)</option>
-                  <option value="51063">51063 — Floyd County (Southwest Light Industrial)</option>
-                </optgroup>
-                <optgroup label="Out of Bounds">
-                  <option value="51760">51760 — City of Richmond (Immediate Kill)</option>
-                </optgroup>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Parcel ID / GPIN
-              </label>
-              <input
-                type="text"
-                value={parcelId}
-                onChange={(e) => setParcelId(e.target.value)}
-                required
-                className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider">
-                NAICS Vertical Code
-              </label>
-              <input
-                type="text"
-                value={naicsCode}
-                onChange={(e) => setNaicsCode(e.target.value)}
-                required
-                className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Asking / Cure Price ($ USD)
-              </label>
-              <input
-                type="text"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                required
-                className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
-              />
+                Botetourt CNC
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePreFill("FRANKLIN")}
+                className="px-2.5 py-1 rounded-md bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 font-mono transition"
+              >
+                Franklin HVAC
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePreFill("NEAR_MISS")}
+                className="px-2.5 py-1 rounded-md bg-amber-950/80 hover:bg-amber-900 border border-amber-800 text-amber-300 font-mono transition"
+              >
+                Salem Near-Miss
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePreFill("HARD_KILL")}
+                className="px-2.5 py-1 rounded-md bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-300 font-mono transition"
+              >
+                Residential Kill
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 pt-1">
-            <input
-              type="checkbox"
-              id="hasFloor"
-              checked={hasFloor}
-              onChange={(e) => setHasFloor(e.target.checked)}
-              className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-emerald-600 focus:ring-0"
-            />
-            <label htmlFor="hasFloor" className="text-xs text-slate-300">
-              Verified Real Estate or Hard Equipment Floor (&gt;= $150k collateral)
-            </label>
-          </div>
-
-          {/* Feedback Result Banner */}
-          {result && (
-            <div
-              className={`p-4 rounded-xl border ${
-                result.disposition === "IN_BOX"
-                  ? "bg-emerald-950/80 border-emerald-700 text-emerald-200"
-                  : result.disposition === "NEAR_MISS_LOGGED"
-                  ? "bg-amber-950/80 border-amber-700 text-amber-200"
-                  : "bg-red-950/80 border-red-700 text-red-200"
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                {result.disposition === "IN_BOX" ? (
-                  <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
-                ) : (
-                  <AlertOctagon className="w-5 h-5 text-red-400 shrink-0" />
-                )}
-                <span className="font-bold tracking-wide">
-                  Gate Result: {result.disposition}
-                </span>
-                <span className="text-xs font-mono ml-auto">
-                  Stage: {result.stage}
-                </span>
+          <form id="docket-form" onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-400 mb-1 font-mono">Docket ID / Filing Ref</label>
+                <input
+                  type="text"
+                  value={docketId}
+                  onChange={(e) => setDocketId(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500"
+                  required
+                />
               </div>
 
-              {result.reasons && (
-                <ul className="mt-2 text-xs list-disc list-inside space-y-0.5">
-                  {result.reasons.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              )}
-
-              {result.block_reasons && (
-                <ul className="mt-2 text-xs list-disc list-inside space-y-0.5 font-mono">
-                  {result.block_reasons.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              )}
-
-              {result.invoked_tools && (
-                <div className="mt-2 text-xs">
-                  <span className="font-semibold">Conditional Enrichment Invoked:</span>{" "}
-                  <span className="font-mono">{result.invoked_tools.join(", ")}</span>
-                </div>
-              )}
-
-              <div className="mt-2 text-[11px] font-mono text-slate-300">
-                Paid Enrichment Spend: ${result.spend_usd ?? "0.00"}
+              <div>
+                <label className="block text-slate-400 mb-1 font-mono">Target Jurisdiction FIPS</label>
+                <select
+                  value={fipsCode}
+                  onChange={(e) => setFipsCode(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="51770">City of Roanoke (51770)</option>
+                  <option value="51161">Roanoke County (51161)</option>
+                  <option value="51775">City of Salem (51775)</option>
+                  <option value="51023">Botetourt County (51023)</option>
+                  <option value="51067">Franklin County (51067)</option>
+                  <option value="51019">Bedford County (51019)</option>
+                  <option value="51121">Montgomery County (51121)</option>
+                  <option value="51059">Fairfax County (51059 - Out of Box)</option>
+                </select>
               </div>
             </div>
-          )}
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-400 mb-1 font-mono">Entity / Target Name</label>
+                <input
+                  type="text"
+                  value={entityName}
+                  onChange={(e) => setEntityName(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1 font-mono">GIS Parcel ID / GPIN</label>
+                <input
+                  type="text"
+                  value={parcelId}
+                  onChange={(e) => setParcelId(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-slate-400 mb-1 font-mono">NAICS Code (6 Digits)</label>
+                <input
+                  type="text"
+                  value={naicsCode}
+                  onChange={(e) => setNaicsCode(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1 font-mono">Purchase / Cure Price ($ USD)</label>
+                <input
+                  type="number"
+                  step="50000"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 pt-1">
+              <input
+                type="checkbox"
+                id="hasFloor"
+                checked={hasFloor}
+                onChange={(e) => setHasFloor(e.target.checked)}
+                className="rounded border-slate-700 text-emerald-600 focus:ring-emerald-500"
+              />
+              <label htmlFor="hasFloor" className="text-slate-300 font-mono cursor-pointer select-none">
+                Backed by Commercial Real Estate or Hard Equipment Floor
+              </label>
+            </div>
+          </form>
+
+          {/* Feedback & Disposition Banner */}
           {error && (
-            <div className="p-3 rounded-lg bg-red-950/80 border border-red-800 text-red-300 text-xs">
+            <div className="p-3 bg-red-950/80 border border-red-800 text-red-200 rounded-lg text-xs">
               {error}
             </div>
           )}
 
-          <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+          {result && (
+            <div
+              className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
+                result.disposition === "IN_BOX"
+                  ? "bg-emerald-950/80 border-emerald-800 text-emerald-200"
+                  : result.disposition === "NEAR_MISS_QUARANTINE"
+                  ? "bg-amber-950/80 border-amber-800 text-amber-200"
+                  : "bg-red-950/80 border-red-800 text-red-200"
+              }`}
+            >
+              <div className="flex items-center space-x-2 font-bold uppercase tracking-wider">
+                {result.disposition === "IN_BOX" ? (
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <AlertOctagon className="w-4 h-4 text-rose-400" />
+                )}
+                <span>Gate Disposition: {result.disposition}</span>
+              </div>
+              <p>{result.reasons?.join("; ") || "Filing evaluated against active mandate."}</p>
+              <div className="text-[11px] font-mono opacity-80">
+                Stage: {result.stage} • Paid API Spend: ${result.spend_usd || "0.00"}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Fixed Sticky Footer */}
+        <div className="shrink-0 p-3.5 sm:p-4 border-t border-slate-800 bg-slate-900/95 flex items-center justify-between">
+          <div className="text-xs text-slate-500 font-mono">
+            Zero-Cost Mandate Filter • Zero Floating Point Distortion
+          </div>
+          <div className="flex items-center space-x-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700"
+              disabled={loading}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition"
             >
-              Cancel
+              Close
             </button>
             <button
               type="submit"
+              form="docket-form"
               disabled={loading}
-              className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 transition shadow-sm"
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer"
             >
-              {loading ? "Evaluating Mandate Gate..." : "Ingest & Evaluate Gate"}
+              {loading ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  <span>Ingesting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Ingest &amp; Filter Docket</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </>
+              )}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

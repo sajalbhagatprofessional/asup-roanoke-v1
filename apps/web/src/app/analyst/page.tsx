@@ -74,6 +74,18 @@ export default function AnalystPipelinePage() {
     loadPipeline();
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && verifyModalDeal) {
+        setVerifyModalDeal(null);
+      }
+    };
+    if (verifyModalDeal) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [verifyModalDeal]);
+
   const handleVerifyPromote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!verifyModalDeal) return;
@@ -244,54 +256,78 @@ export default function AnalystPipelinePage() {
 
       {/* Verify & Promote Modal */}
       {verifyModalDeal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
-            <h2 className="text-base font-bold text-white tracking-tight">
-              Analyst Lead Verification Gate
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Verify Deal: <span className="font-mono text-emerald-400">{verifyModalDeal.deal_id}</span> ({verifyModalDeal.entity_name})
-            </p>
-
-            <form onSubmit={handleVerifyPromote} className="mt-4 space-y-4 text-xs">
-              <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700 space-y-1">
-                <div className="text-slate-300 font-semibold">Verification Pre-conditions:</div>
-                <div className="text-slate-400">1. Active docket freshness SLA &lt;= 48 hours</div>
-                <div className="text-slate-400">2. GIS / SCC tax record SLA &lt;= 14 days</div>
-                <div className="text-slate-400">3. Base DSCR &gt;= 1.35x &amp; Stressed DSCR &gt;= 1.15x</div>
-                <div className="text-slate-400">4. &gt;= 2 Independent public record domains required</div>
-              </div>
-
+        <div
+          onClick={() => setVerifyModalDeal(null)}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full max-h-[86vh] flex flex-col shadow-2xl overflow-hidden"
+          >
+            {/* Modal Header */}
+            <div className="shrink-0 p-4 sm:p-5 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between">
               <div>
-                <label className="block text-slate-300 font-medium uppercase tracking-wider">
-                  Attach Second Independent Public Source Domain URL
-                </label>
-                <input
-                  type="url"
-                  value={secondSourceUrl}
-                  onChange={(e) => setSecondSourceUrl(e.target.value)}
-                  placeholder="https://open-data-portal-roanokeva.hub.arcgis.com/datasets/parcels"
-                  className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
-                  required
-                />
+                <h2 className="text-base font-bold text-white tracking-tight">
+                  Analyst Lead Verification Gate
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Verify Deal: <span className="font-mono text-emerald-400">{verifyModalDeal.deal_id}</span> ({verifyModalDeal.entity_name})
+                </p>
               </div>
+              <button
+                onClick={() => setVerifyModalDeal(null)}
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+              >
+                ✕
+              </button>
+            </div>
 
-              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setVerifyModalDeal(null)}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold text-white shadow-sm"
-                >
-                  Confirm Sign-Off &amp; Promote
-                </button>
-              </div>
-            </form>
+            {/* Modal Body */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 custom-scrollbar space-y-4">
+              <form id="verify-form" onSubmit={handleVerifyPromote} className="space-y-4 text-xs">
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-1 font-mono text-[11px]">
+                  <div className="text-slate-300 font-semibold mb-1">Verification Pre-conditions:</div>
+                  <div className="text-slate-400">1. Active docket freshness SLA &lt;= 48 hours</div>
+                  <div className="text-slate-400">2. GIS / SCC tax record SLA &lt;= 14 days</div>
+                  <div className="text-slate-400">3. Base DSCR &gt;= 1.35x &amp; Stressed DSCR &gt;= 1.15x</div>
+                  <div className="text-slate-400">4. &gt;= 2 Independent public record domains required</div>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-medium uppercase tracking-wider mb-1">
+                    Attach Second Independent Public Source Domain URL
+                  </label>
+                  <input
+                    type="url"
+                    value={secondSourceUrl}
+                    onChange={(e) => setSecondSourceUrl(e.target.value)}
+                    placeholder="https://open-data-portal-roanokeva.hub.arcgis.com/datasets/parcels"
+                    className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                    required
+                  />
+                </div>
+              </form>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="shrink-0 p-3.5 sm:p-4 border-t border-slate-800 bg-slate-900/95 flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setVerifyModalDeal(null)}
+                className="px-3.5 py-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="verify-form"
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold text-white shadow-sm text-xs transition cursor-pointer"
+              >
+                Confirm Sign-Off &amp; Promote
+              </button>
+            </div>
           </div>
         </div>
       )}
