@@ -11,9 +11,13 @@ import {
   TrendingUp,
   Shield,
   Activity,
+  Compass,
+  MapPin,
+  Sliders,
 } from "lucide-react";
-import { fetchHealth } from "../lib/api";
-import { HealthStatus, TeamRole } from "../lib/types";
+import { fetchActiveMandate, fetchHealth } from "../lib/api";
+import { HealthStatus, MandateProfile, TeamRole } from "../lib/types";
+import MandateSetupModal from "./MandateSetupModal";
 
 interface NavItem {
   name: string;
@@ -33,23 +37,16 @@ const NAV_ITEMS: NavItem[] = [
 export default function Navbar() {
   const pathname = usePathname();
   const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [activeMandate, setActiveMandate] = useState<MandateProfile | null>(null);
+  const [isMandateModalOpen, setIsMandateModalOpen] = useState(false);
+
+  const loadMandateAndHealth = () => {
+    fetchHealth().then(setHealth).catch(() => {});
+    fetchActiveMandate().then(setActiveMandate).catch(() => {});
+  };
 
   useEffect(() => {
-    fetchHealth()
-      .then(setHealth)
-      .catch(() => {
-        // Fallback state if server loading
-        setHealth({
-          status: "healthy",
-          service: "asup-roanoke-api",
-          version: "1.0.0",
-          mandate_code: "ROA-SMB-01",
-          mandate_status: "ACTIVE",
-          allow_paid_enrichment: true,
-          days_remaining_in_mandate_cycle: 50,
-          timestamp: new Date().toISOString(),
-        });
-      });
+    loadMandateAndHealth();
   }, []);
 
   return (
@@ -64,14 +61,28 @@ export default function Navbar() {
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-bold tracking-tight text-white text-base">
-                  ASUP ROANOKE
+                  ASUP NATIONWIDE
                 </span>
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800">
-                  ROA-SMB-01
-                </span>
+                {/* Interactive Mandate & Budget Switcher */}
+                <button
+                  type="button"
+                  onClick={() => setIsMandateModalOpen(true)}
+                  className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-800/80 transition cursor-pointer text-[11px] font-mono group"
+                  title="Click to change target state, counties, or budget box"
+                >
+                  <MapPin className="w-3 h-3 text-emerald-400 group-hover:scale-110 transition-transform" />
+                  <span className="font-semibold">
+                    {activeMandate?.target_states.join(",") || "VA"} Market
+                  </span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-300">
+                    &lt;= ${(parseFloat(activeMandate?.max_price_usd || "5000000") / 1000000).toFixed(1)}M Box
+                  </span>
+                  <span className="text-[10px] text-emerald-300 underline ml-1">Change</span>
+                </button>
               </div>
-              <p className="text-xs text-slate-400">
-                Roanoke City (51770) & County (51161) Family Office Underwriter
+              <p className="text-[11px] text-slate-400 truncate max-w-xs sm:max-w-md">
+                {activeMandate?.mandate_name || "Target Acquisition Mandate & Strategic Budget Engine"}
               </p>
             </div>
           </div>
@@ -104,20 +115,34 @@ export default function Navbar() {
 
           {/* Mandate Health Pill */}
           <div className="hidden lg:flex items-center space-x-3 text-xs font-mono">
+            <button
+              onClick={() => setIsMandateModalOpen(true)}
+              className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition"
+            >
+              <Compass className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Mandate Box</span>
+            </button>
+            <span className="text-slate-500">|</span>
             <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-300">
               <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
               <span>SOP 50 10 8.1</span>
             </div>
-            <span className="text-slate-500">|</span>
-            <div className="text-slate-400">
-              Cycle:{" "}
-              <span className="text-emerald-400 font-semibold">
-                {health?.mandate_status || "ACTIVE"}
-              </span>
-            </div>
           </div>
         </div>
       </div>
+
+      {/* Strategic Location & Budget Mandate Modal */}
+      <MandateSetupModal
+        isOpen={isMandateModalOpen}
+        onClose={() => setIsMandateModalOpen(false)}
+        onSuccess={(profile) => {
+          setActiveMandate(profile);
+          // Reload window to refresh all page components with new market deals
+          if (typeof window !== "undefined") {
+            window.location.reload();
+          }
+        }}
+      />
     </header>
   );
 }

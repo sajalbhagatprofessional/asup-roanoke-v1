@@ -7,7 +7,10 @@ import {
   DocketIngestResponse,
   ExternalFetchResponse,
   HealthStatus,
+  MandateProfile,
+  MetroPresetInfo,
   SBALenderPackBundle,
+  StateGeoInfo,
   TeamRole,
 } from "./types";
 
@@ -225,4 +228,55 @@ export async function fetchExternalListings(
   if (!res.ok) throw new Error(`External listing fetch failed: ${res.statusText}`);
   return res.json();
 }
+
+export async function fetchActiveMandate(): Promise<MandateProfile> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/mandates/active`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch active mandate: ${res.statusText}`);
+  return res.json();
+}
+
+export async function configureMandate(
+  profile: MandateProfile
+): Promise<{ status: string; message: string; profile: MandateProfile }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/mandates/configure`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(profile),
+  });
+  if (!res.ok) throw new Error(`Failed to configure mandate: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchStatesAndPresets(): Promise<{
+  states: StateGeoInfo[];
+  metro_presets: MetroPresetInfo[];
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/geo/states`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch states & presets: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchStateCounties(
+  state: string = "VA"
+): Promise<{ state_code: string; total_counties: number; counties: any[] }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/geo/counties?state=${state}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch counties for ${state}: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchTargetedListings(): Promise<any> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/listings/targeted-fetch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ auto_ingest: true }),
+  });
+  if (!res.ok) throw new Error(`Targeted listing scan failed: ${res.statusText}`);
+  return res.json();
+}
+
 

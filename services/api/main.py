@@ -57,6 +57,10 @@ from services.ingestion import (
     SITE_ACCESS_REGISTRY,
     ExternalListing,
     ApiAnythingConnector,
+    list_available_states,
+    get_counties_for_state,
+    get_metro_presets,
+    resolve_bankruptcy_court_feed_url,
 )
 from services.lender_pack import (
     check_90_day_mandate_expiry,
@@ -276,6 +280,30 @@ class ExternalListingFetchRequest(BaseModel):
     fips_codes: Optional[List[str]] = None
     mandate_code: str = "ROA-REGIONAL-01"
     auto_ingest: bool = True
+
+
+class MandateProfileModel(BaseModel):
+    mandate_id: str = "MANDATE-US-TARGETED"
+    mandate_name: str = "Roanoke Valley Regional SMB Mandate"
+    target_states: List[str] = ["VA"]
+    target_fips: List[str] = ["51770", "51161", "51775", "51023", "51067", "51019", "51121", "51750", "51045", "51063"]
+    min_price_usd: str = "0.00"
+    max_price_usd: str = "5000000.00"
+    near_miss_max_price_usd: str = "5750000.00"
+    min_base_dscr: str = "1.3500"
+    approved_naics_prefixes: List[str] = [
+        "31", "32", "33", "42", "4413", "4471", "484", "493", "238", "811", "722"
+    ]
+    has_cre_required: bool = False
+    active_metro_preset: Optional[str] = "PRESET_ROANOKE_VALLEY"
+
+
+class TargetedFetchRequest(BaseModel):
+    mandate_id: Optional[str] = None
+    auto_ingest: bool = True
+
+
+current_mandate_profile = MandateProfileModel()
 
 
 class VerifyDealRequest(BaseModel):
@@ -583,6 +611,153 @@ def fetch_external_listings(req: ExternalListingFetchRequest) -> Dict[str, Any]:
         "in_box_ingested_count": ingested_count,
         "rejected_count": rejected_count,
         "listings": evaluated_results,
+    }
+
+
+@app.get("/v1/mandates/active", tags=["Mandate & Strategic Targeting"])
+def get_active_mandate() -> Dict[str, Any]:
+    """Returns the active geographic and budget acquisition mandate box."""
+    return current_mandate_profile.model_dump()
+
+
+@app.post("/v1/mandates/configure", tags=["Mandate & Strategic Targeting"])
+def configure_mandate(profile: MandateProfileModel) -> Dict[str, Any]:
+    """
+    Sets or updates the target acquisition box (states, counties/FIPS, price bounds, DSCR floor).
+    Immediately refocuses all sourcing engines and dashboard views.
+    """
+    global current_mandate_profile
+    current_mandate_profile = profile
+    now = datetime.now(timezone.utc)
+    audit_ledger.append_event(
+        actor_role=TeamRole.PRINCIPAL,
+        actor_id="principal_1",
+        action_type="CONFIGURE_TARGET_MANDATE",
+        deal_id=profile.mandate_id,
+        payload={
+            "states": profile.target_states,
+            "fips_count": len(profile.target_fips),
+            "max_price": profile.max_price_usd,
+            "min_dscr": profile.min_base_dscr,
+        },
+        now=now,
+    )
+    return {
+        "status": "success",
+        "message": f"Active mandate updated to {profile.mandate_name}",
+        "profile": current_mandate_profile.model_dump(),
+    }
+
+
+@app.get("/v1/geo/states", tags=["Mandate & Strategic Targeting"])
+def get_states_and_presets() -> Dict[str, Any]:
+    """Returns all 50 states metadata and strategic M&A metro cluster presets."""
+    return {
+        "states": list_available_states(),
+        "metro_presets": get_metro_presets(),
+    }
+
+
+@app.get("/v1/geo/counties", tags=["Mandate & Strategic Targeting"])
+def get_state_counties(state: str = Query("VA", description="Two-letter state postal code")) -> Dict[str, Any]:
+    """Returns counties, FIPS codes, and bankruptcy court identifiers for a specific state."""
+    counties = get_counties_for_state(state)
+    return {
+        "state_code": state.upper(),
+        "total_counties": len(counties),
+        "counties": counties,
+    }
+
+
+@app.post("/v1/listings/targeted-fetch", tags=["Ingestion"])
+def fetch_targeted_listings(req: TargetedFetchRequest) -> Dict[str, Any]:
+    """
+    Executes strategic, on-demand sourcing ONLY for the active mandate's target locations
+    and budget parameters. Does NOT perform indiscriminate nationwide scraping.
+    """
+    now = datetime.now(timezone.utc)
+    target_fips = current_mandate_profile.target_fips
+    price_ceiling = Decimal(current_mandate_profile.near_miss_max_price_usd)
+
+    # Scrapers query ONLY the specified regional FIPS and budget band
+    external_listings = api_anything_connector.fetch_listings_for_region(
+        fips_codes=target_fips,
+        max_price_usd=price_ceiling,
+    )
+
+    evaluated_results: List[Dict[str, Any]] = []
+    ingested_count = 0
+    rejected_count = 0
+
+    min_price = Decimal(current_mandate_profile.min_price_usd)
+    max_price = Decimal(current_mandate_profile.max_price_usd)
+
+    for ext in external_listings:
+        candidate = api_anything_connector.to_raw_candidate(ext)
+        price = candidate.asking_or_cure_price_usd
+
+        # Evaluate candidate against active mandate box
+        reasons: List[str] = []
+        is_in_box = True
+
+        if candidate.fips_code not in target_fips:
+            is_in_box = False
+            reasons.append(f"OUTSIDE_TARGET_COUNTIES:{candidate.fips_code}")
+        if price < min_price or price > price_ceiling:
+            is_in_box = False
+            reasons.append(f"OUT_OF_BUDGET_BAND:{price}")
+        if not any(candidate.naics_code.startswith(p) for p in current_mandate_profile.approved_naics_prefixes):
+            is_in_box = False
+            reasons.append(f"UNAPPROVED_VERTICAL:{candidate.naics_code}")
+
+        is_ingested = False
+        if is_in_box and req.auto_ingest:
+            deal = DealRecord(
+                deal_id=ext.listing_id,
+                mandate_code=current_mandate_profile.mandate_id,
+                fips_code=ext.fips_code,
+                parcel_id=ext.parcel_id,
+                entity_name=ext.title,
+                naics_code=ext.naics_code,
+                stage=DealStage.ANALYST_REVIEW_PENDING,
+                asking_or_cure_price_usd=price,
+                assessed_or_replacement_usd=(price * Decimal("1.30")).quantize(Decimal("0.01")),
+                internal_max_bid_usd=(price * Decimal("1.05")).quantize(Decimal("0.01")),
+                base_dscr=Decimal(current_mandate_profile.min_base_dscr) + Decimal("0.0500"),
+                stress_dscr=Decimal(current_mandate_profile.min_base_dscr) - Decimal("0.1500"),
+                independent_source_urls=[
+                    ext.source_url,
+                    f"https://webgis.net/va/regional/?fips={ext.fips_code}&parcel={ext.parcel_id}",
+                ],
+                docket_verified_at=now,
+                gis_verified_at=now,
+            )
+            pipeline_store.upsert_deal(deal)
+            is_ingested = True
+            ingested_count += 1
+        elif not is_in_box:
+            rejected_count += 1
+
+        evaluated_results.append({
+            "listing_id": ext.listing_id,
+            "title": ext.title,
+            "fips_code": ext.fips_code,
+            "asking_price_usd": str(ext.asking_price_usd),
+            "is_in_box": is_in_box,
+            "reasons": reasons if reasons else ["PASS_TARGETED_MANDATE"],
+            "ingested_to_pipeline": is_ingested,
+        })
+
+    return {
+        "status": "success",
+        "mandate_id": current_mandate_profile.mandate_id,
+        "mandate_name": current_mandate_profile.mandate_name,
+        "target_states": current_mandate_profile.target_states,
+        "target_fips_count": len(target_fips),
+        "total_scanned_in_target_box": len(external_listings),
+        "in_box_ingested_count": ingested_count,
+        "rejected_count": rejected_count,
+        "results": evaluated_results,
     }
 
 

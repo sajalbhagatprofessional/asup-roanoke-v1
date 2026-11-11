@@ -160,3 +160,39 @@ export interface DealMemo {
   counsel_signed_by?: string;
   cpa_signed_by?: string;
 }
+
+export interface MandateProfile {
+  mandate_id: string;
+  mandate_name: string;
+  target_states: string[];
+  target_fips: string[];
+  min_price_usd: string;
+  max_price_usd: string;
+  near_miss_max_price_usd: string;
+  min_base_dscr: string;
+  approved_naics_prefixes: string[];
+  has_cre_required: boolean;
+  active_metro_preset?: string;
+}
+
+export interface StateGeoInfo {
+  state_code: string;
+  state_name: string;
+  fips_prefix: string;
+  bankruptcy_districts: string[];
+  county_count: number;
+  public_notice_portal: string;
+}
+
+export interface MetroPresetInfo {
+  preset_id: string;
+  name: string;
+  state_code: string;
+  description: string;
+  counties: {
+    fips_code: string;
+    county_name: string;
+    state_code: string;
+    bankruptcy_court_id: string;
+  }[];
+}
