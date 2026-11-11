@@ -21,6 +21,7 @@ export default function LenderPackPage() {
   const [loading, setLoading] = useState(true);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [selectedOsintDeal, setSelectedOsintDeal] = useState<Deal | null>(null);
+  const [mobileActiveView, setMobileActiveView] = useState<"QUEUE" | "PACK">("QUEUE");
   const [lenderPack, setLenderPack] = useState<SBALenderPackBundle | null>(null);
   const [packLoading, setPackLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -47,6 +48,7 @@ export default function LenderPackPage() {
 
   const handleExportPack = async (deal: Deal) => {
     setSelectedDeal(deal);
+    setMobileActiveView("PACK");
     setPackLoading(true);
     setError(null);
     try {
@@ -115,13 +117,44 @@ export default function LenderPackPage() {
         </div>
       </div>
 
+      {/* Mobile Master-Detail Segmented Switcher */}
+      <div className="lg:hidden flex p-1 bg-slate-900 border border-slate-800 rounded-2xl">
+        <button
+          type="button"
+          onClick={() => setMobileActiveView("QUEUE")}
+          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition ${
+            mobileActiveView === "QUEUE"
+              ? "bg-slate-800 text-white shadow-sm"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          Approved Deals ({deals.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileActiveView("PACK")}
+          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition ${
+            mobileActiveView === "PACK"
+              ? "bg-blue-900/90 text-white shadow-sm"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          Sanitized Lender Pack
+        </button>
+      </div>
+
       {/* Main Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: LOI Deals List */}
-        <div className="lg:col-span-5 space-y-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Approved LOI Deals ({deals.length})
-          </h2>
+        <div className={`lg:col-span-5 space-y-4 ${mobileActiveView === "PACK" ? "hidden lg:block" : "block"}`}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Approved LOI Deals ({deals.length})
+            </h2>
+            <span className="text-[11px] text-slate-500 lg:hidden">
+              Tap card to export pack
+            </span>
+          </div>
 
           {loading ? (
             <div className="p-8 text-center text-slate-500 font-mono text-xs">
@@ -136,7 +169,7 @@ export default function LenderPackPage() {
               <div
                 key={deal.deal_id}
                 onClick={() => handleExportPack(deal)}
-                className={`cursor-pointer rounded-xl transition ${
+                className={`cursor-pointer rounded-2xl transition ${
                   selectedDeal?.deal_id === deal.deal_id
                     ? "ring-2 ring-blue-500 shadow-md"
                     : "opacity-80 hover:opacity-100"
@@ -155,7 +188,7 @@ export default function LenderPackPage() {
         </div>
 
         {/* Right Column: Sanitized Pack Exporter & Markdown Viewer */}
-        <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-xl p-6 shadow-xl">
+        <div className={`lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl ${mobileActiveView === "QUEUE" ? "hidden lg:block" : "block"}`}>
           <div className="flex items-center justify-between pb-4 border-b border-slate-800">
             <div className="flex items-center space-x-3">
               <div className="w-9 h-9 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center">

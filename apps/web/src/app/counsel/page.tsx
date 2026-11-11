@@ -19,6 +19,7 @@ export default function CounselReviewPage() {
   const [loading, setLoading] = useState(true);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [selectedOsintDeal, setSelectedOsintDeal] = useState<Deal | null>(null);
+  const [mobileActiveView, setMobileActiveView] = useState<"QUEUE" | "FORM">("QUEUE");
 
   // Form state for Counsel Statutory Audit
   const [noticePubDate, setNoticePubDate] = useState("2026-11-01");
@@ -119,13 +120,44 @@ export default function CounselReviewPage() {
         </div>
       )}
 
+      {/* Mobile Master-Detail Segmented Switcher */}
+      <div className="lg:hidden flex p-1 bg-slate-900 border border-slate-800 rounded-2xl">
+        <button
+          type="button"
+          onClick={() => setMobileActiveView("QUEUE")}
+          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition ${
+            mobileActiveView === "QUEUE"
+              ? "bg-slate-800 text-white shadow-sm"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          Diligence Queue ({deals.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileActiveView("FORM")}
+          className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition ${
+            mobileActiveView === "FORM"
+              ? "bg-indigo-900/90 text-white shadow-sm"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          Audit Checklist &amp; Form
+        </button>
+      </div>
+
       {/* Main Review Layout: Split Deal Selector and Statutory Audit Form */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Deal Selector */}
-        <div className="lg:col-span-5 space-y-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Diligence Queue ({deals.length} Deals)
-          </h2>
+        <div className={`lg:col-span-5 space-y-4 ${mobileActiveView === "FORM" ? "hidden lg:block" : "block"}`}>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Diligence Queue ({deals.length} Deals)
+            </h2>
+            <span className="text-[11px] text-slate-500 lg:hidden">
+              Tap card to audit
+            </span>
+          </div>
 
           {loading ? (
             <div className="p-8 text-center text-slate-500 font-mono text-xs">
@@ -139,11 +171,14 @@ export default function CounselReviewPage() {
             deals.map((deal) => (
               <div
                 key={deal.deal_id}
-                onClick={() => setSelectedDeal(deal)}
-                className={`cursor-pointer rounded-xl transition ${
+                onClick={() => {
+                  setSelectedDeal(deal);
+                  setMobileActiveView("FORM");
+                }}
+                className={`cursor-pointer rounded-2xl transition ${
                   selectedDeal?.deal_id === deal.deal_id
                     ? "ring-2 ring-indigo-500 shadow-md"
-                    : "opacity-75 hover:opacity-100"
+                    : "opacity-80 hover:opacity-100"
                 }`}
               >
                 <DealCard
@@ -157,7 +192,7 @@ export default function CounselReviewPage() {
         </div>
 
         {/* Right Column: Statutory Checklist & Review Form */}
-        <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-xl p-6 shadow-xl">
+        <div className={`lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl ${mobileActiveView === "QUEUE" ? "hidden lg:block" : "block"}`}>
           <div className="flex items-center space-x-3 pb-4 border-b border-slate-800">
             <div className="w-9 h-9 rounded-lg bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center">
               <Scale className="w-5 h-5 text-indigo-400" />
@@ -336,7 +371,7 @@ export default function CounselReviewPage() {
               <button
                 type="submit"
                 disabled={submitting || !selectedDeal}
-                className="px-5 py-2.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 transition shadow-sm"
+                className="apple-press w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 transition shadow-sm min-h-[42px] sm:min-h-0 text-center"
               >
                 {submitting ? "Evaluating Basis..." : "Execute Va. Code § 55.1-321 Audit"}
               </button>

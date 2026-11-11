@@ -60,25 +60,29 @@ export default function ResourceAccessModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
       role="dialog"
       aria-modal="true"
     >
+      {/* Modal Dialog Card (Apple Bottom Sheet on Mobile, Dialog on Desktop) */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-4xl max-h-[86vh] flex flex-col bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden font-sans text-slate-100"
+        className="relative w-full max-w-4xl max-h-[92vh] sm:max-h-[86vh] flex flex-col bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden font-sans text-slate-100 animate-slideUp sm:animate-none"
       >
+        {/* Apple iOS Bottom Sheet Drag Handle */}
+        <div className="w-12 h-1.5 bg-slate-700/70 rounded-full mx-auto mt-2 sm:hidden shrink-0" />
+
         {/* Fixed Header */}
-        <div className="shrink-0 p-4 sm:p-5 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-blue-950/80 border border-blue-800/80 rounded-xl text-blue-400">
-              <Key className="w-5 h-5" />
+        <div className="shrink-0 p-3.5 sm:p-5 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between gap-3">
+          <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+            <div className="p-2 sm:p-2.5 bg-blue-950/80 border border-blue-800/80 rounded-xl text-blue-400 shrink-0">
+              <Key className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                Resource Access &amp; Physical Account Requirements
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
+                Resource Access &amp; Account Requirements
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
                 API-Anything listing connections &amp; lawful access protocol audit
               </p>
             </div>
@@ -86,7 +90,7 @@ export default function ResourceAccessModal({
           <button
             onClick={onClose}
             aria-label="Close modal"
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+            className="apple-press p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -183,14 +187,14 @@ export default function ResourceAccessModal({
           ) : null}
         </div>
 
-        {/* Fixed Sticky Footer */}
-        <div className="shrink-0 p-3.5 sm:p-4 border-t border-slate-800 bg-slate-900/95 flex items-center justify-between">
-          <span className="text-xs text-slate-400 font-mono">
+        {/* Fixed Sticky Footer (Apple Safe-Area & Touch Optimized) */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-slate-800 bg-slate-900/95 flex flex-col sm:flex-row items-center justify-between gap-3 pb-safe sm:pb-4">
+          <span className="hidden sm:inline text-xs text-slate-400 font-mono">
             Protected by Lawful Circuit Breaker (24h lock on HTTP 403 / Akamai block)
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium rounded-lg transition cursor-pointer"
+            className="apple-press w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium rounded-xl transition cursor-pointer min-h-[40px] sm:min-h-0 text-center"
           >
             Close Audit
           </button>

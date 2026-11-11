@@ -257,31 +257,34 @@ export default function AnalystPipelinePage() {
         onClose={() => setIsAccessModalOpen(false)}
       />
 
-      {/* Verify & Promote Modal */}
+      {/* Verify & Promote Modal (Apple Bottom Sheet on Mobile, Dialog on Desktop) */}
       {verifyModalDeal && (
         <div
           onClick={() => setVerifyModalDeal(null)}
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 animate-fadeIn"
           role="dialog"
           aria-modal="true"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full max-h-[86vh] flex flex-col shadow-2xl overflow-hidden"
+            className="bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[86vh] flex flex-col shadow-2xl overflow-hidden animate-slideUp sm:animate-none font-sans"
           >
+            {/* Apple iOS Bottom Sheet Drag Handle */}
+            <div className="w-12 h-1.5 bg-slate-700/70 rounded-full mx-auto mt-2 sm:hidden shrink-0" />
+
             {/* Modal Header */}
-            <div className="shrink-0 p-4 sm:p-5 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold text-white tracking-tight">
+            <div className="shrink-0 p-3.5 sm:p-5 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
                   Analyst Lead Verification Gate
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 truncate">
                   Verify Deal: <span className="font-mono text-emerald-400">{verifyModalDeal.deal_id}</span> ({verifyModalDeal.entity_name})
                 </p>
               </div>
               <button
                 onClick={() => setVerifyModalDeal(null)}
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+                className="apple-press p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition shrink-0"
               >
                 ✕
               </button>
@@ -307,7 +310,7 @@ export default function AnalystPipelinePage() {
                     value={secondSourceUrl}
                     onChange={(e) => setSecondSourceUrl(e.target.value)}
                     placeholder="https://open-data-portal-roanokeva.hub.arcgis.com/datasets/parcels"
-                    className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                    className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white font-mono text-base sm:text-xs focus:outline-none focus:border-emerald-500"
                     required
                   />
                 </div>
@@ -315,20 +318,20 @@ export default function AnalystPipelinePage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="shrink-0 p-3.5 sm:p-4 border-t border-slate-800 bg-slate-900/95 flex justify-end space-x-2">
+            <div className="shrink-0 p-3 sm:p-4 border-t border-slate-800 bg-slate-900/95 flex items-center justify-end space-x-2 pb-safe sm:pb-4">
               <button
                 type="button"
                 onClick={() => setVerifyModalDeal(null)}
-                className="px-3.5 py-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold transition"
+                className="apple-press flex-1 sm:flex-initial px-4 py-2.5 sm:py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold transition min-h-[40px] sm:min-h-0 text-center"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 form="verify-form"
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold text-white shadow-sm text-xs transition cursor-pointer"
+                className="apple-press flex-1 sm:flex-initial px-4 py-2.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-white shadow-sm text-xs transition cursor-pointer min-h-[40px] sm:min-h-0 text-center"
               >
-                Confirm Sign-Off &amp; Promote
+                Promote
               </button>
             </div>
           </div>

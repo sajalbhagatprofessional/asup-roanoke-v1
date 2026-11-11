@@ -168,49 +168,52 @@ export default function InstitutionalAladdinModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
       role="dialog"
       aria-modal="true"
     >
-      {/* Modal Dialog Card - Strictly Clamped to max-h-[86vh] */}
+      {/* Modal Dialog Card (Apple Bottom Sheet on Mobile, Dialog on Desktop) */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-5xl max-h-[86vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden font-sans"
+        className="relative w-full max-w-5xl max-h-[92vh] sm:max-h-[86vh] flex flex-col bg-zinc-950 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden font-sans text-zinc-100 animate-slideUp sm:animate-none"
       >
+        {/* Apple iOS Bottom Sheet Drag Handle */}
+        <div className="w-12 h-1.5 bg-zinc-700/70 rounded-full mx-auto mt-2 sm:hidden shrink-0" />
+
         {/* Fixed Top Terminal Header */}
-        <div className="shrink-0 p-4 sm:p-5 border-b border-zinc-800 bg-gradient-to-r from-zinc-900 via-zinc-950 to-black flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+        <div className="shrink-0 p-3.5 sm:p-5 border-b border-zinc-800 bg-gradient-to-r from-zinc-900 via-zinc-950 to-black flex items-center justify-between gap-3">
+          <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0">
               <span className="text-emerald-400 font-bold text-xs tracking-wider">BLK</span>
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">
-                  ALADDIN INSTITUTIONAL TERMINAL
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <h2 className="text-sm sm:text-lg font-bold text-white tracking-wide truncate">
+                  ALADDIN TERMINAL
                 </h2>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-950/80 border border-emerald-800 text-emerald-300">
-                  Risk &amp; Portfolio Intelligence
+                <span className="px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-mono font-semibold bg-emerald-950/80 border border-emerald-800 text-emerald-300 shrink-0">
+                  Risk &amp; Portfolio
                 </span>
               </div>
-              <p className="text-xs text-zinc-400">
-                Multi-Tranche Waterfall • SOFR Sensitivity • Liquidation Floors • Spatial Roll-Ups • Pre-Distress
+              <p className="text-[11px] sm:text-xs text-zinc-400 truncate">
+                Multi-Tranche Waterfall • SOFR Sensitivity • Liquidation Floors • Spatial Roll-Ups
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Close terminal"
-            className="text-zinc-400 hover:text-white p-2 rounded-lg bg-zinc-900/60 hover:bg-zinc-800 transition"
+            className="apple-press text-zinc-400 hover:text-white p-2 rounded-full bg-zinc-900/80 hover:bg-zinc-800 transition shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Fixed Tab Switcher */}
-        <div className="shrink-0 flex items-center space-x-1 px-4 sm:px-6 pt-2.5 border-b border-zinc-800 bg-zinc-950 overflow-x-auto custom-scrollbar">
+        {/* Fixed Tab Switcher (Smooth Momentum Touch Scroll) */}
+        <div className="shrink-0 flex items-center space-x-1 px-3 sm:px-6 pt-2 border-b border-zinc-800 bg-zinc-950 overflow-x-auto no-scrollbar touch-momentum">
           <button
             onClick={() => setActiveTab("WATERFALL")}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
+            className={`px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "WATERFALL"
                 ? "border-emerald-500 text-white bg-zinc-900/80"
                 : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
@@ -221,7 +224,7 @@ export default function InstitutionalAladdinModal({
           </button>
           <button
             onClick={() => setActiveTab("LIQUIDATION")}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
+            className={`px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "LIQUIDATION"
                 ? "border-emerald-500 text-white bg-zinc-900/80"
                 : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
@@ -232,7 +235,7 @@ export default function InstitutionalAladdinModal({
           </button>
           <button
             onClick={() => setActiveTab("ROLLUP")}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
+            className={`px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "ROLLUP"
                 ? "border-emerald-500 text-white bg-zinc-900/80"
                 : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
@@ -243,7 +246,7 @@ export default function InstitutionalAladdinModal({
           </button>
           <button
             onClick={() => setActiveTab("SHADOW")}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
+            className={`px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "SHADOW"
                 ? "border-emerald-500 text-white bg-zinc-900/80"
                 : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
@@ -763,15 +766,15 @@ export default function InstitutionalAladdinModal({
           )}
         </div>
 
-        {/* Fixed Sticky Footer - Always Visible on Any Viewport */}
-        <div className="shrink-0 p-3.5 sm:p-4 border-t border-zinc-800 bg-zinc-900/95 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-zinc-500 font-mono flex items-center space-x-2">
+        {/* Fixed Sticky Footer (Apple Safe-Area & Touch Optimized) */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-zinc-800 bg-zinc-900/95 flex flex-col sm:flex-row items-center justify-between gap-3 pb-safe sm:pb-4">
+          <div className="hidden sm:flex text-xs text-zinc-500 font-mono items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span>Deterministic Pure Decimal Math • Zero Floats • SBA SOP 50 10 8.1 Compliant</span>
           </div>
           <button
             onClick={onClose}
-            className="px-5 py-2 text-xs font-semibold rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white transition cursor-pointer"
+            className="apple-press w-full sm:w-auto px-5 py-2.5 sm:py-2 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white transition cursor-pointer min-h-[40px] sm:min-h-0 text-center"
           >
             Close Terminal
           </button>

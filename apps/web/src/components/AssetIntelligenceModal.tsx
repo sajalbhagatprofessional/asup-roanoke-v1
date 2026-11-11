@@ -94,52 +94,55 @@ export default function AssetIntelligenceModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
       role="dialog"
       aria-modal="true"
     >
-      {/* Viewport-Clamped Modal Card */}
+      {/* Viewport-Clamped Modal Card (Apple Bottom Sheet on Mobile, Dialog on Desktop) */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-5xl max-h-[86vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden font-sans text-zinc-100"
+        className="relative w-full max-w-5xl max-h-[92vh] sm:max-h-[86vh] flex flex-col bg-zinc-950 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden font-sans text-zinc-100 animate-slideUp sm:animate-none"
       >
+        {/* Apple iOS Bottom Sheet Drag Handle */}
+        <div className="w-12 h-1.5 bg-zinc-700/70 rounded-full mx-auto mt-2 sm:hidden shrink-0" />
+
         {/* Fixed Header */}
-        <div className="shrink-0 p-4 sm:p-5 border-b border-zinc-800 bg-gradient-to-r from-zinc-900 via-zinc-950 to-black flex items-start justify-between gap-4">
-          <div className="flex items-start space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0 mt-0.5">
-              <Shield className="w-5 h-5 text-emerald-400" />
+        <div className="shrink-0 p-3.5 sm:p-5 border-b border-zinc-800 bg-gradient-to-r from-zinc-900 via-zinc-950 to-black flex items-start justify-between gap-3">
+          <div className="flex items-start space-x-2.5 sm:space-x-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0 mt-0.5">
+              <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
             </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${signalBadge.style}`}>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                <span className={`text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded-full border ${signalBadge.style}`}>
                   {signalBadge.label}
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                <span className="text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
                   {deal.deal_id}
                 </span>
                 {deal.fips_code && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
+                  <span className="text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
                     FIPS {deal.fips_code} • {deal.county_name || "Regional Market"}
                   </span>
                 )}
                 {deal.basis_ratio && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-800 font-bold">
-                    Basis: {(Number(deal.basis_ratio) * 100).toFixed(0)}% of Replacement Value
+                  <span className="text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-800 font-bold">
+                    Basis: {(Number(deal.basis_ratio) * 100).toFixed(0)}%
                   </span>
                 )}
               </div>
-              <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+              <h2 className="text-base sm:text-xl font-bold text-white tracking-tight leading-snug truncate">
                 {deal.entity_name}
               </h2>
-              <p className="text-xs text-zinc-400 flex items-center gap-1.5 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-zinc-400 flex items-center gap-1.5 mt-0.5">
                 <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>
+                <span className="truncate">
                   {deal.street_address ? `${deal.street_address}, ${deal.city || ""} ${deal.state_code || ""}` : "Verified Regional Asset Location"}
                 </span>
                 {deal.building_sqft && (
                   <>
-                    <span className="text-zinc-600">•</span>
-                    <span className="text-zinc-300">{deal.building_sqft.toLocaleString()} sqft Facility</span>
+                    <span className="text-zinc-600 shrink-0">•</span>
+                    <span className="text-zinc-300 shrink-0">{deal.building_sqft.toLocaleString()} sqft</span>
                   </>
                 )}
               </p>
@@ -148,17 +151,17 @@ export default function AssetIntelligenceModal({
           <button
             onClick={onClose}
             aria-label="Close dossier"
-            className="text-zinc-400 hover:text-white p-2 rounded-lg bg-zinc-900/60 hover:bg-zinc-800 transition shrink-0"
+            className="apple-press text-zinc-400 hover:text-white p-2 rounded-full bg-zinc-900/80 hover:bg-zinc-800 transition shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Fixed Navigation Tabs */}
-        <div className="shrink-0 flex items-center space-x-1 px-4 sm:px-6 pt-2.5 border-b border-zinc-800 bg-zinc-950 overflow-x-auto custom-scrollbar">
+        {/* Fixed Navigation Tabs (Smooth Momentum Scroll) */}
+        <div className="shrink-0 flex items-center space-x-1 px-3 sm:px-6 pt-2 border-b border-zinc-800 bg-zinc-950 overflow-x-auto no-scrollbar touch-momentum">
           <button
             onClick={() => setActiveTab("SUMMARY")}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
+            className={`px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "SUMMARY"
                 ? "border-emerald-500 text-white bg-zinc-900/80"
                 : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
@@ -169,7 +172,7 @@ export default function AssetIntelligenceModal({
           </button>
           <button
             onClick={() => setActiveTab("PROPERTY")}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
+            className={`px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "PROPERTY"
                 ? "border-emerald-500 text-white bg-zinc-900/80"
                 : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
@@ -180,7 +183,7 @@ export default function AssetIntelligenceModal({
           </button>
           <button
             onClick={() => setActiveTab("FINANCIALS")}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
+            className={`px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "FINANCIALS"
                 ? "border-emerald-500 text-white bg-zinc-900/80"
                 : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
@@ -191,7 +194,7 @@ export default function AssetIntelligenceModal({
           </button>
           <button
             onClick={() => setActiveTab("LIQUIDATION")}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
+            className={`px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "LIQUIDATION"
                 ? "border-emerald-500 text-white bg-zinc-900/80"
                 : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
@@ -202,7 +205,7 @@ export default function AssetIntelligenceModal({
           </button>
           <button
             onClick={() => setActiveTab("REGULATORY")}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
+            className={`px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
               activeTab === "REGULATORY"
                 ? "border-emerald-500 text-white bg-zinc-900/80"
                 : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
@@ -597,14 +600,14 @@ export default function AssetIntelligenceModal({
           )}
         </div>
 
-        {/* Fixed Sticky Footer */}
-        <div className="shrink-0 p-3.5 sm:p-4 border-t border-zinc-800 bg-zinc-900/95 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-zinc-500 font-mono flex items-center space-x-2">
+        {/* Fixed Sticky Footer (Apple Safe-Area & Touch Optimized) */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-zinc-800 bg-zinc-900/95 flex flex-col sm:flex-row items-center justify-between gap-3 pb-safe sm:pb-4">
+          <div className="hidden sm:flex text-xs text-zinc-500 font-mono items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             <span>Deterministic Asset Intelligence • SBA SOP 50 10 8.1 Compliant</span>
           </div>
 
-          <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+          <div className="grid grid-cols-2 xs:flex sm:flex items-center gap-2 w-full sm:w-auto justify-end">
             {currentRole === "PRINCIPAL" && (
               <>
                 {onReject && (
@@ -613,7 +616,7 @@ export default function AssetIntelligenceModal({
                       onReject(deal.deal_id);
                       onClose();
                     }}
-                    className="px-3.5 py-2 rounded-lg bg-red-950/60 hover:bg-red-900/60 text-red-300 border border-red-800 text-xs font-semibold transition cursor-pointer"
+                    className="apple-press px-3 py-2 sm:py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/60 text-red-300 border border-red-800 text-xs font-semibold transition cursor-pointer min-h-[38px] sm:min-h-0 text-center"
                   >
                     Reject
                   </button>
@@ -624,9 +627,9 @@ export default function AssetIntelligenceModal({
                       onSendToCounsel(deal.deal_id);
                       onClose();
                     }}
-                    className="px-3.5 py-2 rounded-lg bg-indigo-950/70 hover:bg-indigo-900/70 text-indigo-300 border border-indigo-800 text-xs font-semibold transition cursor-pointer"
+                    className="apple-press px-3 py-2 sm:py-1.5 rounded-xl bg-indigo-950/70 hover:bg-indigo-900/70 text-indigo-300 border border-indigo-800 text-xs font-semibold transition cursor-pointer min-h-[38px] sm:min-h-0 text-center"
                   >
-                    Send to Counsel
+                    Counsel
                   </button>
                 )}
                 {onApprove && (
@@ -635,7 +638,7 @@ export default function AssetIntelligenceModal({
                       onApprove(deal.deal_id);
                       onClose();
                     }}
-                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm cursor-pointer"
+                    className="apple-press px-4 py-2 sm:py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-sm cursor-pointer min-h-[38px] sm:min-h-0 text-center col-span-2 xs:col-auto"
                   >
                     Approve (LOI)
                   </button>
@@ -645,7 +648,7 @@ export default function AssetIntelligenceModal({
 
             <button
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white transition cursor-pointer"
+              className="apple-press px-4 py-2 sm:py-1.5 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white transition cursor-pointer min-h-[38px] sm:min-h-0 text-center col-span-2 xs:col-auto"
             >
               Close Dossier
             </button>

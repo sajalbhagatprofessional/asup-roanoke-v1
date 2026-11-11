@@ -160,25 +160,29 @@ export default function ManualDocketModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
       role="dialog"
       aria-modal="true"
     >
+      {/* Modal Dialog Card (Apple Bottom Sheet on Mobile, Dialog on Desktop) */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl max-h-[86vh] flex flex-col bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden font-sans text-slate-100"
+        className="relative w-full max-w-2xl max-h-[92vh] sm:max-h-[86vh] flex flex-col bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden font-sans text-slate-100 animate-slideUp sm:animate-none"
       >
+        {/* Apple iOS Bottom Sheet Drag Handle */}
+        <div className="w-12 h-1.5 bg-slate-700/70 rounded-full mx-auto mt-2 sm:hidden shrink-0" />
+
         {/* Fixed Header */}
-        <div className="shrink-0 p-4 sm:p-5 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center">
+        <div className="shrink-0 p-3.5 sm:p-5 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between gap-3">
+          <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
               <Upload className="w-4 h-4 text-emerald-400" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white tracking-tight">
-                Manual Docket Dropzone &amp; Ingestion Gate
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
+                Manual Docket Dropzone
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
                 Stage 1 Distress Parsing &amp; Zero-Cost Mandate Gate
               </p>
             </div>
@@ -186,7 +190,7 @@ export default function ManualDocketModal({
           <button
             onClick={onClose}
             aria-label="Close modal"
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+            className="apple-press p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -367,17 +371,17 @@ export default function ManualDocketModal({
           )}
         </div>
 
-        {/* Fixed Sticky Footer */}
-        <div className="shrink-0 p-3.5 sm:p-4 border-t border-slate-800 bg-slate-900/95 flex items-center justify-between">
-          <div className="text-xs text-slate-500 font-mono">
+        {/* Fixed Sticky Footer (Apple Safe-Area & Touch Optimized) */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-slate-800 bg-slate-900/95 flex flex-col sm:flex-row items-center justify-between gap-3 pb-safe sm:pb-4">
+          <div className="hidden sm:block text-xs text-slate-500 font-mono">
             Zero-Cost Mandate Filter • Zero Floating Point Distortion
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition"
+              className="apple-press flex-1 sm:flex-initial px-4 py-2.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition min-h-[40px] sm:min-h-0 text-center"
             >
               Close
             </button>
@@ -385,7 +389,7 @@ export default function ManualDocketModal({
               type="submit"
               form="docket-form"
               disabled={loading}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer"
+              className="apple-press flex-1 sm:flex-initial inline-flex items-center justify-center space-x-2 px-4 py-2.5 sm:py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-sm transition disabled:opacity-50 cursor-pointer min-h-[40px] sm:min-h-0 text-center"
             >
               {loading ? (
                 <>
@@ -394,8 +398,8 @@ export default function ManualDocketModal({
                 </>
               ) : (
                 <>
-                  <span>Ingest &amp; Filter Docket</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span>Ingest Docket</span>
+                  <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                 </>
               )}
             </button>

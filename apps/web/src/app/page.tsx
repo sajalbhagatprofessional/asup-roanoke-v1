@@ -85,19 +85,19 @@ export default function PrincipalDigestPage() {
   return (
     <div className="space-y-6">
       {/* Digest Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 border-b border-slate-800/80 pb-4 sm:pb-5">
         <div>
           <div className="flex items-center space-x-2 text-emerald-400 font-mono text-xs uppercase tracking-wider">
             <Clock className="w-3.5 h-3.5" />
             <span>Monday 07:00 EST Weekly Executive Briefing</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight mt-1 flex items-center space-x-3">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-1 flex flex-wrap items-center gap-2 sm:gap-3">
             <span>Principal Weekly Deal Digest</span>
             <span className="text-xs font-mono font-normal px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
               Max &lt;= 5 Verified Deals
             </span>
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
             Active Mandate: <span className="text-white font-semibold">{activeMandate?.mandate_name || "Target Regional Box"}</span> ({activeMandate?.target_states.join(", ") || "VA"} • {activeMandate?.target_fips.length || 7} Jurisdictions)
           </p>
         </div>
@@ -105,7 +105,7 @@ export default function PrincipalDigestPage() {
         <button
           onClick={() => loadDigest()}
           disabled={loading}
-          className="self-start md:self-auto inline-flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+          className="apple-press self-start sm:self-auto inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition min-h-[38px] sm:min-h-0"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
           <span>Refresh Digest</span>

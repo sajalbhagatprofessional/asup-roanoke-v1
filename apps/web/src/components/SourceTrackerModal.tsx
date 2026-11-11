@@ -146,38 +146,41 @@ export default function SourceTrackerModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
       role="dialog"
       aria-modal="true"
     >
-      {/* Modal Dialog Card - Strictly Clamped to max-h-[86vh] */}
+      {/* Modal Dialog Card (Apple Bottom Sheet on Mobile, Dialog on Desktop) */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-4xl max-h-[86vh] flex flex-col bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden font-sans text-zinc-100"
+        className="relative w-full max-w-4xl max-h-[92vh] sm:max-h-[86vh] flex flex-col bg-zinc-950 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden font-sans text-zinc-100 animate-slideUp sm:animate-none"
       >
+        {/* Apple iOS Bottom Sheet Drag Handle */}
+        <div className="w-12 h-1.5 bg-zinc-700/70 rounded-full mx-auto mt-2 sm:hidden shrink-0" />
+
         {/* Fixed Header */}
-        <div className="shrink-0 p-4 sm:p-5 border-b border-zinc-800 bg-gradient-to-r from-zinc-900 to-zinc-950 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl">
-              <Radio className="w-5 h-5 animate-pulse" />
+        <div className="shrink-0 p-3.5 sm:p-5 border-b border-zinc-800 bg-gradient-to-r from-zinc-900 to-zinc-950 flex items-center justify-between gap-3">
+          <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+            <div className="p-2 sm:p-2.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl shrink-0">
+              <Radio className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">
-                  Location Resource &amp; Connectivity Tracker
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <h2 className="text-sm sm:text-lg font-bold text-white tracking-wide truncate">
+                  Source Connectivity Tracker
                 </h2>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-950 border border-blue-800 text-blue-300 font-semibold">
-                  Health Engine
+                <span className="px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-mono bg-blue-950 border border-blue-800 text-blue-300 font-semibold shrink-0">
+                  Live Engine
                 </span>
               </div>
-              <p className="text-xs text-zinc-400">
-                Active Location Box:{" "}
+              <p className="text-[11px] sm:text-xs text-zinc-400 truncate">
+                Active:{" "}
                 <span className="font-semibold text-zinc-200">
                   {report?.mandate_name || "Target Box"}
                 </span>{" "}
                 ({report?.target_states.join(", ")}) •{" "}
                 <span className="text-zinc-300">
-                  {report?.target_fips.length || 0} Target Jurisdictions
+                  {report?.target_fips.length || 0} Jurisdictions
                 </span>
               </p>
             </div>
@@ -185,7 +188,7 @@ export default function SourceTrackerModal({
           <button
             onClick={onClose}
             aria-label="Close modal"
-            className="text-zinc-400 hover:text-white p-2 rounded-lg bg-zinc-900/60 hover:bg-zinc-800 transition"
+            className="apple-press text-zinc-400 hover:text-white p-2 rounded-full bg-zinc-900/80 hover:bg-zinc-800 transition shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -383,21 +386,21 @@ export default function SourceTrackerModal({
           ) : null}
         </div>
 
-        {/* Fixed Sticky Footer - Always Visible on Any Viewport */}
-        <div className="shrink-0 p-3.5 sm:p-4 border-t border-zinc-800 bg-zinc-900/95 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-zinc-400 font-mono">
+        {/* Fixed Sticky Footer (Apple Safe-Area & Touch Optimized) */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-zinc-800 bg-zinc-900/95 flex flex-col sm:flex-row items-center justify-between gap-3 pb-safe sm:pb-4">
+          <div className="text-[11px] sm:text-xs text-zinc-400 font-mono">
             Last evaluated: {report ? new Date(report.sources[0]?.last_checked_at || "").toLocaleTimeString() : "—"}
           </div>
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              className="apple-press flex-1 sm:flex-initial px-4 py-2.5 sm:py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer min-h-[40px] sm:min-h-0 text-center"
             >
               {refreshing ? (
                 <>
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  <span>Pinging Sources...</span>
+                  <span>Pinging...</span>
                 </>
               ) : (
                 <>
@@ -408,7 +411,7 @@ export default function SourceTrackerModal({
             </button>
             <button
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white transition cursor-pointer"
+              className="apple-press flex-1 sm:flex-initial px-4 py-2.5 sm:py-2 text-xs font-semibold rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white transition cursor-pointer min-h-[40px] sm:min-h-0 text-center"
             >
               Done
             </button>

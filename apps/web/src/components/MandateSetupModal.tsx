@@ -191,37 +191,40 @@ export default function MandateSetupModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-fadeIn"
       role="dialog"
       aria-modal="true"
     >
-      {/* Modal Dialog Card - Strictly Clamped to max-h-[86vh] */}
+      {/* Modal Dialog Card (Apple Bottom Sheet on Mobile, Dialog on Desktop) */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-4xl max-h-[86vh] flex flex-col bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden font-sans text-slate-100"
+        className="relative w-full max-w-4xl max-h-[92vh] sm:max-h-[86vh] flex flex-col bg-slate-900 border-t sm:border border-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden font-sans text-slate-100 animate-slideUp sm:animate-none"
       >
+        {/* Apple iOS Bottom Sheet Drag Handle */}
+        <div className="w-12 h-1.5 bg-slate-700/70 rounded-full mx-auto mt-2 sm:hidden shrink-0" />
+
         {/* Fixed Header */}
-        <div className="shrink-0 p-4 sm:p-5 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-emerald-950/80 border border-emerald-800/80 rounded-xl text-emerald-400">
-              <Compass className="w-5 h-5" />
+        <div className="shrink-0 p-3.5 sm:p-5 border-b border-slate-800 bg-slate-900/95 flex items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+            <div className="p-2 sm:p-2.5 bg-emerald-950/80 border border-emerald-800/80 rounded-xl text-emerald-400 shrink-0">
+              <Compass className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                <span>Target Acquisition Mandate &amp; Budget Setup</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300 font-semibold">
-                  Zero-Waste Sourcing
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm sm:text-lg font-bold text-white tracking-tight flex items-center gap-1.5 sm:gap-2 truncate">
+                <span className="truncate">Target Acquisition Mandate &amp; Budget</span>
+                <span className="text-[9px] sm:text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300 font-semibold shrink-0">
+                  Targeted Sourcing
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
-                Pollers query strictly the selected target counties and budget bounds. Zero wasted nationwide requests.
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
+                Configure target state, counties &amp; budget box. Zero wasted nationwide requests.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Close modal"
-            className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+            className="apple-press p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -396,7 +399,7 @@ export default function MandateSetupModal({
                   <span>Define Purchase / Cure Price Budget Box:</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                   <div>
                     <label className="block text-[11px] text-slate-400 font-mono mb-1">
                       Minimum Budget ($ USD)
@@ -407,7 +410,7 @@ export default function MandateSetupModal({
                       value={minPrice}
                       onChange={(e) => setMinPrice(e.target.value)}
                       required
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-base sm:text-xs focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
@@ -421,7 +424,7 @@ export default function MandateSetupModal({
                       value={maxPrice}
                       onChange={(e) => setMaxPrice(e.target.value)}
                       required
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-base sm:text-xs focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
@@ -470,17 +473,17 @@ export default function MandateSetupModal({
           )}
         </div>
 
-        {/* Fixed Sticky Footer - Always Visible on Any Viewport */}
-        <div className="shrink-0 p-3.5 sm:p-4 border-t border-slate-800 bg-slate-900/95 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs text-slate-400 font-mono flex items-center flex-wrap gap-2">
+        {/* Fixed Sticky Footer (Apple Safe-Area & Touch Optimized) */}
+        <div className="shrink-0 p-3 sm:p-4 border-t border-slate-800 bg-slate-900/95 flex flex-col sm:flex-row items-center justify-between gap-3 pb-safe sm:pb-4">
+          <div className="text-[11px] sm:text-xs text-slate-400 font-mono flex items-center flex-wrap gap-1.5 sm:gap-2">
             <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 font-bold border border-slate-700">
-              {selectedFips.length} Counties Selected
+              {selectedFips.length} Counties
             </span>
             <span className="text-slate-500">•</span>
             <span className="text-slate-300 font-bold">{selectedState} Market</span>
             <span className="text-slate-500">•</span>
             <span className="text-slate-300">
-              ${(parseFloat(minPrice || "0") / 1000).toFixed(0)}k – ${(parseFloat(maxPrice || "0") / 1000000).toFixed(1)}M Box
+              ${(parseFloat(minPrice || "0") / 1000).toFixed(0)}k – ${(parseFloat(maxPrice || "0") / 1000000).toFixed(1)}M
             </span>
           </div>
 
@@ -489,7 +492,7 @@ export default function MandateSetupModal({
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition disabled:opacity-50"
+              className="apple-press flex-1 sm:flex-initial px-4 py-2.5 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition disabled:opacity-50 min-h-[40px] sm:min-h-0 text-center"
             >
               Cancel
             </button>
@@ -497,17 +500,17 @@ export default function MandateSetupModal({
               type="submit"
               form="mandate-form"
               disabled={submitting || selectedFips.length === 0}
-              className="inline-flex items-center space-x-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer"
+              className="apple-press flex-1 sm:flex-initial inline-flex items-center justify-center space-x-2 px-5 py-2.5 sm:py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-sm transition disabled:opacity-50 cursor-pointer min-h-[40px] sm:min-h-0 text-center"
             >
               {submitting ? (
                 <>
                   <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  <span>Targeting &amp; Scanning...</span>
+                  <span>Scanning...</span>
                 </>
               ) : (
                 <>
-                  <span>Activate Market &amp; Scan Deals</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <span className="truncate">Activate Market</span>
+                  <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                 </>
               )}
             </button>

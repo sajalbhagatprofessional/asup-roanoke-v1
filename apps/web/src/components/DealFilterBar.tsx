@@ -117,8 +117,8 @@ export default function DealFilterBar({
 
   return (
     <div className="space-y-3 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
-      {/* Search Input & Quick Controls */}
-      <div className="flex flex-col sm:flex-row items-center gap-3">
+      {/* Search Input & Quick Controls (Apple Mobile Ergonomics) */}
+      <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-3">
         <form onSubmit={handleSearchSubmit} className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -126,7 +126,7 @@ export default function DealFilterBar({
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search debtor entity, parcel GPIN, docket, or keyword..."
-            className="w-full pl-9 pr-9 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 font-mono transition"
+            className="w-full pl-9 pr-9 py-2.5 sm:py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-base sm:text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 font-mono transition min-h-[42px] sm:min-h-0"
           />
           {searchInput && (
             <button
@@ -135,9 +135,9 @@ export default function DealFilterBar({
                 setSearchInput("");
                 onFilterChange({ ...filters, q: undefined });
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           )}
         </form>
@@ -147,7 +147,7 @@ export default function DealFilterBar({
           <button
             type="button"
             onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-            className={`inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition ${
+            className={`apple-press flex-1 sm:flex-initial inline-flex items-center justify-center space-x-1.5 px-3 py-2.5 sm:py-2 rounded-xl text-xs font-semibold border transition min-h-[42px] sm:min-h-0 ${
               hasActiveFilters || isDrawerOpen
                 ? "bg-emerald-950/80 text-emerald-300 border-emerald-700"
                 : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
@@ -161,11 +161,11 @@ export default function DealFilterBar({
           </button>
 
           {/* Sort Selector */}
-          <div className="relative">
+          <div className="relative flex-1 sm:flex-initial">
             <select
               value={filters.sort_by || "dscr_desc"}
               onChange={(e) => onFilterChange({ ...filters, sort_by: e.target.value })}
-              className="px-3 py-2 bg-slate-800 text-slate-200 border border-slate-700 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-500"
+              className="apple-press w-full sm:w-auto px-3 py-2.5 sm:py-2 bg-slate-800 text-slate-200 border border-slate-700 rounded-xl text-base sm:text-xs font-medium focus:outline-none focus:border-emerald-500 min-h-[42px] sm:min-h-0 cursor-pointer"
             >
               <option value="dscr_desc">Sort: Highest DSCR</option>
               <option value="basis_asc">Sort: Lowest Basis Ratio (&lt;=70%)</option>
@@ -177,12 +177,12 @@ export default function DealFilterBar({
         </div>
       </div>
 
-      {/* Quick Chips Row */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-thin">
+      {/* Quick Chips Row (Touch Momentum Scrolling) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar touch-momentum">
         <span className="text-slate-400 text-[11px] font-mono mr-1 shrink-0">Presets:</span>
         <button
           onClick={() => handleQuickPreset("ALL")}
-          className={`px-2.5 py-1 rounded-lg shrink-0 transition font-medium text-[11px] ${
+          className={`apple-press px-2.5 py-1 rounded-lg shrink-0 transition font-medium text-[11px] ${
             !hasActiveFilters
               ? "bg-slate-700 text-white font-bold"
               : "bg-slate-800/80 text-slate-400 hover:text-white"
