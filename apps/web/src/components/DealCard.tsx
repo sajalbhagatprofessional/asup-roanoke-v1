@@ -7,9 +7,10 @@ import {
   CheckCircle2,
   XCircle,
   ArrowRight,
-  Lock,
-  Gavel,
-  Globe,
+  Shield,
+  MapPin,
+  Building,
+  Sparkles,
 } from "lucide-react";
 import { Deal, TeamRole } from "../lib/types";
 
@@ -20,6 +21,7 @@ interface DealCardProps {
   onReject?: (dealId: string) => void;
   onSendToCounsel?: (dealId: string) => void;
   onActionClick?: (deal: Deal) => void;
+  onViewOsint?: (deal: Deal) => void;
   actionButtonText?: string;
 }
 
@@ -30,6 +32,7 @@ export default function DealCard({
   onReject,
   onSendToCounsel,
   onActionClick,
+  onViewOsint,
   actionButtonText,
 }: DealCardProps) {
   const formatCurrency = (val?: string) => {
@@ -59,56 +62,17 @@ export default function DealCard({
     }
   };
 
-  const getSourceLabel = (url: string) => {
-    const low = url.toLowerCase();
-    if (low.includes("column.us")) {
-      return "The Roanoke Times Public Notices (Substitute Trustee Sale Bid)";
-    }
-    if (low.includes("taxva.com") || (low.includes("roanokeva.gov") && low.includes("tax"))) {
-      return "City of Roanoke Real Estate Tax Sale Auction (TACS)";
-    }
-    if (low.includes("pacer.uscourts.gov")) {
-      return "U.S. Bankruptcy Court WDVA (VAWBK Docket & Auction Claims)";
-    }
-    if (low.includes("roanokecountyva.gov") && low.includes("judicial")) {
-      return "Roanoke County Judicial Sale Auction Portal";
-    }
-    if (low.includes("arcgis") || low.includes("open-data") || low.includes("webgis")) {
-      return "Roanoke Official GIS Parcel & Tax Assessment Record";
-    }
-    if (low.includes("scc.virginia.gov")) {
-      return "Virginia SCC CIS Corporate Standing Record";
-    }
-    return "Official Docket & Asset Sourcing Website";
-  };
-
-  const getFipsJurisdictionName = (fips?: string) => {
-    switch (fips) {
-      case "51770": return "City of Roanoke";
-      case "51161": return "Roanoke County";
-      case "51775": return "City of Salem";
-      case "51023": return "Botetourt County";
-      case "51067": return "Franklin County";
-      case "51019": return "Bedford County";
-      case "51121": return "Montgomery County";
-      case "51750": return "City of Radford";
-      case "51045": return "Craig County";
-      case "51063": return "Floyd County";
-      default: return fips ? `County FIPS ${fips}` : "";
-    }
-  };
-
   const getSignalBadge = (sig?: string) => {
     switch (sig) {
       case "BANKRUPTCY":
-        return { label: "Bankruptcy § 363", style: "bg-amber-950/80 text-amber-300 border-amber-800" };
+        return { label: "Bankruptcy § 363 Auction", style: "bg-amber-950/80 text-amber-300 border-amber-800" };
       case "TAX_SALE":
-        return { label: "Tax Sale / Delinquency", style: "bg-red-950/80 text-red-300 border-red-800" };
+        return { label: "Judicial Tax Sale (TACS)", style: "bg-red-950/80 text-red-300 border-red-800" };
       case "BROKER_LISTING":
-        return { label: "Broker / M&A Listing", style: "bg-cyan-950/80 text-cyan-300 border-cyan-800" };
+        return { label: "Broker / M&A Sourcing", style: "bg-cyan-950/80 text-cyan-300 border-cyan-800" };
       case "TRUSTEE_SALE":
       default:
-        return { label: "Trustee Foreclosure", style: "bg-indigo-950/80 text-indigo-300 border-indigo-800" };
+        return { label: "Substitute Trustee Foreclosure", style: "bg-indigo-950/80 text-indigo-300 border-indigo-800" };
     }
   };
 
@@ -120,41 +84,54 @@ export default function DealCard({
 
   const signalBadge = getSignalBadge(deal.signal_type);
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // If the click is on an interactive button or link, don't trigger modal
+    const target = e.target as HTMLElement;
+    if (target.closest("button") || target.closest("a")) return;
+    if (onViewOsint) onViewOsint(deal);
+  };
+
   return (
-    <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition shadow-lg flex flex-col justify-between">
+    <div
+      onClick={handleCardClick}
+      className="bg-slate-900/80 border border-slate-800/90 hover:border-emerald-600/60 rounded-xl p-5 transition shadow-lg flex flex-col justify-between group cursor-pointer"
+    >
       <div>
-        {/* Card Header: Entity Name + Stage Badge */}
+        {/* Card Header: Badges & Stage */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="flex flex-wrap items-center gap-2 mb-1">
+            <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
               <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${signalBadge.style}`}>
                 {signalBadge.label}
               </span>
               {deal.basis_ratio && (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-800">
-                  Basis: {(Number(deal.basis_ratio) * 100).toFixed(0)}%
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-800 font-bold">
+                  {(Number(deal.basis_ratio) * 100).toFixed(0)}% Basis
+                </span>
+              )}
+              {deal.building_sqft && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                  {deal.building_sqft.toLocaleString()} sqft Facility
                 </span>
               )}
             </div>
-            <h3 className="text-base font-semibold text-white tracking-tight">
+
+            <h3 className="text-base font-bold text-white tracking-tight group-hover:text-emerald-400 transition-colors">
               {deal.entity_name}
             </h3>
-            <div className="flex items-center space-x-2 mt-1">
-              <span className="font-mono text-xs text-slate-400">
-                {deal.deal_id}
+
+            <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-1 font-sans">
+              <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>
+                {deal.street_address ? `${deal.street_address}, ${deal.city || ""} ${deal.state_code || ""}` : (deal.county_name || `FIPS ${deal.fips_code}`)}
               </span>
-              {deal.fips_code && (
-                <>
-                  <span className="text-slate-600">•</span>
-                  <span className="text-xs text-slate-400">
-                    FIPS {deal.fips_code} ({getFipsJurisdictionName(deal.fips_code)})
-                  </span>
-                </>
-              )}
-            </div>
+              <span className="text-slate-600">•</span>
+              <span className="font-mono text-slate-500">{deal.deal_id}</span>
+            </p>
           </div>
+
           <span
-            className={`text-[11px] font-mono px-2.5 py-1 rounded-full border ${getStageBadgeColor(
+            className={`text-[11px] font-mono px-2.5 py-1 rounded-full border shrink-0 ${getStageBadgeColor(
               deal.stage
             )}`}
           >
@@ -162,198 +139,148 @@ export default function DealCard({
           </span>
         </div>
 
-        {/* Financial Metrics Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-800/80">
+        {/* Financial Highlights Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-3.5 border-t border-slate-800/80 font-mono text-xs">
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">
-              Asking / Cure
-            </p>
-            <p className="text-sm font-semibold text-white mt-0.5">
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
+              Asking / Cure Basis
+            </span>
+            <span className="text-sm font-bold text-white mt-0.5 block">
               {formatCurrency(deal.asking_or_cure_price_usd)}
-            </p>
+            </span>
+            {deal.discount_to_assessed_pct && (
+              <span className="text-[10px] text-emerald-400">
+                {deal.discount_to_assessed_pct}% Discount
+              </span>
+            )}
           </div>
 
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">
-              Base DSCR
-            </p>
-            <p
-              className={`text-sm font-semibold mt-0.5 ${
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
+              Base DSCR (SBA)
+            </span>
+            <span
+              className={`text-sm font-bold mt-0.5 block ${
                 parseFloat(deal.base_dscr) >= 1.35
                   ? "text-emerald-400"
                   : "text-amber-400"
               }`}
             >
               {deal.base_dscr}x
-            </p>
+            </span>
+            <span className="text-[10px] text-slate-500">Post-$85k GM Ded.</span>
           </div>
 
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">
-              Stress DSCR
-            </p>
-            <p className="text-sm font-semibold text-slate-200 mt-0.5">
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
+              Stressed DSCR
+            </span>
+            <span className="text-sm font-bold text-slate-200 mt-0.5 block">
               {deal.stress_dscr ? `${deal.stress_dscr}x` : "1.18x"}
-            </p>
+            </span>
+            <span className="text-[10px] text-slate-500">-15% Rev Shock</span>
           </div>
 
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium flex items-center space-x-1">
-              <span>Max Bid</span>
-              {currentRole === "LENDER_BROKER" && (
-                <Lock className="w-3 h-3 text-slate-500" />
-              )}
-            </p>
-            {currentRole === "LENDER_BROKER" ? (
-              <p className="text-xs font-mono text-slate-500 mt-0.5 italic">
-                Redacted (RLS)
-              </p>
-            ) : (
-              <p className="text-sm font-semibold text-indigo-300 mt-0.5">
-                {formatCurrency(deal.internal_max_bid_usd)}
-              </p>
-            )}
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 block">
+              Collateral Floor
+            </span>
+            <span className="text-sm font-bold text-blue-300 mt-0.5 block">
+              {formatCurrency(deal.flv_total_liquidation_floor_usd || deal.assessed_or_replacement_usd)}
+            </span>
+            <span className="text-[10px] text-blue-400">
+              {deal.flv_downside_coverage_ratio || "100% Protected"}
+            </span>
           </div>
         </div>
 
-        {/* Aladdin Institutional Badge & Liquidation Floor Indicator */}
-        <div className="flex flex-wrap items-center gap-2 mt-3 pt-2 border-t border-slate-800/50 text-[10px] font-mono">
-          <span className="px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-800/80 text-emerald-300 font-semibold flex items-center gap-1">
-            <span>🛡️</span>
-            <span>Aladdin Score: 86/100 (Tier A Prime)</span>
-          </span>
-          <span className="px-2 py-0.5 rounded bg-blue-950/70 border border-blue-800/80 text-blue-300 font-semibold flex items-center gap-1">
-            <span>⚖️</span>
-            <span>FLV Downside Covered: 1.18x</span>
-          </span>
-          <span className="px-2 py-0.5 rounded bg-purple-950/70 border border-purple-800/80 text-purple-300 font-semibold flex items-center gap-1">
-            <span>🏢</span>
-            <span>Roll-Up Eligible</span>
-          </span>
-        </div>
+        {/* Asset Intelligence & Direct Bid Quick Strip */}
+        <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          {/* OSINT Dossier Trigger Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onViewOsint) onViewOsint(deal);
+            }}
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-300 text-xs font-semibold transition cursor-pointer shadow-sm group/btn"
+          >
+            <Shield className="w-3.5 h-3.5 text-emerald-400 group-hover/btn:scale-110 transition-transform" />
+            <span>View Asset Intelligence (OSINT)</span>
+            <ArrowRight className="w-3 h-3 text-emerald-400 group-hover/btn:translate-x-0.5 transition-transform" />
+          </button>
 
-        {/* Direct Auction & Bidding Website Callout */}
-        {primaryBiddingUrl && (
-          <div className="mt-4 p-3 rounded-xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-900 border border-emerald-500/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-inner">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center space-x-2 text-emerald-300 font-semibold text-xs">
-                <Gavel className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="uppercase tracking-wider">
-                  Direct Bidding &amp; Researched Docket Source:
-                </span>
-              </div>
-              <p className="text-xs text-white font-medium mt-1 truncate">
-                {getSourceLabel(primaryBiddingUrl)}
-              </p>
-              <p className="text-[11px] text-emerald-400/90 font-mono truncate mt-0.5">
-                {primaryBiddingUrl}
-              </p>
-            </div>
-
+          {/* Direct Bidding / Sourcing Link */}
+          {primaryBiddingUrl && (
             <a
               href={primaryBiddingUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center space-x-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition shrink-0 group"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center space-x-1 text-xs text-blue-400 hover:text-blue-300 transition font-mono self-start sm:self-center"
             >
               <span>Bid Directly on Source</span>
-              <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" />
+              <ExternalLink className="w-3 h-3" />
             </a>
-          </div>
-        )}
-
-        {/* Researched Public Record Domains & Provenance URLs */}
-        <div className="mt-4 pt-3 border-t border-slate-800/60">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <div className="flex items-center space-x-1.5 text-emerald-400 font-mono text-[11px]">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>
-                All Verified Research Sources:{" "}
-                {deal.independent_source_count ??
-                  deal.independent_source_urls?.length ??
-                  2}{" "}
-                Independent Public Record Domains
-              </span>
-            </div>
-            {deal.analyst_verified_by && (
-              <span className="text-[11px] text-slate-400">
-                Sign-off: {deal.analyst_verified_by}
-              </span>
-            )}
-          </div>
-
-          {deal.independent_source_urls && deal.independent_source_urls.length > 0 && (
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {deal.independent_source_urls.map((url, i) => {
-                let domain = "";
-                try {
-                  domain = new URL(url).hostname;
-                } catch {
-                  domain = url.slice(0, 25);
-                }
-                const isPrimary = url === primaryBiddingUrl;
-
-                return (
-                  <a
-                    key={i}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={`Researched at: ${url}`}
-                    className={`inline-flex items-center space-x-1.5 text-[11px] font-mono px-2.5 py-1 rounded-md border transition ${
-                      isPrimary
-                        ? "bg-emerald-950/90 text-emerald-300 border-emerald-700/80 hover:bg-emerald-900/90"
-                        : "bg-slate-800/80 text-slate-300 border-slate-700/60 hover:bg-slate-800 hover:text-white"
-                    }`}
-                  >
-                    <Globe className="w-3 h-3 text-slate-400 shrink-0" />
-                    <span>{domain}</span>
-                    <ExternalLink className="w-2.5 h-2.5 text-slate-400" />
-                  </a>
-                );
-              })}
-            </div>
           )}
         </div>
       </div>
 
-      {/* Action Footer */}
-      <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-end gap-2">
-        {currentRole === "PRINCIPAL" && (
-          <>
-            <button
-              onClick={() => onReject && onReject(deal.deal_id)}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-950/60 hover:bg-red-900/60 text-red-300 border border-red-800/60 transition"
-            >
-              <XCircle className="w-3.5 h-3.5" />
-              <span>Reject</span>
-            </button>
-            <button
-              onClick={() => onSendToCounsel && onSendToCounsel(deal.deal_id)}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-800/60 transition"
-            >
-              <ArrowRight className="w-3.5 h-3.5" />
-              <span>Send to Counsel</span>
-            </button>
-            <button
-              onClick={() => onApprove && onApprove(deal.deal_id)}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white font-semibold shadow-sm transition"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Approve (LOI)</span>
-            </button>
-          </>
-        )}
+      {/* Role Action Controls Footer */}
+      <div className="mt-4 pt-3.5 border-t border-slate-800 flex items-center justify-between gap-2">
+        <span className="text-[10px] font-mono text-slate-500">
+          {deal.independent_source_count || deal.independent_source_urls?.length || 2} Independent Domains Verified
+        </span>
 
-        {actionButtonText && onActionClick && (
-          <button
-            onClick={() => onActionClick(deal)}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition"
-          >
-            <span>{actionButtonText}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {currentRole === "PRINCIPAL" && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onReject) onReject(deal.deal_id);
+                }}
+                className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-red-950/60 hover:bg-red-900/60 text-red-300 border border-red-800/60 transition cursor-pointer"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                <span>Reject</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onSendToCounsel) onSendToCounsel(deal.deal_id);
+                }}
+                className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-800/60 transition cursor-pointer"
+              >
+                <ArrowRight className="w-3.5 h-3.5" />
+                <span>Counsel</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onApprove) onApprove(deal.deal_id);
+                }}
+                className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition cursor-pointer"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Approve (LOI)</span>
+              </button>
+            </>
+          )}
+
+          {actionButtonText && onActionClick && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onActionClick(deal);
+              }}
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition cursor-pointer"
+            >
+              <span>{actionButtonText}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

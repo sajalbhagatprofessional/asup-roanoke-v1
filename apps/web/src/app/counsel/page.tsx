@@ -10,6 +10,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import DealCard from "../../components/DealCard";
+import AssetIntelligenceModal from "../../components/AssetIntelligenceModal";
 import { counselReview, fetchDeals } from "../../lib/api";
 import { Deal } from "../../lib/types";
 
@@ -17,6 +18,7 @@ export default function CounselReviewPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [selectedOsintDeal, setSelectedOsintDeal] = useState<Deal | null>(null);
 
   // Form state for Counsel Statutory Audit
   const [noticePubDate, setNoticePubDate] = useState("2026-11-01");
@@ -144,7 +146,11 @@ export default function CounselReviewPage() {
                     : "opacity-75 hover:opacity-100"
                 }`}
               >
-                <DealCard deal={deal} currentRole="COUNSEL" />
+                <DealCard
+                  deal={deal}
+                  currentRole="COUNSEL"
+                  onViewOsint={(d) => setSelectedOsintDeal(d)}
+                />
               </div>
             ))
           )}
@@ -338,6 +344,13 @@ export default function CounselReviewPage() {
           </form>
         </div>
       </div>
+
+      <AssetIntelligenceModal
+        deal={selectedOsintDeal}
+        isOpen={!!selectedOsintDeal}
+        currentRole="COUNSEL"
+        onClose={() => setSelectedOsintDeal(null)}
+      />
     </div>
   );
 }

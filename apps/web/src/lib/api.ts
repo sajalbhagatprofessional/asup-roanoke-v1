@@ -70,6 +70,13 @@ export async function fetchDealDetail(dealId: string, role: TeamRole = "ANALYST"
   return res.json();
 }
 
+export async function fetchDealIntelligence(dealId: string, role: TeamRole = "ANALYST"): Promise<Deal> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/deals/${dealId}/intelligence?role=${role}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch deal intelligence: ${res.statusText}`);
+  return res.json();
+}
+
 export async function ingestDocket(payload: DocketIngestRequest): Promise<DocketIngestResponse> {
   const base = getApiBase();
   const res = await fetch(`${base}/v1/dockets/ingest`, {

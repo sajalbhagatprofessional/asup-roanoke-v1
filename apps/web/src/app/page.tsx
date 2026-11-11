@@ -12,12 +12,15 @@ import {
 } from "lucide-react";
 import DealCard from "../components/DealCard";
 import DealFilterBar from "../components/DealFilterBar";
-import { fetchDeals, principalDecision } from "../lib/api";
-import { Deal, DealFilterParams } from "../lib/types";
+import AssetIntelligenceModal from "../components/AssetIntelligenceModal";
+import { fetchActiveMandate, fetchDeals, principalDecision } from "../lib/api";
+import { Deal, DealFilterParams, MandateProfile } from "../lib/types";
 
 export default function PrincipalDigestPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [activeMandate, setActiveMandate] = useState<MandateProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedOsintDeal, setSelectedOsintDeal] = useState<Deal | null>(null);
   const [filters, setFilters] = useState<DealFilterParams>({
     role: "PRINCIPAL",
     sort_by: "dscr_desc",
@@ -27,8 +30,12 @@ export default function PrincipalDigestPage() {
   const loadDigest = async (activeFilters = filters) => {
     setLoading(true);
     try {
-      const data = await fetchDeals("PRINCIPAL", activeFilters);
-      setDeals(data);
+      const [dealsData, mandateData] = await Promise.all([
+        fetchDeals("PRINCIPAL", activeFilters),
+        fetchActiveMandate().catch(() => null),
+      ]);
+      setDeals(dealsData);
+      if (mandateData) setActiveMandate(mandateData);
     } catch (err: any) {
       console.error("Error loading digest:", err);
     } finally {
@@ -91,7 +98,7 @@ export default function PrincipalDigestPage() {
             </span>
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Mandate ROA-SMB-01: City of Roanoke (51770) &amp; Roanoke County (51161) In-Box acquisitions.
+            Active Mandate: <span className="text-white font-semibold">{activeMandate?.mandate_name || "Target Regional Box"}</span> ({activeMandate?.target_states.join(", ") || "VA"} • {activeMandate?.target_fips.length || 7} Jurisdictions)
           </p>
         </div>
 
@@ -207,10 +214,22 @@ export default function PrincipalDigestPage() {
               onApprove={handleApprove}
               onReject={handleReject}
               onSendToCounsel={handleSendToCounsel}
+              onViewOsint={(d) => setSelectedOsintDeal(d)}
             />
           ))}
         </div>
       )}
+
+      {/* Asset Analyst OSINT Intelligence Dossier Modal */}
+      <AssetIntelligenceModal
+        deal={selectedOsintDeal}
+        isOpen={!!selectedOsintDeal}
+        onClose={() => setSelectedOsintDeal(null)}
+        currentRole="PRINCIPAL"
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onSendToCounsel={handleSendToCounsel}
+      />
     </div>
   );
 }

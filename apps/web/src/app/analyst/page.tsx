@@ -17,6 +17,7 @@ import DealFilterBar from "../../components/DealFilterBar";
 import ManualDocketModal from "../../components/ManualDocketModal";
 import ResourceAccessModal from "../../components/ResourceAccessModal";
 import SourceTrackerModal from "../../components/SourceTrackerModal";
+import AssetIntelligenceModal from "../../components/AssetIntelligenceModal";
 import { fetchDeals, fetchExternalListings, verifyAndPromoteDeal } from "../../lib/api";
 import { Deal, DealFilterParams, DealStage } from "../../lib/types";
 
@@ -27,6 +28,7 @@ export default function AnalystPipelinePage() {
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [isSourceTrackerOpen, setIsSourceTrackerOpen] = useState(false);
   const [isFetchingExternal, setIsFetchingExternal] = useState(false);
+  const [selectedOsintDeal, setSelectedOsintDeal] = useState<Deal | null>(null);
   const [filters, setFilters] = useState<DealFilterParams>({
     role: "ANALYST",
     stage: "ALL",
@@ -222,6 +224,7 @@ export default function AnalystPipelinePage() {
               <DealCard
                 deal={deal}
                 currentRole="ANALYST"
+                onViewOsint={(d) => setSelectedOsintDeal(d)}
                 actionButtonText={
                   deal.stage === "ANALYST_REVIEW_PENDING"
                     ? "Verify & Promote to Principal"
@@ -336,6 +339,14 @@ export default function AnalystPipelinePage() {
       <SourceTrackerModal
         isOpen={isSourceTrackerOpen}
         onClose={() => setIsSourceTrackerOpen(false)}
+      />
+
+      {/* Asset Analyst OSINT Intelligence Dossier Modal */}
+      <AssetIntelligenceModal
+        deal={selectedOsintDeal}
+        isOpen={!!selectedOsintDeal}
+        onClose={() => setSelectedOsintDeal(null)}
+        currentRole="ANALYST"
       />
     </div>
   );

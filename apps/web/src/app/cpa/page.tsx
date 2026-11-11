@@ -10,6 +10,7 @@ import {
   Calculator,
 } from "lucide-react";
 import DealCard from "../../components/DealCard";
+import AssetIntelligenceModal from "../../components/AssetIntelligenceModal";
 import { cpaAudit, fetchDeals } from "../../lib/api";
 import { Deal } from "../../lib/types";
 
@@ -17,6 +18,7 @@ export default function CPAAuditPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [selectedOsintDeal, setSelectedOsintDeal] = useState<Deal | null>(null);
 
   // Form state for CPA SOP 50 10 8.1 Audit
   const [projectCost, setProjectCost] = useState("2500000.00");
@@ -149,7 +151,11 @@ export default function CPAAuditPage() {
                     : "opacity-75 hover:opacity-100"
                 }`}
               >
-                <DealCard deal={deal} currentRole="CPA" />
+                <DealCard
+                  deal={deal}
+                  currentRole="CPA"
+                  onViewOsint={(d) => setSelectedOsintDeal(d)}
+                />
               </div>
             ))
           )}
@@ -386,6 +392,13 @@ export default function CPAAuditPage() {
           </form>
         </div>
       </div>
+
+      <AssetIntelligenceModal
+        deal={selectedOsintDeal}
+        isOpen={!!selectedOsintDeal}
+        currentRole="CPA"
+        onClose={() => setSelectedOsintDeal(null)}
+      />
     </div>
   );
 }

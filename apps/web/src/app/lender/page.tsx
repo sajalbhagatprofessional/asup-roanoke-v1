@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import DealCard from "../../components/DealCard";
+import AssetIntelligenceModal from "../../components/AssetIntelligenceModal";
 import { fetchDeals, fetchLenderPack } from "../../lib/api";
 import { Deal, SBALenderPackBundle } from "../../lib/types";
 
@@ -19,6 +20,7 @@ export default function LenderPackPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [selectedOsintDeal, setSelectedOsintDeal] = useState<Deal | null>(null);
   const [lenderPack, setLenderPack] = useState<SBALenderPackBundle | null>(null);
   const [packLoading, setPackLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -145,6 +147,7 @@ export default function LenderPackPage() {
                   currentRole="LENDER_BROKER"
                   actionButtonText="Generate Sanitized Pack"
                   onActionClick={(d) => handleExportPack(d)}
+                  onViewOsint={(d) => setSelectedOsintDeal(d)}
                 />
               </div>
             ))
@@ -237,6 +240,13 @@ export default function LenderPackPage() {
           )}
         </div>
       </div>
+
+      <AssetIntelligenceModal
+        deal={selectedOsintDeal}
+        isOpen={!!selectedOsintDeal}
+        currentRole="LENDER_BROKER"
+        onClose={() => setSelectedOsintDeal(null)}
+      />
     </div>
   );
 }

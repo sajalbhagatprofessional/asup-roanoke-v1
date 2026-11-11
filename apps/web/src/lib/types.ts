@@ -37,6 +37,40 @@ export interface Deal {
   analyst_verified_by?: string;
   counsel_verified_by?: string;
   cpa_verified_by?: string;
+
+  // Asset Analyst OSINT Intelligence Fields
+  street_address?: string;
+  city?: string;
+  state_code?: string;
+  county_name?: string;
+  zip_code?: string;
+  zoning_code?: string;
+  building_sqft?: number;
+  lot_acreage?: string;
+  year_built?: number;
+  land_assessed_usd?: string;
+  improvement_assessed_usd?: string;
+  total_assessed_usd?: string;
+  discount_to_assessed_pct?: string;
+  annual_revenue_usd?: string;
+  historical_normalized_ebitda_usd?: string;
+  replacement_gm_salary_deducted_usd?: string;
+  adjusted_operating_cash_flow_usd?: string;
+  sba_sop_50_10_8_1_status?: string;
+  flv_real_estate_usd?: string;
+  flv_machinery_floor_usd?: string;
+  flv_total_liquidation_floor_usd?: string;
+  flv_downside_coverage_ratio?: string;
+  is_100pct_principal_protected?: boolean;
+  epa_screening_status?: string;
+  fema_flood_zone?: string;
+  corporate_registry_status?: string;
+  court_docket_number?: string;
+  fiduciary_name?: string;
+  fiduciary_firm?: string;
+  fiduciary_phone?: string;
+  fiduciary_email?: string;
+  executive_summary?: string;
 }
 
 export interface DealFilterParams {
