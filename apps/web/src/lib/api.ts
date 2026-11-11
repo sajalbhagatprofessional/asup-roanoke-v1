@@ -7,10 +7,15 @@ import {
   DocketIngestResponse,
   ExternalFetchResponse,
   HealthStatus,
+  InstitutionalScorecardResult,
+  InstitutionalWaterfallResult,
+  LiquidationFloorResult,
   LocationConnectivityReport,
   MandateProfile,
   MetroPresetInfo,
+  RollUpClusterOpportunity,
   SBALenderPackBundle,
+  ShadowDistressOpportunity,
   StateGeoInfo,
   TeamRole,
 } from "./types";
@@ -301,6 +306,58 @@ export async function refreshSourcesHealth(): Promise<{
     headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw new Error(`Failed to refresh source connectivity: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchRollUpClusters(): Promise<{
+  status: string;
+  total_clusters_identified: number;
+  clusters: RollUpClusterOpportunity[];
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/analytics/roll-up-clusters`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch roll-up clusters: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchShadowPipeline(fips?: string): Promise<{
+  status: string;
+  total_shadow_opportunities: number;
+  opportunities: ShadowDistressOpportunity[];
+}> {
+  const base = getApiBase();
+  const url = fips ? `${base}/v1/dockets/shadow-pipeline?fips=${fips}` : `${base}/v1/dockets/shadow-pipeline`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch shadow pipeline: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchDealScorecard(dealId: string): Promise<InstitutionalScorecardResult> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/deals/${dealId}/institutional-scorecard`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch deal scorecard: ${res.statusText}`);
+  return res.json();
+}
+
+export async function runInstitutionalWaterfall(payload: any): Promise<InstitutionalWaterfallResult> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/underwriting/institutional-waterfall`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`Institutional waterfall run failed: ${res.statusText}`);
+  return res.json();
+}
+
+export async function runLiquidationFloor(payload: any): Promise<LiquidationFloorResult> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/underwriting/liquidation-floor`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`Liquidation floor solver failed: ${res.statusText}`);
   return res.json();
 }
 

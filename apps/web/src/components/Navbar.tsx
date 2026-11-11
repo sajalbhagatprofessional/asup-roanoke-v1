@@ -20,6 +20,7 @@ import { fetchActiveMandate, fetchHealth } from "../lib/api";
 import { HealthStatus, MandateProfile, TeamRole } from "../lib/types";
 import MandateSetupModal from "./MandateSetupModal";
 import SourceTrackerModal from "./SourceTrackerModal";
+import InstitutionalAladdinModal from "./InstitutionalAladdinModal";
 
 interface NavItem {
   name: string;
@@ -42,6 +43,7 @@ export default function Navbar() {
   const [activeMandate, setActiveMandate] = useState<MandateProfile | null>(null);
   const [isMandateModalOpen, setIsMandateModalOpen] = useState(false);
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+  const [isAladdinModalOpen, setIsAladdinModalOpen] = useState(false);
 
   const loadMandateAndHealth = () => {
     fetchHealth().then(setHealth).catch(() => {});
@@ -129,6 +131,15 @@ export default function Navbar() {
           {/* Mandate Health Pill */}
           <div className="hidden lg:flex items-center space-x-3 text-xs font-mono">
             <button
+              onClick={() => setIsAladdinModalOpen(true)}
+              className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-800 text-emerald-300 transition"
+              title="BlackRock Aladdin Institutional Terminal"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="font-semibold">Aladdin Terminal</span>
+            </button>
+            <span className="text-slate-500">|</span>
+            <button
               onClick={() => setIsSourceModalOpen(true)}
               className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-blue-950/60 hover:bg-blue-900/60 border border-blue-800 text-blue-300 transition"
               title="Track data sources and connectivity for this location"
@@ -171,6 +182,12 @@ export default function Navbar() {
         isOpen={isSourceModalOpen}
         onClose={() => setIsSourceModalOpen(false)}
         mandateCode={activeMandate?.mandate_id}
+      />
+
+      {/* Institutional Aladdin Terminal Modal */}
+      <InstitutionalAladdinModal
+        isOpen={isAladdinModalOpen}
+        onClose={() => setIsAladdinModalOpen(false)}
       />
     </header>
   );

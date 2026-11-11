@@ -11,6 +11,9 @@ import tests.unit.test_ast_airgap as u1
 import tests.unit.test_sba_sop_50_10_8_1 as u2
 import tests.unit.test_va_foreclosure_and_addbacks as u3
 import tests.unit.test_mandate_and_provenance as u4
+import tests.unit.test_institutional_waterfall as u5
+import tests.unit.test_liquidation_floor_solver as u6
+import tests.unit.test_roll_up_and_shadow_pipeline as u7
 import tests.integration.test_sprint2_connectors_and_breaker as i1
 import tests.integration.test_sprint3_enrichment_rbac_security as i2
 import tests.integration.test_sprint4_to_6_memo_outreach_lender_pack as i3
@@ -19,6 +22,7 @@ import tests.integration.test_regional_expansion_and_api_anything as i5
 import tests.integration.test_deals_filtering as i6
 import tests.integration.test_nationwide_mandate_wizard as i7
 import tests.integration.test_source_connectivity_tracker as i8
+import tests.integration.test_institutional_endpoints as i9
 
 
 def main() -> int:
@@ -95,7 +99,20 @@ def main() -> int:
 
     print(f"All {tracker_passed}/{tracker_passed} Location Resource Connectivity Tests PASSED!")
 
-    total_passed = core_passed + api_passed + regional_passed + filtering_passed + wizard_passed + tracker_passed
+    # Milestone 9: BlackRock Institutional Upgrade Suite (Waterfall, FLV Floor, Roll-Up & Scorecard)
+    institutional_passed = 0
+    for mod in [u5, u6, u7, i9]:
+        for attr in sorted(dir(mod)):
+            if attr.startswith("test_"):
+                fn = getattr(mod, attr)
+                if callable(fn):
+                    fn()
+                    institutional_passed += 1
+                    print(f"[PASS] {mod.__name__}.{attr}")
+
+    print(f"All {institutional_passed}/{institutional_passed} Institutional Aladdin Suite Tests PASSED!")
+
+    total_passed = core_passed + api_passed + regional_passed + filtering_passed + wizard_passed + tracker_passed + institutional_passed
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 
     env = os.environ.copy()

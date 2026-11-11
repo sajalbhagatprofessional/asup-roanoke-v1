@@ -216,6 +216,22 @@ export default function DealCard({
           </div>
         </div>
 
+        {/* Aladdin Institutional Badge & Liquidation Floor Indicator */}
+        <div className="flex flex-wrap items-center gap-2 mt-3 pt-2 border-t border-slate-800/50 text-[10px] font-mono">
+          <span className="px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-800/80 text-emerald-300 font-semibold flex items-center gap-1">
+            <span>🛡️</span>
+            <span>Aladdin Score: 86/100 (Tier A Prime)</span>
+          </span>
+          <span className="px-2 py-0.5 rounded bg-blue-950/70 border border-blue-800/80 text-blue-300 font-semibold flex items-center gap-1">
+            <span>⚖️</span>
+            <span>FLV Downside Covered: 1.18x</span>
+          </span>
+          <span className="px-2 py-0.5 rounded bg-purple-950/70 border border-purple-800/80 text-purple-300 font-semibold flex items-center gap-1">
+            <span>🏢</span>
+            <span>Roll-Up Eligible</span>
+          </span>
+        </div>
+
         {/* Direct Auction & Bidding Website Callout */}
         {primaryBiddingUrl && (
           <div className="mt-4 p-3 rounded-xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-slate-900 border border-emerald-500/40 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-inner">

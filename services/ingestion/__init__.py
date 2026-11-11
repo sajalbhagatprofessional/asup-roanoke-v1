@@ -38,6 +38,12 @@ from .source_tracker import (
     LocationConnectivityReport,
     SourceConnectivityTracker,
 )
+from .shadow_pipeline_tracker import (
+    DistressMaturityTier,
+    LeadingSignalType,
+    ShadowDistressOpportunity,
+    ShadowPipelineTracker,
+)
 
 __all__ = [
     "CircuitBreakerOpenError",
@@ -70,4 +76,8 @@ __all__ = [
     "TrackedSourceConnection",
     "LocationConnectivityReport",
     "SourceConnectivityTracker",
+    "DistressMaturityTier",
+    "LeadingSignalType",
+    "ShadowDistressOpportunity",
+    "ShadowPipelineTracker",
 ]
