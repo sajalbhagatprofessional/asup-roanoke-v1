@@ -586,22 +586,140 @@ def fetch_external_listings(req: ExternalListingFetchRequest) -> Dict[str, Any]:
     }
 
 
+def _classify_deal_signal_type(deal: Dict[str, Any]) -> str:
+    """
+    Classifies a deal's source signal:
+    - BANKRUPTCY: U.S. Bankruptcy Court (VAWBK / Chapter 11 / § 363)
+    - TRUSTEE_SALE: Commercial deed of trust Substitute Trustee notice (Va. Code § 55.1-321)
+    - TAX_SALE: City TACS or County Judicial real estate tax sale
+    - BROKER_LISTING: Reverse-engineered M&A / broker market listing via api-anything
+    """
+    deal_id = str(deal.get("deal_id", "")).lower()
+    entity = str(deal.get("entity_name", "")).lower()
+    urls = [str(u).lower() for u in deal.get("independent_source_urls", [])]
+    primary = str(deal.get("primary_source_url") or "").lower()
+    all_urls = urls + ([primary] if primary else [])
+
+    if "vawbk" in deal_id or "pacer" in deal_id or "ch 11" in entity or any("pacer" in u for u in all_urls):
+        return "BANKRUPTCY"
+    if "tacs" in deal_id or "tax" in deal_id or any("tax" in u or "judicial" in u for u in all_urls):
+        return "TAX_SALE"
+    if "ext-" in deal_id or any("bizbuysell" in u or "crexi" in u or "broker" in u for u in all_urls):
+        return "BROKER_LISTING"
+    return "TRUSTEE_SALE"
+
+
 @app.get("/v1/deals", tags=["Deals"])
 def list_deals(
     role: TeamRole = Query(TeamRole.ANALYST, description="Role requesting pipeline access"),
     stage: Optional[str] = Query(None, description="Optional stage filter"),
+    fips_code: Optional[str] = Query(None, description="Comma-separated FIPS codes, e.g. '51770,51023'"),
+    signal_type: Optional[str] = Query(None, description="BANKRUPTCY | TRUSTEE_SALE | TAX_SALE | BROKER_LISTING"),
+    naics_prefix: Optional[str] = Query(None, description="NAICS code prefix, e.g. '332', '238'"),
+    min_price_usd: Optional[str] = Query(None, description="Minimum price filter in USD"),
+    max_price_usd: Optional[str] = Query(None, description="Maximum price filter in USD"),
+    min_base_dscr: Optional[str] = Query(None, description="Minimum Base DSCR hurdle, e.g. '1.35'"),
+    max_basis_ratio: Optional[str] = Query(None, description="Maximum basis-to-replacement ratio, e.g. '0.70'"),
+    has_cre: Optional[bool] = Query(None, description="Filter for deals with owner-occupied CRE"),
+    q: Optional[str] = Query(None, description="Full-text search across entity, parcel, or docket ID"),
+    sort_by: Optional[str] = Query("dscr_desc", description="Sort order: dscr_desc | price_asc | price_desc | basis_asc | date_desc"),
 ) -> List[Dict[str, Any]]:
     """
-    5-Role RBAC Query with Row-Level Security:
-    - PRINCIPAL: Sees <= 5 top verified deals for Monday Weekly Digest.
-    - LENDER_BROKER: Sees ONLY LOI_LENDER_PACK deals; internal_max_bid_usd is stripped.
-    - ANALYST / COUNSEL / CPA: Sees all pipeline stages for verification and diligence.
+    Multi-Faceted Deal Filtering & Sorting Engine:
+    - 5-Role RBAC Query with Row-Level Security
+    - Pure decimal.Decimal Underwriting Predicates (DSCR, Basis Ratio, Price)
+    - Full-Text Search and Regional Jurisdiction Filtering
+    - Principal view capped at <= 5 verified opportunities
     """
     now = datetime.now(timezone.utc)
-    deals = pipeline_store.query_deals_for_role(role, now=now)
+    raw_deals = pipeline_store.query_deals_for_role(role, now=now)
+
+    enriched_deals: List[Dict[str, Any]] = []
+    for d in raw_deals:
+        d_copy = dict(d)
+        sig = _classify_deal_signal_type(d_copy)
+        d_copy["signal_type"] = sig
+
+        price = Decimal(d_copy["asking_or_cure_price_usd"])
+        assessed = Decimal(d_copy.get("assessed_or_replacement_usd", str(price)))
+        if assessed > Decimal("0.00"):
+            basis_ratio = (price / assessed).quantize(Decimal("0.0001"), rounding=ROUND_HALF_EVEN)
+        else:
+            basis_ratio = Decimal("1.0000")
+        d_copy["basis_ratio"] = str(basis_ratio)
+        d_copy["has_cre"] = (assessed >= Decimal("150000.00"))
+        enriched_deals.append(d_copy)
+
+    # 1. Stage Filter
     if stage:
-        deals = [d for d in deals if d.get("stage") == stage]
-    return deals
+        enriched_deals = [d for d in enriched_deals if d.get("stage") == stage]
+
+    # 2. Distress Signal Filter
+    if signal_type:
+        enriched_deals = [d for d in enriched_deals if d.get("signal_type") == signal_type]
+
+    # 3. Geography / FIPS Filter (supports comma-separated list)
+    if fips_code:
+        fips_set = {f.strip() for f in fips_code.split(",") if f.strip()}
+        enriched_deals = [d for d in enriched_deals if d.get("fips_code") in fips_set]
+
+    # 4. NAICS Prefix Filter
+    if naics_prefix:
+        enriched_deals = [d for d in enriched_deals if str(d.get("naics_code", "")).startswith(naics_prefix)]
+
+    # 5. Price Min / Max Filter (pure Decimal)
+    if min_price_usd:
+        min_p = Decimal(min_price_usd)
+        enriched_deals = [d for d in enriched_deals if Decimal(d["asking_or_cure_price_usd"]) >= min_p]
+    if max_price_usd:
+        max_p = Decimal(max_price_usd)
+        enriched_deals = [d for d in enriched_deals if Decimal(d["asking_or_cure_price_usd"]) <= max_p]
+
+    # 6. Minimum Base DSCR Hurdle (pure Decimal)
+    if min_base_dscr:
+        min_dscr = Decimal(min_base_dscr)
+        enriched_deals = [d for d in enriched_deals if Decimal(d.get("base_dscr", "0")) >= min_dscr]
+
+    # 7. Maximum Basis Ratio (pure Decimal)
+    if max_basis_ratio:
+        max_b = Decimal(max_basis_ratio)
+        enriched_deals = [d for d in enriched_deals if Decimal(d.get("basis_ratio", "1.0000")) <= max_b]
+
+    # 8. Real Estate / Collateral Floor Filter
+    if has_cre is not None:
+        enriched_deals = [d for d in enriched_deals if d.get("has_cre") == has_cre]
+
+    # 9. Full-Text Query Search (Debtor, Parcel GPIN, Docket ID)
+    if q:
+        terms = [t.lower().strip() for t in q.split() if t.strip()]
+        enriched_deals = [
+            d for d in enriched_deals
+            if all(
+                t in (
+                    f"{d.get('entity_name', '')} {d.get('deal_id', '')} "
+                    f"{d.get('parcel_id', '')} {d.get('fips_code', '')}"
+                ).lower()
+                for t in terms
+            )
+        ]
+
+    # 10. Deterministic Sorting
+    if sort_by == "dscr_desc":
+        enriched_deals.sort(key=lambda x: Decimal(x.get("base_dscr", "0")), reverse=True)
+    elif sort_by == "price_asc":
+        enriched_deals.sort(key=lambda x: Decimal(x.get("asking_or_cure_price_usd", "0")))
+    elif sort_by == "price_desc":
+        enriched_deals.sort(key=lambda x: Decimal(x.get("asking_or_cure_price_usd", "0")), reverse=True)
+    elif sort_by == "basis_asc":
+        enriched_deals.sort(key=lambda x: Decimal(x.get("basis_ratio", "1.0000")))
+    elif sort_by == "date_desc":
+        enriched_deals.sort(key=lambda x: str(x.get("deal_id", "")), reverse=True)
+
+    # Principal RLS Digest Cap: <= 5 verified opportunities
+    if role == TeamRole.PRINCIPAL:
+        return enriched_deals[:5]
+
+    return enriched_deals
 
 
 @app.get("/v1/deals/{deal_id}", tags=["Deals"])

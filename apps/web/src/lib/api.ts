@@ -1,6 +1,7 @@
 import {
   AccessRequirementsResponse,
   Deal,
+  DealFilterParams,
   DealMemo,
   DocketIngestRequest,
   DocketIngestResponse,
@@ -25,10 +26,29 @@ export async function fetchHealth(): Promise<HealthStatus> {
   return res.json();
 }
 
-export async function fetchDeals(role: TeamRole = "ANALYST", stage?: string): Promise<Deal[]> {
+export async function fetchDeals(
+  role: TeamRole = "ANALYST",
+  stageOrParams?: string | DealFilterParams
+): Promise<Deal[]> {
   const base = getApiBase();
   const params = new URLSearchParams({ role });
-  if (stage) params.append("stage", stage);
+
+  if (typeof stageOrParams === "string") {
+    if (stageOrParams && stageOrParams !== "ALL") params.append("stage", stageOrParams);
+  } else if (stageOrParams) {
+    if (stageOrParams.stage && stageOrParams.stage !== "ALL") params.append("stage", stageOrParams.stage);
+    if (stageOrParams.fips_code) params.append("fips_code", stageOrParams.fips_code);
+    if (stageOrParams.signal_type) params.append("signal_type", stageOrParams.signal_type);
+    if (stageOrParams.naics_prefix) params.append("naics_prefix", stageOrParams.naics_prefix);
+    if (stageOrParams.min_price_usd) params.append("min_price_usd", stageOrParams.min_price_usd);
+    if (stageOrParams.max_price_usd) params.append("max_price_usd", stageOrParams.max_price_usd);
+    if (stageOrParams.min_base_dscr) params.append("min_base_dscr", stageOrParams.min_base_dscr);
+    if (stageOrParams.max_basis_ratio) params.append("max_basis_ratio", stageOrParams.max_basis_ratio);
+    if (stageOrParams.has_cre !== undefined) params.append("has_cre", String(stageOrParams.has_cre));
+    if (stageOrParams.q) params.append("q", stageOrParams.q);
+    if (stageOrParams.sort_by) params.append("sort_by", stageOrParams.sort_by);
+  }
+
   const res = await fetch(`${base}/v1/deals?${params.toString()}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch deals for ${role}: ${res.statusText}`);
   return res.json();

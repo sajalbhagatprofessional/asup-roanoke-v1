@@ -11,24 +11,34 @@ import {
   RefreshCw,
 } from "lucide-react";
 import DealCard from "../components/DealCard";
+import DealFilterBar from "../components/DealFilterBar";
 import { fetchDeals, principalDecision } from "../lib/api";
-import { Deal } from "../lib/types";
+import { Deal, DealFilterParams } from "../lib/types";
 
 export default function PrincipalDigestPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<DealFilterParams>({
+    role: "PRINCIPAL",
+    sort_by: "dscr_desc",
+  });
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
-  const loadDigest = async () => {
+  const loadDigest = async (activeFilters = filters) => {
     setLoading(true);
     try {
-      const data = await fetchDeals("PRINCIPAL");
+      const data = await fetchDeals("PRINCIPAL", activeFilters);
       setDeals(data);
     } catch (err: any) {
       console.error("Error loading digest:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFilterChange = (newFilters: DealFilterParams) => {
+    setFilters(newFilters);
+    loadDigest(newFilters);
   };
 
   useEffect(() => {
@@ -86,7 +96,7 @@ export default function PrincipalDigestPage() {
         </div>
 
         <button
-          onClick={loadDigest}
+          onClick={() => loadDigest()}
           disabled={loading}
           className="self-start md:self-auto inline-flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
         >
@@ -164,6 +174,13 @@ export default function PrincipalDigestPage() {
           </p>
         </div>
       </div>
+
+      {/* Principal Deal Filter & Search Bar */}
+      <DealFilterBar
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        totalResults={deals.length}
+      />
 
       {/* Deals Digest Cards */}
       {loading ? (

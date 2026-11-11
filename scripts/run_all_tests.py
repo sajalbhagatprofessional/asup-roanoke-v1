@@ -16,6 +16,7 @@ import tests.integration.test_sprint3_enrichment_rbac_security as i2
 import tests.integration.test_sprint4_to_6_memo_outreach_lender_pack as i3
 import tests.integration.test_fastapi_endpoints as i4
 import tests.integration.test_regional_expansion_and_api_anything as i5
+import tests.integration.test_deals_filtering as i6
 
 
 def main() -> int:
@@ -56,7 +57,19 @@ def main() -> int:
 
     print(f"All {regional_passed}/{regional_passed} Regional Expansion & ApiAnything Tests PASSED!")
 
-    total_passed = core_passed + api_passed + regional_passed
+    # Milestone 6: Multi-Faceted Deal Filtering & Sorting Engine
+    filtering_passed = 0
+    for attr in sorted(dir(i6)):
+        if attr.startswith("test_"):
+            fn = getattr(i6, attr)
+            if callable(fn):
+                fn()
+                filtering_passed += 1
+                print(f"[PASS] {i6.__name__}.{attr}")
+
+    print(f"All {filtering_passed}/{filtering_passed} Multi-Faceted Deal Filtering & Sorting Tests PASSED!")
+
+    total_passed = core_passed + api_passed + regional_passed + filtering_passed
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 
     env = os.environ.copy()

@@ -26,6 +26,9 @@ export interface Deal {
   internal_max_bid_usd?: string; // Stripped for LENDER_BROKER
   base_dscr: string;
   stress_dscr?: string;
+  basis_ratio?: string;
+  signal_type?: string;
+  has_cre?: boolean;
   independent_source_count?: number;
   independent_source_urls?: string[];
   primary_source_url?: string;
@@ -34,6 +37,21 @@ export interface Deal {
   analyst_verified_by?: string;
   counsel_verified_by?: string;
   cpa_verified_by?: string;
+}
+
+export interface DealFilterParams {
+  role?: TeamRole;
+  stage?: string;
+  fips_code?: string;
+  signal_type?: string;
+  naics_prefix?: string;
+  min_price_usd?: string;
+  max_price_usd?: string;
+  min_base_dscr?: string;
+  max_basis_ratio?: string;
+  has_cre?: boolean;
+  q?: string;
+  sort_by?: string;
 }
 
 export interface HealthStatus {

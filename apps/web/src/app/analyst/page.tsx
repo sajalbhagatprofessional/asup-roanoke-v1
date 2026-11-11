@@ -12,10 +12,11 @@ import {
   Layers,
 } from "lucide-react";
 import DealCard from "../../components/DealCard";
+import DealFilterBar from "../../components/DealFilterBar";
 import ManualDocketModal from "../../components/ManualDocketModal";
 import ResourceAccessModal from "../../components/ResourceAccessModal";
 import { fetchDeals, fetchExternalListings, verifyAndPromoteDeal } from "../../lib/api";
-import { Deal, DealStage } from "../../lib/types";
+import { Deal, DealFilterParams, DealStage } from "../../lib/types";
 
 export default function AnalystPipelinePage() {
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -23,23 +24,32 @@ export default function AnalystPipelinePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [isFetchingExternal, setIsFetchingExternal] = useState(false);
-  const [selectedStage, setSelectedStage] = useState<string>("ALL");
+  const [filters, setFilters] = useState<DealFilterParams>({
+    role: "ANALYST",
+    stage: "ALL",
+    sort_by: "dscr_desc",
+  });
   const [verifyModalDeal, setVerifyModalDeal] = useState<Deal | null>(null);
   const [secondSourceUrl, setSecondSourceUrl] = useState(
     "https://open-data-portal-roanokeva.hub.arcgis.com/datasets/parcels"
   );
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
-  const loadPipeline = async () => {
+  const loadPipeline = async (activeFilters = filters) => {
     setLoading(true);
     try {
-      const data = await fetchDeals("ANALYST");
+      const data = await fetchDeals("ANALYST", activeFilters);
       setDeals(data);
     } catch (err: any) {
       console.error("Failed to load pipeline:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFilterChange = (newFilters: DealFilterParams) => {
+    setFilters(newFilters);
+    loadPipeline(newFilters);
   };
 
   const handleScanRegionalListings = async () => {
@@ -81,11 +91,6 @@ export default function AnalystPipelinePage() {
     }
   };
 
-  const filteredDeals =
-    selectedStage === "ALL"
-      ? deals
-      : deals.filter((d) => d.stage === selectedStage);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -124,7 +129,7 @@ export default function AnalystPipelinePage() {
             <span>Drop Ingest Filing</span>
           </button>
           <button
-            onClick={loadPipeline}
+            onClick={() => loadPipeline()}
             disabled={loading}
             className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
           >
@@ -152,37 +157,44 @@ export default function AnalystPipelinePage() {
           (st) => (
             <button
               key={st}
-              onClick={() => setSelectedStage(st)}
+              onClick={() => handleFilterChange({ ...filters, stage: st })}
               className={`px-3 py-1.5 rounded-lg border transition ${
-                selectedStage === st
-                  ? "bg-slate-800 text-white border-emerald-500"
+                (filters.stage || "ALL") === st
+                  ? "bg-slate-800 text-white border-emerald-500 font-bold"
                   : "bg-slate-900/60 text-slate-400 border-slate-800 hover:text-white"
               }`}
             >
-              {st === "ALL" ? "All Deals" : st.replace(/_/g, " ")}
+              {st === "ALL" ? "All Stages" : st.replace(/_/g, " ")}
             </button>
           )
         )}
       </div>
+
+      {/* Multi-Faceted Deal Filter & Search Bar */}
+      <DealFilterBar
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        totalResults={deals.length}
+      />
 
       {/* Deals List */}
       {loading ? (
         <div className="p-12 text-center text-slate-400 font-mono text-sm">
           Loading pipeline...
         </div>
-      ) : filteredDeals.length === 0 ? (
+      ) : deals.length === 0 ? (
         <div className="bg-slate-900/40 border border-dashed border-slate-800 rounded-2xl p-12 text-center">
           <Layers className="w-10 h-10 text-slate-600 mx-auto" />
           <h3 className="text-base font-semibold text-white mt-3">
-            No Deals in Selected Stage
+            No Deals Match the Current Filter Criteria
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            Drop new filings into the docket dropzone to trigger the Mandate ROA-SMB-01 evaluation gate.
+            Try resetting your filters or run the API-Anything regional scanner to ingest more opportunities.
           </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredDeals.map((deal) => (
+          {deals.map((deal) => (
             <div key={deal.deal_id} className="relative">
               <DealCard
                 deal={deal}

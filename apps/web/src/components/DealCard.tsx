@@ -82,11 +82,43 @@ export default function DealCard({
     return "Official Docket & Asset Sourcing Website";
   };
 
+  const getFipsJurisdictionName = (fips?: string) => {
+    switch (fips) {
+      case "51770": return "City of Roanoke";
+      case "51161": return "Roanoke County";
+      case "51775": return "City of Salem";
+      case "51023": return "Botetourt County";
+      case "51067": return "Franklin County";
+      case "51019": return "Bedford County";
+      case "51121": return "Montgomery County";
+      case "51750": return "City of Radford";
+      case "51045": return "Craig County";
+      case "51063": return "Floyd County";
+      default: return fips ? `County FIPS ${fips}` : "";
+    }
+  };
+
+  const getSignalBadge = (sig?: string) => {
+    switch (sig) {
+      case "BANKRUPTCY":
+        return { label: "Bankruptcy § 363", style: "bg-amber-950/80 text-amber-300 border-amber-800" };
+      case "TAX_SALE":
+        return { label: "Tax Sale / Delinquency", style: "bg-red-950/80 text-red-300 border-red-800" };
+      case "BROKER_LISTING":
+        return { label: "Broker / M&A Listing", style: "bg-cyan-950/80 text-cyan-300 border-cyan-800" };
+      case "TRUSTEE_SALE":
+      default:
+        return { label: "Trustee Foreclosure", style: "bg-indigo-950/80 text-indigo-300 border-indigo-800" };
+    }
+  };
+
   const primaryBiddingUrl =
     deal.primary_source_url ||
     (deal.independent_source_urls && deal.independent_source_urls.length > 0
       ? deal.independent_source_urls[0]
       : null);
+
+  const signalBadge = getSignalBadge(deal.signal_type);
 
   return (
     <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition shadow-lg flex flex-col justify-between">
@@ -94,6 +126,16 @@ export default function DealCard({
         {/* Card Header: Entity Name + Stage Badge */}
         <div className="flex items-start justify-between gap-3">
           <div>
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${signalBadge.style}`}>
+                {signalBadge.label}
+              </span>
+              {deal.basis_ratio && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-800">
+                  Basis: {(Number(deal.basis_ratio) * 100).toFixed(0)}%
+                </span>
+              )}
+            </div>
             <h3 className="text-base font-semibold text-white tracking-tight">
               {deal.entity_name}
             </h3>
@@ -105,12 +147,7 @@ export default function DealCard({
                 <>
                   <span className="text-slate-600">•</span>
                   <span className="text-xs text-slate-400">
-                    FIPS {deal.fips_code}{" "}
-                    {deal.fips_code === "51770"
-                      ? "(City of Roanoke)"
-                      : deal.fips_code === "51161"
-                      ? "(Roanoke County)"
-                      : "(City of Salem)"}
+                    FIPS {deal.fips_code} ({getFipsJurisdictionName(deal.fips_code)})
                   </span>
                 </>
               )}
