@@ -196,3 +196,53 @@ export interface MetroPresetInfo {
     bankruptcy_court_id: string;
   }[];
 }
+
+export type SourceStatus =
+  | "CONNECTED"
+  | "AUTH_REQUIRED"
+  | "CIRCUIT_BREAKER_LOCKED"
+  | "RATE_LIMITED"
+  | "FALLBACK_GENERIC"
+  | "OFFLINE_ERROR";
+
+export type SourceCategory =
+  | "Federal Bankruptcy Court Dockets"
+  | "Statutory Foreclosure & Trustee Notices"
+  | "Municipal Tax Sales & Judicial Auctions"
+  | "County & City GIS Tax Assessments"
+  | "State Corporate & UCC Registry (SCC/SoS)"
+  | "Federal Environmental (EPA UST & FEMA)"
+  | "Commercial M&A & Private Brokers";
+
+export interface TrackedSourceConnection {
+  source_id: string;
+  source_name: string;
+  category: SourceCategory;
+  target_jurisdictions: string[];
+  target_fips: string[];
+  endpoint_url: string;
+  status: SourceStatus;
+  is_accessible: boolean;
+  requires_physical_account: boolean;
+  account_instructions?: string;
+  access_barrier_reason?: string;
+  last_checked_at: string;
+  latency_ms?: number;
+  records_retrieved_count: number;
+}
+
+export interface LocationConnectivityReport {
+  mandate_id: string;
+  mandate_name: string;
+  target_states: string[];
+  target_fips: string[];
+  total_sources_evaluated: number;
+  connected_count: number;
+  auth_required_count: number;
+  blocked_or_locked_count: number;
+  fallback_or_unmapped_count: number;
+  coverage_score_pct: number;
+  sources: TrackedSourceConnection[];
+  summary_guidance: string[];
+}
+

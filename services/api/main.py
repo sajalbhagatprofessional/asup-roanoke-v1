@@ -61,6 +61,7 @@ from services.ingestion import (
     get_counties_for_state,
     get_metro_presets,
     resolve_bankruptcy_court_feed_url,
+    SourceConnectivityTracker,
 )
 from services.lender_pack import (
     check_90_day_mandate_expiry,
@@ -101,6 +102,7 @@ outreach_engine = HumanGatedOutreachEngine()
 circuit_breaker = LawfulCircuitBreaker()
 bronze_vault = BronzeIngestVault()
 api_anything_connector = ApiAnythingConnector()
+source_tracker = SourceConnectivityTracker(circuit_breaker=circuit_breaker)
 
 MANDATE_CREATED_AT = datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
 
@@ -537,6 +539,50 @@ def get_resource_access_requirements() -> Dict[str, Any]:
             "physical_account_required_count": sum(1 for p in profiles if p["requires_physical_account"]),
             "open_public_count": sum(1 for p in profiles if not p["requires_physical_account"]),
         },
+    }
+
+
+@app.get("/v1/sources/health", tags=["Data Sources & Connectivity"])
+def get_sources_connectivity(
+    mandate_code: Optional[str] = Query(None, description="Optional mandate ID; defaults to active mandate"),
+    state: Optional[str] = Query(None, description="Optional override state code (e.g. VA, NC)"),
+    fips: Optional[str] = Query(None, description="Optional comma-separated FIPS codes to evaluate"),
+) -> Dict[str, Any]:
+    """
+    Evaluates connection status and accessibility of all statutory court dockets,
+    public notice archives, municipal tax sales, county GIS assessment portals,
+    corporate registries, environmental databases, and commercial broker feeds
+    relevant to the active mandate's target locations.
+    """
+    target_states = [state.upper()] if state else current_mandate_profile.target_states
+    target_fips = [f.strip() for f in fips.split(",")] if fips else current_mandate_profile.target_fips
+    mandate_id = mandate_code or current_mandate_profile.mandate_id
+    mandate_name = current_mandate_profile.mandate_name
+
+    report = source_tracker.evaluate_mandate_connectivity(
+        mandate_id=mandate_id,
+        mandate_name=mandate_name,
+        target_states=target_states,
+        target_fips=target_fips,
+    )
+    return report.to_dict()
+
+
+@app.post("/v1/sources/refresh", tags=["Data Sources & Connectivity"])
+def refresh_sources_connectivity() -> Dict[str, Any]:
+    """
+    Refreshes and re-pings connectivity to all data sources for the active mandate box.
+    """
+    report = source_tracker.evaluate_mandate_connectivity(
+        mandate_id=current_mandate_profile.mandate_id,
+        mandate_name=current_mandate_profile.mandate_name,
+        target_states=current_mandate_profile.target_states,
+        target_fips=current_mandate_profile.target_fips,
+    )
+    return {
+        "status": "success",
+        "message": f"Successfully refreshed connectivity for {report.total_sources_evaluated} sources across {len(report.target_fips)} target jurisdictions.",
+        "report": report.to_dict(),
     }
 
 

@@ -7,6 +7,7 @@ import {
   DocketIngestResponse,
   ExternalFetchResponse,
   HealthStatus,
+  LocationConnectivityReport,
   MandateProfile,
   MetroPresetInfo,
   SBALenderPackBundle,
@@ -276,6 +277,30 @@ export async function fetchTargetedListings(): Promise<any> {
     body: JSON.stringify({ auto_ingest: true }),
   });
   if (!res.ok) throw new Error(`Targeted listing scan failed: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchSourcesHealth(mandateCode?: string): Promise<LocationConnectivityReport> {
+  const base = getApiBase();
+  const url = mandateCode
+    ? `${base}/v1/sources/health?mandate_code=${encodeURIComponent(mandateCode)}`
+    : `${base}/v1/sources/health`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch source connectivity: ${res.statusText}`);
+  return res.json();
+}
+
+export async function refreshSourcesHealth(): Promise<{
+  status: string;
+  message: string;
+  report: LocationConnectivityReport;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/sources/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error(`Failed to refresh source connectivity: ${res.statusText}`);
   return res.json();
 }
 

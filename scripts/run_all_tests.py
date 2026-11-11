@@ -18,6 +18,7 @@ import tests.integration.test_fastapi_endpoints as i4
 import tests.integration.test_regional_expansion_and_api_anything as i5
 import tests.integration.test_deals_filtering as i6
 import tests.integration.test_nationwide_mandate_wizard as i7
+import tests.integration.test_source_connectivity_tracker as i8
 
 
 def main() -> int:
@@ -82,7 +83,19 @@ def main() -> int:
 
     print(f"All {wizard_passed}/{wizard_passed} Nationwide Mandate & Targeted Sourcing Tests PASSED!")
 
-    total_passed = core_passed + api_passed + regional_passed + filtering_passed + wizard_passed
+    # Milestone 8: Location-Specific Resource & Connectivity Tracker
+    tracker_passed = 0
+    for attr in sorted(dir(i8)):
+        if attr.startswith("test_"):
+            fn = getattr(i8, attr)
+            if callable(fn):
+                fn()
+                tracker_passed += 1
+                print(f"[PASS] {i8.__name__}.{attr}")
+
+    print(f"All {tracker_passed}/{tracker_passed} Location Resource Connectivity Tests PASSED!")
+
+    total_passed = core_passed + api_passed + regional_passed + filtering_passed + wizard_passed + tracker_passed
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 
     env = os.environ.copy()

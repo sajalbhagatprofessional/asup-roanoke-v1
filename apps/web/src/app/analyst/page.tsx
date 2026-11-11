@@ -10,11 +10,13 @@ import {
   AlertTriangle,
   Clock,
   Layers,
+  Radio,
 } from "lucide-react";
 import DealCard from "../../components/DealCard";
 import DealFilterBar from "../../components/DealFilterBar";
 import ManualDocketModal from "../../components/ManualDocketModal";
 import ResourceAccessModal from "../../components/ResourceAccessModal";
+import SourceTrackerModal from "../../components/SourceTrackerModal";
 import { fetchDeals, fetchExternalListings, verifyAndPromoteDeal } from "../../lib/api";
 import { Deal, DealFilterParams, DealStage } from "../../lib/types";
 
@@ -23,6 +25,7 @@ export default function AnalystPipelinePage() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
+  const [isSourceTrackerOpen, setIsSourceTrackerOpen] = useState(false);
   const [isFetchingExternal, setIsFetchingExternal] = useState(false);
   const [filters, setFilters] = useState<DealFilterParams>({
     role: "ANALYST",
@@ -108,6 +111,14 @@ export default function AnalystPipelinePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsSourceTrackerOpen(true)}
+            className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-blue-950/70 hover:bg-blue-900/80 text-blue-300 border border-blue-800/80 transition"
+            title="Track all data sources, connections, and access barriers for this location"
+          >
+            <Radio className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+            <span>Location Sources</span>
+          </button>
           <button
             onClick={() => setIsAccessModalOpen(true)}
             className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-900/60 transition"
@@ -284,6 +295,12 @@ export default function AnalystPipelinePage() {
           </div>
         </div>
       )}
+
+      {/* Location Resource & Connectivity Tracker Modal */}
+      <SourceTrackerModal
+        isOpen={isSourceTrackerOpen}
+        onClose={() => setIsSourceTrackerOpen(false)}
+      />
     </div>
   );
 }

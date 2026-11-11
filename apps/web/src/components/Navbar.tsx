@@ -14,10 +14,12 @@ import {
   Compass,
   MapPin,
   Sliders,
+  Radio,
 } from "lucide-react";
 import { fetchActiveMandate, fetchHealth } from "../lib/api";
 import { HealthStatus, MandateProfile, TeamRole } from "../lib/types";
 import MandateSetupModal from "./MandateSetupModal";
+import SourceTrackerModal from "./SourceTrackerModal";
 
 interface NavItem {
   name: string;
@@ -39,6 +41,7 @@ export default function Navbar() {
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [activeMandate, setActiveMandate] = useState<MandateProfile | null>(null);
   const [isMandateModalOpen, setIsMandateModalOpen] = useState(false);
+  const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
 
   const loadMandateAndHealth = () => {
     fetchHealth().then(setHealth).catch(() => {});
@@ -80,6 +83,16 @@ export default function Navbar() {
                   </span>
                   <span className="text-[10px] text-emerald-300 underline ml-1">Change</span>
                 </button>
+                {/* Source & Resource Connectivity Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsSourceModalOpen(true)}
+                  className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-950/70 hover:bg-blue-900/80 text-blue-300 border border-blue-700/80 transition cursor-pointer text-[11px] font-mono group"
+                  title="View active sources, connectivity health, and access barriers for this location"
+                >
+                  <Radio className="w-3 h-3 text-blue-400 group-hover:scale-110 transition-transform animate-pulse" />
+                  <span className="font-semibold">Sources</span>
+                </button>
               </div>
               <p className="text-[11px] text-slate-400 truncate max-w-xs sm:max-w-md">
                 {activeMandate?.mandate_name || "Target Acquisition Mandate & Strategic Budget Engine"}
@@ -116,6 +129,15 @@ export default function Navbar() {
           {/* Mandate Health Pill */}
           <div className="hidden lg:flex items-center space-x-3 text-xs font-mono">
             <button
+              onClick={() => setIsSourceModalOpen(true)}
+              className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-blue-950/60 hover:bg-blue-900/60 border border-blue-800 text-blue-300 transition"
+              title="Track data sources and connectivity for this location"
+            >
+              <Radio className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+              <span>Source Tracker</span>
+            </button>
+            <span className="text-slate-500">|</span>
+            <button
               onClick={() => setIsMandateModalOpen(true)}
               className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 transition"
             >
@@ -142,6 +164,13 @@ export default function Navbar() {
             window.location.reload();
           }
         }}
+      />
+
+      {/* Location Resource & Connectivity Tracker Modal */}
+      <SourceTrackerModal
+        isOpen={isSourceModalOpen}
+        onClose={() => setIsSourceModalOpen(false)}
+        mandateCode={activeMandate?.mandate_id}
       />
     </header>
   );
