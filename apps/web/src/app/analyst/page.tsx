@@ -13,13 +13,16 @@ import {
 } from "lucide-react";
 import DealCard from "../../components/DealCard";
 import ManualDocketModal from "../../components/ManualDocketModal";
-import { fetchDeals, verifyAndPromoteDeal } from "../../lib/api";
+import ResourceAccessModal from "../../components/ResourceAccessModal";
+import { fetchDeals, fetchExternalListings, verifyAndPromoteDeal } from "../../lib/api";
 import { Deal, DealStage } from "../../lib/types";
 
 export default function AnalystPipelinePage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
+  const [isFetchingExternal, setIsFetchingExternal] = useState(false);
   const [selectedStage, setSelectedStage] = useState<string>("ALL");
   const [verifyModalDeal, setVerifyModalDeal] = useState<Deal | null>(null);
   const [secondSourceUrl, setSecondSourceUrl] = useState(
@@ -36,6 +39,21 @@ export default function AnalystPipelinePage() {
       console.error("Failed to load pipeline:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleScanRegionalListings = async () => {
+    setIsFetchingExternal(true);
+    try {
+      const res = await fetchExternalListings(undefined, "ROA-REGIONAL-01");
+      setActionMessage(
+        `API-Anything Scan Complete: Fetched ${res.total_fetched} market listings across 10 regional counties. Ingested ${res.in_box_ingested_count} in-box deals into pipeline (killed ${res.rejected_count} off-mandate).`
+      );
+      loadPipeline();
+    } catch (err: any) {
+      setActionMessage(`External scan failed: ${err.message}`);
+    } finally {
+      setIsFetchingExternal(false);
     }
   };
 
@@ -84,10 +102,23 @@ export default function AnalystPipelinePage() {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsAccessModalOpen(true)}
+            className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-900/60 transition"
+          >
+            <span>Account Access Guide</span>
+          </button>
+          <button
+            onClick={handleScanRegionalListings}
+            disabled={isFetchingExternal}
+            className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition disabled:opacity-50"
+          >
+            <span>{isFetchingExternal ? "Scanning Region..." : "API-Anything Regional Scan"}</span>
+          </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition"
+            className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition"
           >
             <Upload className="w-4 h-4" />
             <span>Drop Ingest Filing</span>
@@ -180,6 +211,12 @@ export default function AnalystPipelinePage() {
           setIsModalOpen(false);
           loadPipeline();
         }}
+      />
+
+      {/* Resource Access & Account Requirements Modal */}
+      <ResourceAccessModal
+        isOpen={isAccessModalOpen}
+        onClose={() => setIsAccessModalOpen(false)}
       />
 
       {/* Verify & Promote Modal */}

@@ -1,8 +1,10 @@
 import {
+  AccessRequirementsResponse,
   Deal,
   DealMemo,
   DocketIngestRequest,
   DocketIngestResponse,
+  ExternalFetchResponse,
   HealthStatus,
   SBALenderPackBundle,
   TeamRole,
@@ -178,3 +180,29 @@ export async function fetchLenderPack(
   }
   return res.json();
 }
+
+export async function fetchAccessRequirements(): Promise<AccessRequirementsResponse> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/access-requirements`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch access requirements: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchExternalListings(
+  fipsCodes?: string[],
+  mandateCode: string = "ROA-REGIONAL-01"
+): Promise<ExternalFetchResponse> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/listings/external-fetch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fips_codes: fipsCodes,
+      mandate_code: mandateCode,
+      auto_ingest: true,
+    }),
+  });
+  if (!res.ok) throw new Error(`External listing fetch failed: ${res.statusText}`);
+  return res.json();
+}
+

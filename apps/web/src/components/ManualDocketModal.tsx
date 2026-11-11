@@ -24,6 +24,7 @@ export default function ManualDocketModal({
   onSuccess,
 }: ManualDocketModalProps) {
   const [docketId, setDocketId] = useState("ROA-MANUAL-01");
+  const [mandateCode, setMandateCode] = useState("ROA-REGIONAL-01");
   const [fipsCode, setFipsCode] = useState("51770");
   const [parcelId, setParcelId] = useState("4012903");
   const [entityName, setEntityName] = useState("Blue Ridge Precision Tooling LLC");
@@ -36,7 +37,7 @@ export default function ManualDocketModal({
 
   if (!isOpen) return null;
 
-  const handlePreFill = (type: "IN_BOX" | "NEAR_MISS" | "HARD_KILL" | "LUST_BLOCK") => {
+  const handlePreFill = (type: "IN_BOX" | "NEAR_MISS" | "BOTETOURT" | "FRANKLIN" | "BEDFORD" | "HARD_KILL" | "LUST_BLOCK") => {
     setResult(null);
     setError(null);
     if (type === "IN_BOX") {
@@ -47,9 +48,33 @@ export default function ManualDocketModal({
       setNaicsCode("332710");
       setPrice("1750000.00");
       setHasFloor(true);
+    } else if (type === "BOTETOURT") {
+      setDocketId("BOT-CNC-" + Math.floor(Math.random() * 1000));
+      setFipsCode("51023"); // Botetourt County
+      setParcelId("BOT-PARCEL-8841");
+      setEntityName("Botetourt Precision CNC & Industrial Fabrication LLC");
+      setNaicsCode("332710");
+      setPrice("2450000.00");
+      setHasFloor(true);
+    } else if (type === "FRANKLIN") {
+      setDocketId("FRK-HVAC-" + Math.floor(Math.random() * 1000));
+      setFipsCode("51067"); // Franklin County
+      setParcelId("FRK-PARCEL-1940");
+      setEntityName("Franklin County Commercial HVAC Contractors Inc.");
+      setNaicsCode("238220");
+      setPrice("1850000.00");
+      setHasFloor(true);
+    } else if (type === "BEDFORD") {
+      setDocketId("BDF-FLEET-" + Math.floor(Math.random() * 1000));
+      setFipsCode("51019"); // Bedford County
+      setParcelId("BDF-PARCEL-4412");
+      setEntityName("Bedford Commercial Fleet Maintenance & Heavy Truck Repair");
+      setNaicsCode("811111");
+      setPrice("1650000.00");
+      setHasFloor(true);
     } else if (type === "NEAR_MISS") {
       setDocketId("ROA-SALEM-" + Math.floor(Math.random() * 1000));
-      setFipsCode("51775"); // City of Salem (Near-Miss)
+      setFipsCode("51775"); // City of Salem
       setParcelId("SALEM-099");
       setEntityName("Salem Industrial Fabrication LLC");
       setNaicsCode("332312");
@@ -88,6 +113,7 @@ export default function ManualDocketModal({
         entity_name: entityName,
         naics_code: naicsCode,
         asking_or_cure_price_usd: price,
+        mandate_code: mandateCode,
         has_real_estate_or_equipment_floor: hasFloor,
         is_predatory_personal_distress: false,
       });
@@ -128,33 +154,68 @@ export default function ManualDocketModal({
 
         {/* Quick Pre-fill Buttons */}
         <div className="mt-4 pt-3 border-t border-slate-800 flex flex-wrap gap-2 text-xs">
-          <span className="text-slate-400 self-center font-mono">Test Presets:</span>
+          <span className="text-slate-400 self-center font-mono">Presets:</span>
           <button
             type="button"
             onClick={() => handlePreFill("IN_BOX")}
             className="px-2.5 py-1 rounded bg-emerald-950/80 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800"
           >
-            In-Box Precision Machining
+            Roanoke Machining
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePreFill("BOTETOURT")}
+            className="px-2.5 py-1 rounded bg-blue-950/80 hover:bg-blue-900/80 text-blue-300 border border-blue-800"
+          >
+            Botetourt CNC (51023)
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePreFill("FRANKLIN")}
+            className="px-2.5 py-1 rounded bg-indigo-950/80 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800"
+          >
+            Franklin HVAC (51067)
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePreFill("BEDFORD")}
+            className="px-2.5 py-1 rounded bg-cyan-950/80 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800"
+          >
+            Bedford Fleet (51019)
           </button>
           <button
             type="button"
             onClick={() => handlePreFill("NEAR_MISS")}
             className="px-2.5 py-1 rounded bg-amber-950/80 hover:bg-amber-900/80 text-amber-300 border border-amber-800"
           >
-            Salem (51775) Near-Miss
+            Salem (51775)
           </button>
           <button
             type="button"
             onClick={() => handlePreFill("HARD_KILL")}
             className="px-2.5 py-1 rounded bg-red-950/80 hover:bg-red-900/80 text-red-300 border border-red-800"
           >
-            Residential 531110 (Hard Kill)
+            Residential 531110 (Kill)
           </button>
         </div>
 
         {/* Submission Form */}
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider">
+                Mandate Policy
+              </label>
+              <select
+                value={mandateCode}
+                onChange={(e) => setMandateCode(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
+              >
+                <option value="ROA-REGIONAL-01">ROA-REGIONAL-01 (Roanoke Valley + Neighboring Counties)</option>
+                <option value="ROA-SMB-01">ROA-SMB-01 (Strict Core City & County Only)</option>
+              </select>
+            </div>
+
             <div>
               <label className="block text-xs font-medium text-slate-300 uppercase tracking-wider">
                 Docket / Notice ID
@@ -190,10 +251,23 @@ export default function ManualDocketModal({
                 onChange={(e) => setFipsCode(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
               >
-                <option value="51770">51770 — City of Roanoke (In-Box)</option>
-                <option value="51161">51161 — Roanoke County (In-Box)</option>
-                <option value="51775">51775 — City of Salem (Near-Miss)</option>
-                <option value="51760">51760 — City of Richmond (Out-of-Box Kill)</option>
+                <optgroup label="Core Roanoke Valley">
+                  <option value="51770">51770 — City of Roanoke (Core)</option>
+                  <option value="51161">51161 — Roanoke County (Core)</option>
+                  <option value="51775">51775 — City of Salem (Immediate Neighbor)</option>
+                </optgroup>
+                <optgroup label="Neighboring Regional Counties">
+                  <option value="51023">51023 — Botetourt County (North I-81 Corridor)</option>
+                  <option value="51067">51067 — Franklin County (South Rocky Mount / SML)</option>
+                  <option value="51019">51019 — Bedford County (East US-460 Corridor)</option>
+                  <option value="51121">51121 — Montgomery County (West Tech & Machining)</option>
+                  <option value="51750">51750 — City of Radford (West Manufacturing)</option>
+                  <option value="51045">51045 — Craig County (Northwest Fleet/Timber)</option>
+                  <option value="51063">51063 — Floyd County (Southwest Light Industrial)</option>
+                </optgroup>
+                <optgroup label="Out of Bounds">
+                  <option value="51760">51760 — City of Richmond (Immediate Kill)</option>
+                </optgroup>
               </select>
             </div>
 

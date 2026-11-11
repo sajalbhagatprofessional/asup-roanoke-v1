@@ -54,9 +54,52 @@ export interface DocketIngestRequest {
   entity_name: string;
   naics_code: string;
   asking_or_cure_price_usd: string;
+  mandate_code?: string;
   has_real_estate_or_equipment_floor: boolean;
   is_predatory_personal_distress: boolean;
   source_url?: string;
+}
+
+export interface SiteAccessProfile {
+  site: string;
+  display_name: string;
+  requires_physical_account: boolean;
+  account_type_needed: string;
+  auth_mechanism: string;
+  target_domains: string[];
+  compliance_notes: string;
+}
+
+export interface AccessRequirementsResponse {
+  status: string;
+  total_tracked_platforms: number;
+  platforms: SiteAccessProfile[];
+  summary: {
+    physical_account_required_count: number;
+    open_public_count: number;
+  };
+}
+
+export interface ExternalListingResult {
+  listing_id: string;
+  title: string;
+  site: string;
+  source_url: string;
+  fips_code: string;
+  asking_price_usd: string;
+  disposition: string;
+  reasons: string[];
+  ingested_to_pipeline: boolean;
+}
+
+export interface ExternalFetchResponse {
+  status: string;
+  mandate_code: string;
+  target_fips_count: number;
+  total_fetched: number;
+  in_box_ingested_count: number;
+  rejected_count: number;
+  listings: ExternalListingResult[];
 }
 
 export interface DocketIngestResponse {

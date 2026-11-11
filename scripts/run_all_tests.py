@@ -15,6 +15,7 @@ import tests.integration.test_sprint2_connectors_and_breaker as i1
 import tests.integration.test_sprint3_enrichment_rbac_security as i2
 import tests.integration.test_sprint4_to_6_memo_outreach_lender_pack as i3
 import tests.integration.test_fastapi_endpoints as i4
+import tests.integration.test_regional_expansion_and_api_anything as i5
 
 
 def main() -> int:
@@ -43,7 +44,19 @@ def main() -> int:
 
     print(f"All {api_passed}/{api_passed} FastAPI Production REST Server Endpoint Tests PASSED!")
 
-    total_passed = core_passed + api_passed
+    # Milestone 5: Regional Expansion & ApiAnything Suite
+    regional_passed = 0
+    for attr in sorted(dir(i5)):
+        if attr.startswith("test_"):
+            fn = getattr(i5, attr)
+            if callable(fn):
+                fn()
+                regional_passed += 1
+                print(f"[PASS] {i5.__name__}.{attr}")
+
+    print(f"All {regional_passed}/{regional_passed} Regional Expansion & ApiAnything Tests PASSED!")
+
+    total_passed = core_passed + api_passed + regional_passed
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 
     env = os.environ.copy()

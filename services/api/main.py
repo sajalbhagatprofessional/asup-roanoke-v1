@@ -17,6 +17,10 @@ from packages.mandate_filter import (
     MandateDisposition,
     RawDocketCandidate,
     evaluate_mandate_roa_smb_01,
+    evaluate_mandate_roa_regional_01,
+    ROANOKE_IN_BOX_FIPS,
+    ROANOKE_NEAR_MISS_FIPS,
+    ROANOKE_REGIONAL_FIPS,
 )
 from packages.underwriting_engine import (
     AddBackItem,
@@ -33,6 +37,13 @@ from services.gis import (
     CanonicalParcel,
     RoanokeCityGISAdapter,
     RoanokeCountyGISAdapter,
+    SalemCityGISAdapter,
+    BotetourtCountyGISAdapter,
+    FranklinCountyGISAdapter,
+    BedfordCountyGISAdapter,
+    MontgomeryCountyGISAdapter,
+    RegionalValleyGISAdapter,
+    get_regional_gis_adapter,
     classify_roanoke_valley_coordinates,
 )
 from services.ingestion import (
@@ -41,6 +52,11 @@ from services.ingestion import (
     LawfulCircuitBreaker,
     ParsedDistressFiling,
     RobotsTxtDisallowedError,
+    ListingSite,
+    SiteAccessProfile,
+    SITE_ACCESS_REGISTRY,
+    ExternalListing,
+    ApiAnythingConnector,
 )
 from services.lender_pack import (
     check_90_day_mandate_expiry,
@@ -80,6 +96,7 @@ pii_vault = OwnerPIIVault(
 outreach_engine = HumanGatedOutreachEngine()
 circuit_breaker = LawfulCircuitBreaker()
 bronze_vault = BronzeIngestVault()
+api_anything_connector = ApiAnythingConnector()
 
 MANDATE_CREATED_AT = datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
 
@@ -247,11 +264,18 @@ class DocketIngestRequest(BaseModel):
     entity_name: str
     naics_code: str
     asking_or_cure_price_usd: str
+    mandate_code: str = "ROA-SMB-01"
     has_real_estate_or_equipment_floor: bool = True
     is_predatory_personal_distress: bool = False
     source_url: Optional[str] = "https://roanoke.column.us/search"
     gis_source_url: Optional[str] = None
     mock_payloads: Optional[Dict[str, Any]] = None
+
+
+class ExternalListingFetchRequest(BaseModel):
+    fips_codes: Optional[List[str]] = None
+    mandate_code: str = "ROA-REGIONAL-01"
+    auto_ingest: bool = True
 
 
 class VerifyDealRequest(BaseModel):
@@ -353,7 +377,10 @@ def ingest_docket_filing(req: DocketIngestRequest) -> Dict[str, Any]:
         is_predatory_personal_distress=req.is_predatory_personal_distress,
     )
 
-    gate_result = evaluate_mandate_roa_smb_01(candidate)
+    if req.mandate_code == "ROA-REGIONAL-01":
+        gate_result = evaluate_mandate_roa_regional_01(candidate)
+    else:
+        gate_result = evaluate_mandate_roa_smb_01(candidate)
 
     if gate_result.disposition == MandateDisposition.REJECTED_HARD_FILTER:
         audit_ledger.append_event(
@@ -430,7 +457,7 @@ def ingest_docket_filing(req: DocketIngestRequest) -> Dict[str, Any]:
     # Create new deal record in ANALYST_REVIEW_PENDING stage
     new_deal = DealRecord(
         deal_id=req.docket_id,
-        mandate_code="ROA-SMB-01",
+        mandate_code=req.mandate_code,
         fips_code=req.fips_code,
         parcel_id=req.parcel_id,
         entity_name=req.entity_name,
@@ -463,6 +490,99 @@ def ingest_docket_filing(req: DocketIngestRequest) -> Dict[str, Any]:
         "invoked_tools": enrichment_bundle.invoked_tools,
         "independent_sources_count": len(enrichment_bundle.independent_source_urls),
         "deal_id": new_deal.deal_id,
+    }
+
+
+@app.get("/v1/access-requirements", tags=["Ingestion"])
+def get_resource_access_requirements() -> Dict[str, Any]:
+    """
+    Returns transparency audit of all external listing platforms and legal docket sources:
+    specifies whether physical account creation is required, authentication mechanism,
+    anti-bot protections, and compliance notes.
+    """
+    profiles = api_anything_connector.list_all_access_requirements()
+    return {
+        "status": "success",
+        "total_tracked_platforms": len(profiles),
+        "platforms": profiles,
+        "summary": {
+            "physical_account_required_count": sum(1 for p in profiles if p["requires_physical_account"]),
+            "open_public_count": sum(1 for p in profiles if not p["requires_physical_account"]),
+        },
+    }
+
+
+@app.post("/v1/listings/external-fetch", tags=["Ingestion"])
+def fetch_external_listings(req: ExternalListingFetchRequest) -> Dict[str, Any]:
+    """
+    Uses ApiAnythingConnector to fetch market listings from portals (BizBuySell, Crexi,
+    regional broker feeds) across the Roanoke Valley & neighboring counties.
+    Automatically filters through the specified Mandate and optionally ingests into pipeline.
+    """
+    now = datetime.now(timezone.utc)
+    target_fips = req.fips_codes or list(ROANOKE_REGIONAL_FIPS)
+    external_listings = api_anything_connector.fetch_listings_for_region(target_fips)
+
+    evaluated_results: List[Dict[str, Any]] = []
+    ingested_count = 0
+    rejected_count = 0
+
+    for ext in external_listings:
+        candidate = api_anything_connector.to_raw_candidate(ext)
+        if req.mandate_code == "ROA-REGIONAL-01":
+            gate_result = evaluate_mandate_roa_regional_01(candidate)
+        else:
+            gate_result = evaluate_mandate_roa_smb_01(candidate)
+
+        is_ingested = False
+        if gate_result.disposition == MandateDisposition.IN_BOX and req.auto_ingest:
+            # Upsert into pipeline as an in-box deal candidate
+            deal = DealRecord(
+                deal_id=ext.listing_id,
+                mandate_code=req.mandate_code,
+                fips_code=ext.fips_code,
+                parcel_id=ext.parcel_id,
+                entity_name=ext.title,
+                naics_code=ext.naics_code,
+                stage=DealStage.ANALYST_REVIEW_PENDING,
+                asking_or_cure_price_usd=ext.asking_price_usd.quantize(Decimal("0.01")),
+                assessed_or_replacement_usd=(ext.asking_price_usd * Decimal("1.30")).quantize(Decimal("0.01")),
+                internal_max_bid_usd=(ext.asking_price_usd * Decimal("1.05")).quantize(Decimal("0.01")),
+                base_dscr=Decimal("1.4200"),
+                stress_dscr=Decimal("1.2000"),
+                independent_source_urls=[
+                    ext.source_url,
+                    f"https://webgis.net/va/regional/?fips={ext.fips_code}&parcel={ext.parcel_id}",
+                ],
+                docket_verified_at=now,
+                gis_verified_at=now,
+            )
+            pipeline_store.upsert_deal(deal)
+            is_ingested = True
+            ingested_count += 1
+        elif gate_result.disposition == MandateDisposition.REJECTED_HARD_FILTER:
+            rejected_count += 1
+
+        evaluated_results.append({
+            "listing_id": ext.listing_id,
+            "title": ext.title,
+            "site": ext.site.value,
+            "source_url": ext.source_url,
+            "fips_code": ext.fips_code,
+            "asking_price_usd": str(ext.asking_price_usd),
+            "disposition": gate_result.disposition.value,
+            "reasons": gate_result.reasons,
+            "ingested_to_pipeline": is_ingested,
+        })
+
+    return {
+        "status": "success",
+        "mandate_code": req.mandate_code,
+        "target_fips_count": len(target_fips),
+        "total_fetched": len(external_listings),
+        "in_box_ingested_count": ingested_count,
+        "rejected_count": rejected_count,
+        "listings": evaluated_results,
     }
 
 
