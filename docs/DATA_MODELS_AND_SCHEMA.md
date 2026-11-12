@@ -258,4 +258,33 @@ Append-only tamper-evident audit record for all fiduciary actions.
 - `permit_id` (`str`), `issue_date_iso` (`str`), `permit_type` (`str`), `estimated_valuation_usd` (`Decimal`), `status` (`str`), `contractor_name` (`str`), `description` (`str`).
 - `ZoningEnvelopeReport`: Container with `parcel_id`, `zone_code`, `zone_description`, `permitted_use_status` (`PERMITTED_BY_RIGHT`, `LEGAL_NON_CONFORMING_GRANDFATHERED`, `SPECIAL_USE_PERMIT_REQUIRED`), `parcel_sqft` (`Decimal`), `building_footprint_sqft` (`Decimal`), `max_allowable_far` (`Decimal`), `current_far` (`Decimal`), `expansion_potential_sqft` (`Decimal`), `open_permit_citations_count` (`int`), `permits`, `unpermitted_alteration_risk_detected` (`bool`), and `analyst_zoning_summary`.
 
+---
+
+## 9. Institutional Titan Data Models (Goldman Sachs / BlackRock / Vanguard / Jane Street / Bridgewater)
+
+### `DAGNodeState` & `DAGEvaluationReport` (Goldman SecDB / Athena Reactive DAG)
+- `node_id` (`str`), `node_type` (`DAGNodeType`: `INPUT`, `FORMULA`, `HURDLE`), `label` (`str`), `dependencies` (`List[str]`), `dependents` (`List[str]`), `cached_value` (`Optional[str]`), `is_dirty` (`bool`), `unit` (`str`), `description` (`str`).
+- `DAGEvaluationReport`: Container with `evaluation_id` (`str`), `timestamp_iso` (`str`), `inputs` (`Dict[str, str]`), `computed_formulas` (`Dict[str, str]`), `hurdle_evaluations` (`Dict[str, bool]`), `is_sba_compliant` (`bool`), `is_va_foreclosure_compliant` (`bool`), `is_principal_hurdle_passed` (`bool`), `dirty_nodes_recalculated_count` (`int`), `total_dag_nodes_count` (`int`), `execution_time_microseconds` (`int`), `incremental_efficiency_pct` (`str`), and `executive_synthesis` (`str`).
+
+### `WaterfallTierResult`, `PEWaterfallReport` & `PortfolioAllocationReport` (BlackRock eFront & Citadel)
+- `WaterfallTierResult`: `tier_number` (`int`), `tier_name` (`str`), `description` (`str`), `lp_distribution_usd` (`str`), `gp_distribution_usd` (`str`), `total_tier_distribution_usd` (`str`), `remaining_distributable_usd` (`str`).
+- `PEWaterfallReport`: `deal_id` (`str`), `waterfall_structure` (`WaterfallStructure`: `EUROPEAN_WHOLE_FUND`, `AMERICAN_DEAL_BY_DEAL`), `total_equity_contributed_usd` (`str`), `lp_equity_contributed_usd` (`str`), `gp_equity_contributed_usd` (`str`), `preferred_return_rate_pct` (`str`), `holding_period_years` (`str`), `total_distributable_proceeds_usd` (`str`), `lp_total_received_usd` (`str`), `gp_total_received_usd` (`str`), `lp_moic` (`str`), `gp_moic` (`str`), `lp_annualized_roi_pct` (`str`), `gp_carried_interest_usd` (`str`), `tier_breakdown` (`List[WaterfallTierResult]`), and `cpa_waterfall_opinion` (`str`).
+- `ConcentrationLimitRule`: `rule_name` (`str`), `dimension_type` (`str`), `target_identifier` (`str`), `max_allowable_allocation_pct` (`str`), `current_allocation_pct` (`str`), `current_deployed_usd` (`str`), `is_breached` (`bool`), and `remedial_action` (`str`).
+- `PortfolioAllocationReport`: `report_id` (`str`), `as_of_date_iso` (`str`), `total_committed_family_capital_usd` (`str`), `total_deployed_equity_usd` (`str`), `dry_powder_liquidity_usd` (`str`), `dry_powder_ratio_pct` (`str`), `active_deals_count` (`int`), `is_all_concentration_limits_compliant` (`bool`), `concentration_rules` (`List[ConcentrationLimitRule]`), `capital_call_schedule` (`List[CapitalCallMilestone]`), and `principal_risk_summary` (`str`).
+
+### `Section1031ExchangeReport` & `CostSegregationAnalysisReport` (Vanguard & CPA Tax Alpha)
+- `Section1031IdentificationRecord`: `candidate_id` (`str`), `property_address` (`str`), `county_fips` (`str`), `estimated_purchase_price_usd` (`str`), `identified_date_iso` (`str`), `is_within_45_days` (`bool`), `rule_category` (`str`).
+- `Section1031ExchangeReport`: Container with `exchange_id` (`str`), `relinquished_property_name` (`str`), `sale_closing_date_iso` (`str`), `sale_price_usd` (`str`), `adjusted_cost_basis_usd` (`str`), `existing_mortgage_payoff_usd` (`str`), `net_equity_proceeds_usd` (`str`), `statutory_45_day_deadline_iso` (`str`), `statutory_180_day_deadline_iso` (`str`), `days_remaining_45d_id` (`int`), `days_remaining_180d_close` (`int`), `is_id_window_active` (`bool`), `is_exchange_active` (`bool`), `identified_properties` (`List[Section1031IdentificationRecord]`), `projected_tax_deferral_usd` (`str`), `effective_capital_gains_rate_pct` (`str`), and `tax_opinion_summary` (`str`).
+- `CostSegregationClassAllocation`: `asset_class` (`MACRSAssetClass`), `description` (`str`), `allocated_basis_usd` (`str`), `allocation_pct` (`str`), `bonus_depreciation_pct` (`str`), `year_1_depreciation_usd` (`str`).
+- `CostSegregationAnalysisReport`: Container with `parcel_id`, `deal_id`, `total_acquisition_basis_usd`, `land_value_non_depreciable_usd`, `depreciable_basis_usd`, `class_allocations` (`List[CostSegregationClassAllocation]`), `year_1_accelerated_deduction_usd`, `year_1_straight_line_deduction_usd`, `first_year_additional_deduction_usd`, `marginal_tax_rate_pct`, `year_1_cash_tax_savings_usd`, `npv_5yr_tax_benefit_usd`, and `cpa_tax_opinion`.
+
+### `CanonicalEvent` & `ReplayLedgerReport` (Jane Street Deterministic Canonical SMR)
+- `CanonicalEvent`: `sequence_no` (`int`), `timestamp_iso` (`str`), `event_type` (`CanonicalEventType`), `aggregate_id` (`str`), `actor_role` (`str`), `payload_data` (`Dict[str, Any]`), `payload_hash` (`str`), `parent_hash` (`str`), `event_hash` (`str`).
+- `ReplayLedgerReport`: `replay_id` (`str`), `total_events_replayed` (`int`), `tip_sequence_no` (`int`), `tip_event_hash` (`str`), `is_hash_chain_valid` (`bool`), `reconstructed_state` (`Dict[str, Any]`), `earliest_event_timestamp` (`str`), `latest_event_timestamp` (`str`), and `statutory_audit_opinion` (`str`).
+
+### `QuadrantStressResult` & `BridgewaterMacroRegimeReport` (Dalio 4-Quadrant Macro Tester)
+- `QuadrantStressResult`: `quadrant` (`MacroEconomicQuadrant`), `regime_name` (`str`), `growth_trend` (`str`), `inflation_trend` (`str`), `revenue_shock_pct` (`str`), `input_cost_inflation_pct` (`str`), `rate_shock_bps` (`str`), `stressed_revenue_usd` (`str`), `stressed_ebitda_usd` (`str`), `stressed_annual_debt_service_usd` (`str`), `stressed_dscr` (`str`), `solvency_status` (`str`: `ROBUST_SOLVENT`, `MARGINAL_STRESS`, `INSOLVENT_DEFAULT`), and `resilience_points` (`int`).
+- `BridgewaterMacroRegimeReport`: Container with `deal_id`, `entity_name`, `naics_code`, `base_revenue_usd`, `base_ebitda_usd`, `base_annual_debt_service_usd`, `base_dscr`, `composite_resilience_score`, `all_weather_grade`, `quadrant_results` (`List[QuadrantStressResult]`), `most_severe_threat_quadrant`, `recommended_hedging_strategy`, and `dalio_macro_synthesis`.
+
+
 

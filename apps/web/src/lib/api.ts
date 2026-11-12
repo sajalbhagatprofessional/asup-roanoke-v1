@@ -56,6 +56,14 @@ import {
   DebtMaturityRadarReport,
   TitleCurativeAuditReport,
   ZoningEnvelopeReport,
+  DAGEvaluationReport,
+  DAGNodeState,
+  PEWaterfallReport,
+  PortfolioAllocationReport,
+  Section1031ExchangeReport,
+  CostSegregationAnalysisReport,
+  ReplayLedgerReport,
+  BridgewaterMacroRegimeReport,
 } from "./types";
 
 const getApiBase = () => {
@@ -1213,6 +1221,139 @@ export async function fetchPermitZoningScan(params: {
   if (!res.ok) throw new Error(`Failed to execute permit & zoning scan: ${res.statusText}`);
   return res.json();
 }
+
+// =========================================================================
+// INSTITUTIONAL TITAN API CLIENT METHODS
+// =========================================================================
+
+export async function fetchReactiveDAGEvaluation(params: {
+  purchase_price_usd?: number;
+  buyer_equity_pct?: number;
+  sofr_benchmark_rate?: number;
+  bank_spread_bps?: number;
+  historical_ebitda_usd?: number;
+  replacement_gm_salary_usd?: number;
+  assessed_cre_value_usd?: number;
+  seller_standby_note_usd?: number;
+  seller_consulting_months?: number;
+  loan_term_years?: number;
+} = {}): Promise<{ status: string; dag_report: DAGEvaluationReport; node_states: DAGNodeState[] }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/titan/reactive-dag/evaluate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to evaluate reactive DAG: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchPEWaterfall(params: {
+  deal_id?: string;
+  total_distributable_proceeds_usd: number;
+  lp_equity_contributed_usd: number;
+  gp_equity_contributed_usd?: number;
+  preferred_return_rate_pct?: number;
+  holding_period_years?: number;
+  carried_interest_pct?: number;
+  waterfall_structure?: "EUROPEAN_WHOLE_FUND" | "AMERICAN_DEAL_BY_DEAL";
+}): Promise<{ status: string; waterfall_report: PEWaterfallReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/titan/capital-allocator/waterfall`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to calculate PE waterfall: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchPortfolioConcentration(params: {
+  total_committed_capital_usd?: number;
+  active_positions?: any[];
+} = {}): Promise<{ status: string; concentration_report: PortfolioAllocationReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/titan/capital-allocator/concentration-audit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to audit portfolio concentration: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetch1031ExchangeAudit(params: {
+  exchange_id?: string;
+  relinquished_property_name?: string;
+  sale_closing_date_iso?: string;
+  sale_price_usd: number;
+  adjusted_cost_basis_usd: number;
+  existing_mortgage_payoff_usd?: number;
+  candidate_replacements?: any[];
+}): Promise<{ status: string; exchange_report: Section1031ExchangeReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/titan/tax-alpha/1031-exchange`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to audit 1031 exchange: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchCostSegregationAnalysis(params: {
+  parcel_id: string;
+  deal_id?: string;
+  total_acquisition_basis_usd: number;
+  land_value_ratio?: number;
+  five_year_ratio?: number;
+  fifteen_year_ratio?: number;
+  bonus_depreciation_pct?: number;
+  marginal_tax_rate_pct?: number;
+}): Promise<{ status: string; cost_segregation_report: CostSegregationAnalysisReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/titan/tax-alpha/cost-segregation`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to calculate cost segregation: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchCanonicalEventReplay(params: {
+  aggregate_id?: string;
+  up_to_sequence_no?: number;
+} = {}): Promise<{ status: string; replay_report: ReplayLedgerReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/titan/event-stream/replay`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to replay canonical event stream: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchMacroRegimeStressTest(params: {
+  deal_id?: string;
+  entity_name?: string;
+  naics_code?: string;
+  base_annual_revenue_usd: number;
+  base_normalized_ebitda_usd: number;
+  base_annual_debt_service_usd: number;
+  base_interest_rate_pct?: number;
+}): Promise<{ status: string; macro_regime_report: BridgewaterMacroRegimeReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/titan/macro-regime/stress-test`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to execute macro regime stress test: ${res.statusText}`);
+  return res.json();
+}
+
 
 
 

@@ -1194,6 +1194,212 @@ export interface ZoningEnvelopeReport {
   analyst_zoning_summary: string;
 }
 
+// =========================================================================
+// INSTITUTIONAL TITAN TYPES (GOLDMAN SECDB / BLACKROCK EFRONT / VANGUARD / JANE STREET / BRIDGEWATER)
+// =========================================================================
+
+export interface DAGNodeState {
+  node_id: string;
+  node_type: "INPUT" | "FORMULA" | "HURDLE";
+  label: string;
+  dependencies: string[];
+  dependents: string[];
+  cached_value?: string;
+  is_dirty: boolean;
+  unit: string;
+  description: string;
+}
+
+export interface DAGEvaluationReport {
+  evaluation_id: string;
+  timestamp_iso: string;
+  inputs: Record<string, string>;
+  computed_formulas: Record<string, string>;
+  hurdle_evaluations: Record<string, boolean>;
+  is_sba_compliant: boolean;
+  is_va_foreclosure_compliant: boolean;
+  is_principal_hurdle_passed: boolean;
+  dirty_nodes_recalculated_count: number;
+  total_dag_nodes_count: number;
+  execution_time_microseconds: number;
+  incremental_efficiency_pct: string;
+  executive_synthesis: string;
+}
+
+export interface WaterfallTierResult {
+  tier_number: number;
+  tier_name: string;
+  description: string;
+  lp_distribution_usd: string;
+  gp_distribution_usd: string;
+  total_tier_distribution_usd: string;
+  remaining_distributable_usd: string;
+}
+
+export interface PEWaterfallReport {
+  deal_id: string;
+  waterfall_structure: "EUROPEAN_WHOLE_FUND" | "AMERICAN_DEAL_BY_DEAL";
+  total_equity_contributed_usd: string;
+  lp_equity_contributed_usd: string;
+  gp_equity_contributed_usd: string;
+  preferred_return_rate_pct: string;
+  holding_period_years: string;
+  total_distributable_proceeds_usd: string;
+  lp_total_received_usd: string;
+  gp_total_received_usd: string;
+  lp_moic: string;
+  gp_moic: string;
+  lp_annualized_roi_pct: string;
+  gp_carried_interest_usd: string;
+  tier_breakdown: WaterfallTierResult[];
+  cpa_waterfall_opinion: string;
+}
+
+export interface ConcentrationLimitRule {
+  rule_name: string;
+  dimension_type: string;
+  target_identifier: string;
+  max_allowable_allocation_pct: string;
+  current_allocation_pct: string;
+  current_deployed_usd: string;
+  is_breached: boolean;
+  remedial_action: string;
+}
+
+export interface CapitalCallMilestone {
+  month_offset: number;
+  scheduled_date_iso: string;
+  call_amount_usd: string;
+  purpose: string;
+  cumulative_funded_usd: string;
+}
+
+export interface PortfolioAllocationReport {
+  report_id: string;
+  as_of_date_iso: string;
+  total_committed_family_capital_usd: string;
+  total_deployed_equity_usd: string;
+  dry_powder_liquidity_usd: string;
+  dry_powder_ratio_pct: string;
+  active_deals_count: number;
+  is_all_concentration_limits_compliant: boolean;
+  concentration_rules: ConcentrationLimitRule[];
+  capital_call_schedule: CapitalCallMilestone[];
+  principal_risk_summary: string;
+}
+
+export interface Section1031IdentificationRecord {
+  candidate_id: string;
+  property_address: string;
+  county_fips: string;
+  estimated_purchase_price_usd: string;
+  identified_date_iso: string;
+  is_within_45_days: boolean;
+  rule_category: string;
+}
+
+export interface Section1031ExchangeReport {
+  exchange_id: string;
+  relinquished_property_name: string;
+  sale_closing_date_iso: string;
+  sale_price_usd: string;
+  adjusted_cost_basis_usd: string;
+  existing_mortgage_payoff_usd: string;
+  net_equity_proceeds_usd: string;
+  statutory_45_day_deadline_iso: string;
+  statutory_180_day_deadline_iso: string;
+  days_remaining_45d_id: number;
+  days_remaining_180d_close: number;
+  is_id_window_active: boolean;
+  is_exchange_active: boolean;
+  identified_properties: Section1031IdentificationRecord[];
+  projected_tax_deferral_usd: string;
+  effective_capital_gains_rate_pct: string;
+  tax_opinion_summary: string;
+}
+
+export interface CostSegregationClassAllocation {
+  asset_class: "5_YEAR_TANGIBLE_PERSONAL_PROPERTY" | "15_YEAR_LAND_IMPROVEMENTS" | "39_YEAR_NON_RESIDENTIAL_CRE";
+  description: string;
+  allocated_basis_usd: string;
+  allocation_pct: string;
+  bonus_depreciation_pct: string;
+  year_1_depreciation_usd: string;
+}
+
+export interface CostSegregationAnalysisReport {
+  parcel_id: string;
+  deal_id: string;
+  total_acquisition_basis_usd: string;
+  land_value_non_depreciable_usd: string;
+  depreciable_basis_usd: string;
+  class_allocations: CostSegregationClassAllocation[];
+  year_1_accelerated_deduction_usd: string;
+  year_1_straight_line_deduction_usd: string;
+  first_year_additional_deduction_usd: string;
+  marginal_tax_rate_pct: string;
+  year_1_cash_tax_savings_usd: string;
+  npv_5yr_tax_benefit_usd: string;
+  cpa_tax_opinion: string;
+}
+
+export interface CanonicalEventRecord {
+  sequence_no: number;
+  timestamp_iso: string;
+  event_type: string;
+  aggregate_id: string;
+  actor_role: string;
+  payload_data: Record<string, unknown>;
+  payload_hash: string;
+  parent_hash: string;
+  event_hash: string;
+}
+
+export interface ReplayLedgerReport {
+  replay_id: string;
+  total_events_replayed: number;
+  tip_sequence_no: number;
+  tip_event_hash: string;
+  is_hash_chain_valid: boolean;
+  reconstructed_state: Record<string, unknown>;
+  earliest_event_timestamp: string;
+  latest_event_timestamp: string;
+  statutory_audit_opinion: string;
+}
+
+export interface QuadrantStressResult {
+  quadrant: string;
+  regime_name: string;
+  growth_trend: string;
+  inflation_trend: string;
+  revenue_shock_pct: string;
+  input_cost_inflation_pct: string;
+  rate_shock_bps: string;
+  stressed_revenue_usd: string;
+  stressed_ebitda_usd: string;
+  stressed_annual_debt_service_usd: string;
+  stressed_dscr: string;
+  solvency_status: string;
+  resilience_points: number;
+}
+
+export interface BridgewaterMacroRegimeReport {
+  deal_id: string;
+  entity_name: string;
+  naics_code: string;
+  base_revenue_usd: string;
+  base_ebitda_usd: string;
+  base_annual_debt_service_usd: string;
+  base_dscr: string;
+  composite_resilience_score: string;
+  all_weather_grade: string;
+  quadrant_results: QuadrantStressResult[];
+  most_severe_threat_quadrant: string;
+  recommended_hedging_strategy: string;
+  dalio_macro_synthesis: string;
+}
+
+
 
 
 

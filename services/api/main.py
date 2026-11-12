@@ -3360,6 +3360,238 @@ def scan_permits_and_zoning_endpoint(req: PermitZoningScanRequest) -> Dict[str, 
     }
 
 
+# =========================================================================
+# INSTITUTIONAL TITAN SYSTEMS (GOLDMAN SECDB / BLACKROCK EFRONT / VANGUARD / JANE STREET / BRIDGEWATER)
+# =========================================================================
+
+class ReactiveDAGEvalRequest(BaseModel):
+    purchase_price_usd: Optional[float] = Field(1500000.0, description="Purchase price in USD")
+    buyer_equity_pct: Optional[float] = Field(0.10, description="Buyer equity injection ratio (e.g. 0.10 for 10%)")
+    sofr_benchmark_rate: Optional[float] = Field(0.0530, description="Benchmark SOFR rate (e.g. 0.0530)")
+    bank_spread_bps: Optional[float] = Field(275.0, description="Bank margin in basis points (e.g. 275)")
+    historical_ebitda_usd: Optional[float] = Field(380000.0, description="Historical EBITDA in USD")
+    replacement_gm_salary_usd: Optional[float] = Field(85000.0, description="Replacement GM salary deduction")
+    assessed_cre_value_usd: Optional[float] = Field(2200000.0, description="Assessed commercial real estate replacement value")
+    seller_standby_note_usd: Optional[float] = Field(0.0, description="Seller standby note amount in USD")
+    seller_consulting_months: Optional[int] = Field(12, description="Seller consulting transition months")
+    loan_term_years: Optional[int] = Field(25, description="SBA loan amortization term in years")
+
+
+class PEWaterfallRequest(BaseModel):
+    deal_id: Optional[str] = Field("DEAL-001", description="Internal deal identifier")
+    total_distributable_proceeds_usd: float = Field(..., description="Total exit proceeds or distributable cash in USD")
+    lp_equity_contributed_usd: float = Field(..., description="LP invested equity capital in USD")
+    gp_equity_contributed_usd: Optional[float] = Field(0.0, description="GP invested equity capital in USD")
+    preferred_return_rate_pct: Optional[float] = Field(8.0, description="LP annualized preferred return hurdle %")
+    holding_period_years: Optional[float] = Field(3.0, description="Holding period in years")
+    carried_interest_pct: Optional[float] = Field(20.0, description="GP carried interest percentage")
+    waterfall_structure: Optional[str] = Field("EUROPEAN_WHOLE_FUND", description="Waterfall structure type")
+
+
+class PortfolioConcentrationRequest(BaseModel):
+    total_committed_capital_usd: Optional[float] = Field(10000000.0, description="Total committed family capital in USD")
+    active_positions: Optional[List[Dict[str, Any]]] = Field(None, description="Optional active positions list")
+
+
+class Section1031ExchangeRequest(BaseModel):
+    exchange_id: Optional[str] = Field("EX-001", description="1031 exchange reference ID")
+    relinquished_property_name: Optional[str] = Field("Roanoke Distribution Center", description="Relinquished property name")
+    sale_closing_date_iso: Optional[str] = Field(None, description="ISO sale closing date (defaults to 15 days ago)")
+    sale_price_usd: float = Field(..., description="Gross sale price in USD")
+    adjusted_cost_basis_usd: float = Field(..., description="Adjusted tax basis in USD")
+    existing_mortgage_payoff_usd: Optional[float] = Field(0.0, description="Mortgage payoff debt relief in USD")
+    candidate_replacements: Optional[List[Dict[str, Any]]] = Field(None, description="Optional identified replacement properties")
+
+
+class CostSegregationRequest(BaseModel):
+    parcel_id: str = Field(..., description="Target county GIS parcel GPIN")
+    deal_id: Optional[str] = Field("DEAL-001", description="Deal identifier")
+    total_acquisition_basis_usd: float = Field(..., description="Total commercial real estate acquisition price in USD")
+    land_value_ratio: Optional[float] = Field(0.18, description="Non-depreciable land allocation ratio (~18%)")
+    five_year_ratio: Optional[float] = Field(0.185, description="5-Year tangible property ratio (~18.5%)")
+    fifteen_year_ratio: Optional[float] = Field(0.125, description="15-Year land improvements ratio (~12.5%)")
+    bonus_depreciation_pct: Optional[float] = Field(60.0, description="Bonus depreciation statutory rate %")
+    marginal_tax_rate_pct: Optional[float] = Field(42.75, description="Combined federal + Virginia marginal tax rate %")
+
+
+class CanonicalEventReplayRequest(BaseModel):
+    aggregate_id: Optional[str] = Field("DEAL-ROA-001", description="Target deal aggregate ID to replay")
+    up_to_sequence_no: Optional[int] = Field(None, description="Optional sequence cutoff number")
+
+
+class MacroRegimeStressRequest(BaseModel):
+    deal_id: Optional[str] = Field("DEAL-001", description="Deal ID")
+    entity_name: Optional[str] = Field("Blue Ridge Precision Machining", description="Operating company name")
+    naics_code: Optional[str] = Field("332710", description="6-digit NAICS code")
+    base_annual_revenue_usd: float = Field(..., description="Baseline reported annual gross revenue in USD")
+    base_normalized_ebitda_usd: float = Field(..., description="Baseline normalized EBITDA in USD")
+    base_annual_debt_service_usd: float = Field(..., description="Baseline annual debt service in USD")
+    base_interest_rate_pct: Optional[float] = Field(8.05, description="Baseline senior loan interest rate %")
+
+
+@app.post("/v1/titan/reactive-dag/evaluate", tags=["Institutional Titan Systems"])
+def evaluate_reactive_dag_endpoint(req: ReactiveDAGEvalRequest) -> Dict[str, Any]:
+    """
+    Goldman Sachs SecDB / J.P. Morgan Athena style Reactive Underwriting DAG.
+    Evaluates inputs with fine-grained dependency tracking and sub-millisecond incremental invalidation.
+    """
+    from packages.reactive_underwriting_dag import ReactiveUnderwritingDAG, DAGUnderwritingInputs
+    inputs = DAGUnderwritingInputs(
+        purchase_price_usd=Decimal(str(req.purchase_price_usd or 1500000.0)),
+        buyer_equity_pct=Decimal(str(req.buyer_equity_pct or 0.10)),
+        sofr_benchmark_rate=Decimal(str(req.sofr_benchmark_rate or 0.0530)),
+        bank_spread_bps=Decimal(str(req.bank_spread_bps or 275.0)),
+        historical_ebitda_usd=Decimal(str(req.historical_ebitda_usd or 380000.0)),
+        replacement_gm_salary_usd=Decimal(str(req.replacement_gm_salary_usd or 85000.0)),
+        assessed_cre_value_usd=Decimal(str(req.assessed_cre_value_usd or 2200000.0)),
+        seller_standby_note_usd=Decimal(str(req.seller_standby_note_usd or 0.0)),
+        seller_consulting_months=req.seller_consulting_months or 12,
+        loan_term_years=req.loan_term_years or 25,
+    )
+    dag = ReactiveUnderwritingDAG(initial_inputs=inputs)
+    report = dag.evaluate(force_all=True)
+    return {
+        "status": "success",
+        "dag_report": report.to_dict(),
+        "node_states": [n.to_dict() for n in dag.get_node_states()],
+    }
+
+
+@app.post("/v1/titan/capital-allocator/waterfall", tags=["Institutional Titan Systems"])
+def calculate_pe_waterfall_endpoint(req: PEWaterfallRequest) -> Dict[str, Any]:
+    """
+    BlackRock eFront style Private Capital Distribution Waterfall.
+    Solves 4 tiers: Return of Capital, Preferred Return, GP Catch-Up, and Carried Interest.
+    """
+    from packages.capital_allocator import PEWaterfallSolver, WaterfallStructure
+    struct = (
+        WaterfallStructure.AMERICAN_DEAL_BY_DEAL
+        if req.waterfall_structure == "AMERICAN_DEAL_BY_DEAL"
+        else WaterfallStructure.EUROPEAN_WHOLE_FUND
+    )
+    report = PEWaterfallSolver.calculate_waterfall(
+        deal_id=req.deal_id or "DEAL-001",
+        total_distributable_proceeds_usd=Decimal(str(req.total_distributable_proceeds_usd)),
+        lp_equity_contributed_usd=Decimal(str(req.lp_equity_contributed_usd)),
+        gp_equity_contributed_usd=Decimal(str(req.gp_equity_contributed_usd or 0.0)),
+        preferred_return_rate_pct=Decimal(str(req.preferred_return_rate_pct or 8.0)),
+        holding_period_years=Decimal(str(req.holding_period_years or 3.0)),
+        carried_interest_pct=Decimal(str(req.carried_interest_pct or 20.0)),
+        waterfall_structure=struct,
+    )
+    return {
+        "status": "success",
+        "waterfall_report": report.to_dict(),
+    }
+
+
+@app.post("/v1/titan/capital-allocator/concentration-audit", tags=["Institutional Titan Systems"])
+def audit_portfolio_concentration_endpoint(req: PortfolioConcentrationRequest) -> Dict[str, Any]:
+    """
+    Citadel-style Multi-Mandate Portfolio Factor Neutrality & Concentration Gate.
+    Enforces maximum allocation caps per NAICS industry (<=25%), county (<=40%), and lender (<=30%).
+    """
+    from packages.capital_allocator import PortfolioConcentrationEngine
+    report = PortfolioConcentrationEngine.audit_portfolio(
+        total_committed_capital_usd=Decimal(str(req.total_committed_capital_usd or 10000000.0)),
+        active_positions=req.active_positions,
+    )
+    return {
+        "status": "success",
+        "concentration_report": report.to_dict(),
+    }
+
+
+@app.post("/v1/titan/tax-alpha/1031-exchange", tags=["Institutional Titan Systems"])
+def audit_1031_exchange_endpoint(req: Section1031ExchangeRequest) -> Dict[str, Any]:
+    """
+    Vanguard & CPA-Grade 26 U.S.C. § 1031 Like-Kind Exchange Engine.
+    Enforces 45-day identification and 180-day closing statutory countdown clocks and calculates tax deferral.
+    """
+    from packages.tax_alpha_engine import Section1031ExchangeSolver
+    from datetime import datetime, timezone, timedelta
+    sale_dt_iso = req.sale_closing_date_iso or (datetime.now(timezone.utc) - timedelta(days=15)).strftime("%Y-%m-%d")
+    report = Section1031ExchangeSolver.audit_1031_exchange(
+        exchange_id=req.exchange_id or "EX-001",
+        relinquished_property_name=req.relinquished_property_name or "Roanoke Distribution Center",
+        sale_closing_date_iso=sale_dt_iso,
+        sale_price_usd=Decimal(str(req.sale_price_usd)),
+        adjusted_cost_basis_usd=Decimal(str(req.adjusted_cost_basis_usd)),
+        existing_mortgage_payoff_usd=Decimal(str(req.existing_mortgage_payoff_usd or 0.0)),
+        candidate_replacements=req.candidate_replacements,
+    )
+    return {
+        "status": "success",
+        "exchange_report": report.to_dict(),
+    }
+
+
+@app.post("/v1/titan/tax-alpha/cost-segregation", tags=["Institutional Titan Systems"])
+def calculate_cost_segregation_endpoint(req: CostSegregationRequest) -> Dict[str, Any]:
+    """
+    CPA-Grade Cost Segregation & MACRS Accelerated Depreciation Solver.
+    Decomposes real estate basis into 5-Year, 15-Year, and 39-Year MACRS classes to maximize Year 1 tax shelter.
+    """
+    from packages.tax_alpha_engine import CostSegregationSolver
+    report = CostSegregationSolver.calculate_cost_segregation(
+        parcel_id=req.parcel_id,
+        deal_id=req.deal_id or "DEAL-001",
+        total_acquisition_basis_usd=Decimal(str(req.total_acquisition_basis_usd)),
+        land_value_ratio=Decimal(str(req.land_value_ratio or 0.18)),
+        five_year_ratio=Decimal(str(req.five_year_ratio or 0.185)),
+        fifteen_year_ratio=Decimal(str(req.fifteen_year_ratio or 0.125)),
+        bonus_depreciation_pct=Decimal(str(req.bonus_depreciation_pct or 60.0)),
+        marginal_tax_rate_pct=Decimal(str(req.marginal_tax_rate_pct or 42.75)),
+    )
+    return {
+        "status": "success",
+        "cost_segregation_report": report.to_dict(),
+    }
+
+
+@app.post("/v1/titan/event-stream/replay", tags=["Institutional Titan Systems"])
+def replay_canonical_event_stream_endpoint(req: CanonicalEventReplayRequest) -> Dict[str, Any]:
+    """
+    Jane Street style Deterministic Canonical SMR Event Stream Replay.
+    Verifies cryptographic hash chains and reconstructs exact historical pipeline state.
+    """
+    from packages.deterministic_event_stream import CanonicalEventSequencer
+    sequencer = CanonicalEventSequencer()
+    sequencer.seed_standard_deal_trajectory(deal_id=req.aggregate_id or "DEAL-ROA-001")
+    report = sequencer.replay_state(
+        aggregate_id=req.aggregate_id or "DEAL-ROA-001",
+        up_to_sequence_no=req.up_to_sequence_no,
+    )
+    return {
+        "status": "success",
+        "replay_report": report.to_dict(),
+    }
+
+
+@app.post("/v1/titan/macro-regime/stress-test", tags=["Institutional Titan Systems"])
+def run_macro_regime_stress_test_endpoint(req: MacroRegimeStressRequest) -> Dict[str, Any]:
+    """
+    Bridgewater Associates 4-Quadrant Macro Economic Regime Stress-Tester.
+    Simulates Dalio's 4 economic quadrants (Reflation, Productivity Expansion, Stagflation, Deflation)
+    and computes the composite All-Weather Resilience Score (0-100).
+    """
+    from packages.macro_regime import BridgewaterMacroRegimeEngine
+    report = BridgewaterMacroRegimeEngine.simulate_4_quadrants(
+        deal_id=req.deal_id or "DEAL-001",
+        entity_name=req.entity_name or "Blue Ridge Precision Machining",
+        naics_code=req.naics_code or "332710",
+        base_annual_revenue_usd=Decimal(str(req.base_annual_revenue_usd)),
+        base_normalized_ebitda_usd=Decimal(str(req.base_normalized_ebitda_usd)),
+        base_annual_debt_service_usd=Decimal(str(req.base_annual_debt_service_usd)),
+        base_interest_rate_pct=Decimal(str(req.base_interest_rate_pct or 8.05)),
+    )
+    return {
+        "status": "success",
+        "macro_regime_report": report.to_dict(),
+    }
+
+
+
 
 
 

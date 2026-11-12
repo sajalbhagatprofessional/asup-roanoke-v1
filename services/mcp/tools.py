@@ -482,6 +482,96 @@ MCP_TOOLS_CATALOG: List[McpTool] = [
             },
         },
     ),
+    McpTool(
+        name="evaluate_reactive_dag",
+        description=(
+            "Goldman Sachs SecDB / J.P. Morgan Athena reactive underwriting DAG: evaluates acquisition metrics "
+            "with fine-grained dependency tracking and sub-millisecond incremental invalidation caching."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "purchase_price_usd": {"type": "number", "default": 1500000.0, "description": "Purchase price in USD"},
+                "buyer_equity_pct": {"type": "number", "default": 0.10, "description": "Buyer equity ratio"},
+                "sofr_benchmark_rate": {"type": "number", "default": 0.0530, "description": "SOFR benchmark rate"},
+                "bank_spread_bps": {"type": "number", "default": 275.0, "description": "Bank spread in bps"},
+                "historical_ebitda_usd": {"type": "number", "default": 380000.0, "description": "Historical EBITDA in USD"},
+                "replacement_gm_salary_usd": {"type": "number", "default": 85000.0, "description": "Replacement GM salary"},
+                "assessed_cre_value_usd": {"type": "number", "default": 2200000.0, "description": "Assessed CRE value in USD"},
+            },
+        },
+    ),
+    McpTool(
+        name="calculate_pe_waterfall",
+        description=(
+            "BlackRock eFront private capital distribution waterfall solver: calculates Return of Capital, "
+            "Preferred Return (e.g. 8%), GP Catch-Up, Carried Interest, and LP/GP MOIC multiples."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["total_distributable_proceeds_usd", "lp_equity_contributed_usd"],
+            "properties": {
+                "deal_id": {"type": "string", "default": "DEAL-001"},
+                "total_distributable_proceeds_usd": {"type": "number", "description": "Total exit proceeds in USD"},
+                "lp_equity_contributed_usd": {"type": "number", "description": "LP invested equity in USD"},
+                "gp_equity_contributed_usd": {"type": "number", "default": 0.0, "description": "GP invested equity in USD"},
+                "preferred_return_rate_pct": {"type": "number", "default": 8.0, "description": "Preferred return rate %"},
+                "holding_period_years": {"type": "number", "default": 3.0, "description": "Holding period years"},
+                "carried_interest_pct": {"type": "number", "default": 20.0, "description": "Carried interest %"},
+            },
+        },
+    ),
+    McpTool(
+        name="audit_portfolio_concentration",
+        description=(
+            "Citadel-style multi-mandate portfolio factor neutrality gate: enforces hard concentration caps per "
+            "NAICS industry (<=25%), geography (<=40%), and lender (<=30%), tracking uncalled dry powder."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "total_committed_capital_usd": {"type": "number", "default": 10000000.0, "description": "Committed family capital"},
+            },
+        },
+    ),
+    McpTool(
+        name="audit_1031_exchange_and_cost_seg",
+        description=(
+            "Vanguard & CPA-Grade tax alpha solver: audits 26 U.S.C. § 1031 exchange 45-day ID and 180-day closing deadlines, "
+            "and calculates MACRS cost segregation accelerated bonus depreciation and cash tax shield."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["sale_price_usd", "adjusted_cost_basis_usd"],
+            "properties": {
+                "exchange_id": {"type": "string", "default": "EX-001"},
+                "sale_price_usd": {"type": "number", "description": "Gross sale price in USD"},
+                "adjusted_cost_basis_usd": {"type": "number", "description": "Adjusted basis in USD"},
+                "existing_mortgage_payoff_usd": {"type": "number", "default": 0.0, "description": "Mortgage payoff in USD"},
+                "parcel_id": {"type": "string", "default": "51161-ROA-001", "description": "Target replacement parcel"},
+                "total_acquisition_basis_usd": {"type": "number", "description": "Replacement CRE acquisition basis"},
+            },
+        },
+    ),
+    McpTool(
+        name="simulate_macro_regimes",
+        description=(
+            "Bridgewater Associates 4-Quadrant macro economic regime stress-tester: simulates Dalio's Reflation, "
+            "Productivity Expansion, Stagflation, and Deflation regimes, calculating All-Weather Resilience Score (0-100)."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["base_annual_revenue_usd", "base_normalized_ebitda_usd", "base_annual_debt_service_usd"],
+            "properties": {
+                "deal_id": {"type": "string", "default": "DEAL-001"},
+                "entity_name": {"type": "string", "default": "Blue Ridge Precision Machining"},
+                "naics_code": {"type": "string", "default": "332710"},
+                "base_annual_revenue_usd": {"type": "number", "description": "Baseline annual revenue in USD"},
+                "base_normalized_ebitda_usd": {"type": "number", "description": "Baseline normalized EBITDA in USD"},
+                "base_annual_debt_service_usd": {"type": "number", "description": "Baseline annual debt service in USD"},
+            },
+        },
+    ),
 ]
 
 
@@ -814,6 +904,90 @@ def execute_mcp_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any
             zcode = arguments.get("zoning_code", "I-2")
             rep = PermitZoningScanner.scan_parcel_zoning_and_permits(parcel_id=pid, parcel_area_acres=acres, building_footprint_sqft=sqft, zoning_code=zcode)
             return {"zoning_envelope": rep.to_dict()}
+
+        elif tool_name == "evaluate_reactive_dag":
+            from packages.reactive_underwriting_dag import ReactiveUnderwritingDAG, DAGUnderwritingInputs
+            inp = DAGUnderwritingInputs(
+                purchase_price_usd=Decimal(str(arguments.get("purchase_price_usd", 1500000.0))),
+                buyer_equity_pct=Decimal(str(arguments.get("buyer_equity_pct", 0.10))),
+                sofr_benchmark_rate=Decimal(str(arguments.get("sofr_benchmark_rate", 0.0530))),
+                bank_spread_bps=Decimal(str(arguments.get("bank_spread_bps", 275.0))),
+                historical_ebitda_usd=Decimal(str(arguments.get("historical_ebitda_usd", 380000.0))),
+                replacement_gm_salary_usd=Decimal(str(arguments.get("replacement_gm_salary_usd", 85000.0))),
+                assessed_cre_value_usd=Decimal(str(arguments.get("assessed_cre_value_usd", 2200000.0))),
+            )
+            dag = ReactiveUnderwritingDAG(initial_inputs=inp)
+            rep = dag.evaluate(force_all=True)
+            return {"dag_report": rep.to_dict()}
+
+        elif tool_name == "calculate_pe_waterfall":
+            from packages.capital_allocator import PEWaterfallSolver
+            deal_id = arguments.get("deal_id", "DEAL-001")
+            proceeds = Decimal(str(arguments["total_distributable_proceeds_usd"]))
+            lp_eq = Decimal(str(arguments["lp_equity_contributed_usd"]))
+            gp_eq = Decimal(str(arguments.get("gp_equity_contributed_usd", 0.0)))
+            pref = Decimal(str(arguments.get("preferred_return_rate_pct", 8.0)))
+            years = Decimal(str(arguments.get("holding_period_years", 3.0)))
+            carry = Decimal(str(arguments.get("carried_interest_pct", 20.0)))
+            rep = PEWaterfallSolver.calculate_waterfall(
+                deal_id=deal_id,
+                total_distributable_proceeds_usd=proceeds,
+                lp_equity_contributed_usd=lp_eq,
+                gp_equity_contributed_usd=gp_eq,
+                preferred_return_rate_pct=pref,
+                holding_period_years=years,
+                carried_interest_pct=carry,
+            )
+            return {"waterfall_report": rep.to_dict()}
+
+        elif tool_name == "audit_portfolio_concentration":
+            from packages.capital_allocator import PortfolioConcentrationEngine
+            committed = Decimal(str(arguments.get("total_committed_capital_usd", 10000000.0)))
+            rep = PortfolioConcentrationEngine.audit_portfolio(total_committed_capital_usd=committed)
+            return {"concentration_report": rep.to_dict()}
+
+        elif tool_name == "audit_1031_exchange_and_cost_seg":
+            from packages.tax_alpha_engine import Section1031ExchangeSolver, CostSegregationSolver
+            sale_price = Decimal(str(arguments["sale_price_usd"]))
+            basis = Decimal(str(arguments["adjusted_cost_basis_usd"]))
+            mortgage = Decimal(str(arguments.get("existing_mortgage_payoff_usd", 0.0)))
+            ex_rep = Section1031ExchangeSolver.audit_1031_exchange(
+                exchange_id=arguments.get("exchange_id", "EX-001"),
+                relinquished_property_name="Relinquished Commercial Facility",
+                sale_closing_date_iso="2026-10-15T00:00:00+00:00",
+                sale_price_usd=sale_price,
+                adjusted_cost_basis_usd=basis,
+                existing_mortgage_payoff_usd=mortgage,
+            )
+            rep_basis = Decimal(str(arguments.get("total_acquisition_basis_usd", sale_price)))
+            cs_rep = CostSegregationSolver.calculate_cost_segregation(
+                parcel_id=arguments.get("parcel_id", "51161-ROA-001"),
+                deal_id="DEAL-001",
+                total_acquisition_basis_usd=rep_basis,
+            )
+            return {
+                "section_1031_report": ex_rep.to_dict(),
+                "cost_segregation_report": cs_rep.to_dict(),
+            }
+
+        elif tool_name == "simulate_macro_regimes":
+            from packages.macro_regime import BridgewaterMacroRegimeEngine
+            deal_id = arguments.get("deal_id", "DEAL-001")
+            name = arguments.get("entity_name", "Target Entity")
+            naics = arguments.get("naics_code", "332710")
+            rev = Decimal(str(arguments["base_annual_revenue_usd"]))
+            ebitda = Decimal(str(arguments["base_normalized_ebitda_usd"]))
+            ads = Decimal(str(arguments["base_annual_debt_service_usd"]))
+            rep = BridgewaterMacroRegimeEngine.simulate_4_quadrants(
+                deal_id=deal_id,
+                entity_name=name,
+                naics_code=naics,
+                base_annual_revenue_usd=rev,
+                base_normalized_ebitda_usd=ebitda,
+                base_annual_debt_service_usd=ads,
+            )
+            return {"macro_regime_report": rep.to_dict()}
+
 
         else:
             return {"error": f"Unknown tool: {tool_name}"}

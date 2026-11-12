@@ -33,6 +33,7 @@ import tests.integration.test_upstream_dependency_manager as i16
 import tests.integration.test_augury_asset_health_engines as i17
 import tests.integration.test_palantir_ontology_engines as i18
 import tests.integration.test_advanced_sourcing_intelligence as i19
+import tests.integration.test_institutional_titan_engines as i20
 
 
 def main() -> int:
@@ -252,6 +253,18 @@ def main() -> int:
 
     print(f"All {sourcing_passed}/{sourcing_passed} Advanced Sourcing Intelligence Suite Tests PASSED!")
 
+    # Milestone 23-27: Institutional Titan Systems Suite (Goldman SecDB, BlackRock eFront, Vanguard, Jane Street, Bridgewater)
+    titan_passed = 0
+    for attr in sorted(dir(i20)):
+        if attr.startswith("test_"):
+            fn = getattr(i20, attr)
+            if callable(fn):
+                fn()
+                titan_passed += 1
+                print(f"[PASS] {i20.__name__}.{attr}")
+
+    print(f"All {titan_passed}/{titan_passed} Institutional Titan Systems Suite Tests PASSED!")
+
     total_passed = (
         core_passed
         + api_passed
@@ -270,6 +283,7 @@ def main() -> int:
         + augury_passed
         + palantir_passed
         + sourcing_passed
+        + titan_passed
     )
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 

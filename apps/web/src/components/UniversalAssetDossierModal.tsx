@@ -43,6 +43,10 @@ import {
   Clock,
   ShieldAlert,
   FileText,
+  Zap,
+  GitCommit,
+  Coins,
+  BarChart3,
 } from "lucide-react";
 import {
   UniversalAsset,
@@ -66,6 +70,14 @@ import {
   DebtMaturityRadarReport,
   TitleCurativeAuditReport,
   ZoningEnvelopeReport,
+  DAGEvaluationReport,
+  DAGNodeState,
+  PEWaterfallReport,
+  PortfolioAllocationReport,
+  Section1031ExchangeReport,
+  CostSegregationAnalysisReport,
+  ReplayLedgerReport,
+  BridgewaterMacroRegimeReport,
 } from "../lib/types";
 import {
   runAssetDeepOsint,
@@ -88,13 +100,20 @@ import {
   fetchDebtMaturityRadar,
   fetchTitleCurativeAudit,
   fetchPermitZoningScan,
+  fetchReactiveDAGEvaluation,
+  fetchPEWaterfall,
+  fetchPortfolioConcentration,
+  fetch1031ExchangeAudit,
+  fetchCostSegregationAnalysis,
+  fetchCanonicalEventReplay,
+  fetchMacroRegimeStressTest,
 } from "../lib/api";
 
 interface UniversalAssetDossierModalProps {
   asset: UniversalAsset | null;
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "OUTREACH" | "PIPELINE";
+  initialTab?: "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "TITAN_ANALYTICS" | "OUTREACH" | "PIPELINE";
   onAssetUpdated: (updated: UniversalAsset) => void;
 }
 
@@ -106,7 +125,7 @@ export default function UniversalAssetDossierModal({
   onAssetUpdated,
 }: UniversalAssetDossierModalProps) {
   const [activeTab, setActiveTab] = useState<
-    "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "OUTREACH" | "PIPELINE"
+    "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "TITAN_ANALYTICS" | "OUTREACH" | "PIPELINE"
   >(initialTab);
   const [currentAsset, setCurrentAsset] = useState<UniversalAsset | null>(asset);
   const [spatialTwin, setSpatialTwin] = useState<ParcelSpatialTwin | null>(null);
@@ -172,6 +191,41 @@ export default function UniversalAssetDossierModal({
   const [zoningReport, setZoningReport] = useState<ZoningEnvelopeReport | null>(null);
   const [loadingZoning, setLoadingZoning] = useState(false);
 
+  // Institutional Titan States (Goldman SecDB, BlackRock eFront, Vanguard Tax, Jane Street SMR, Bridgewater Macro)
+  const [titanSubTab, setTitanSubTab] = useState<"DAG_REACTIVE" | "PE_WATERFALL" | "TAX_ALPHA" | "JANE_STREET_REPLAY" | "MACRO_REGIME">("DAG_REACTIVE");
+
+  // 1. Goldman SecDB DAG
+  const [dagReport, setDagReport] = useState<DAGEvaluationReport | null>(null);
+  const [dagNodes, setDagNodes] = useState<DAGNodeState[]>([]);
+  const [loadingDag, setLoadingDag] = useState(false);
+  const [dagPurchasePrice, setDagPurchasePrice] = useState<number>(1500000);
+  const [dagBuyerEquityPct, setDagBuyerEquityPct] = useState<number>(0.10);
+  const [dagSofrRate, setDagSofrRate] = useState<number>(0.0530);
+  const [dagBankSpreadBps, setDagBankSpreadBps] = useState<number>(275);
+  const [dagEbitda, setDagEbitda] = useState<number>(380000);
+
+  // 2. BlackRock eFront Waterfall & Citadel Concentration
+  const [waterfallReport, setWaterfallReport] = useState<PEWaterfallReport | null>(null);
+  const [loadingWaterfall, setLoadingWaterfall] = useState(false);
+  const [concentrationReport, setConcentrationReport] = useState<PortfolioAllocationReport | null>(null);
+  const [loadingConcentration, setLoadingConcentration] = useState(false);
+  const [distributableProceeds, setDistributableProceeds] = useState<number>(3200000);
+  const [lpCapital, setLpCapital] = useState<number>(1500000);
+
+  // 3. Vanguard / CPA Tax Alpha (1031 & Cost Seg)
+  const [tax1031Report, setTax1031Report] = useState<Section1031ExchangeReport | null>(null);
+  const [loading1031, setLoading1031] = useState(false);
+  const [costSegReport, setCostSegReport] = useState<CostSegregationAnalysisReport | null>(null);
+  const [loadingCostSeg, setLoadingCostSeg] = useState(false);
+
+  // 4. Jane Street Event Stream Replay
+  const [replayReport, setReplayReport] = useState<ReplayLedgerReport | null>(null);
+  const [loadingReplay, setLoadingReplay] = useState(false);
+
+  // 5. Bridgewater Macro Regime
+  const [macroRegimeReport, setMacroRegimeReport] = useState<BridgewaterMacroRegimeReport | null>(null);
+  const [loadingMacroRegime, setLoadingMacroRegime] = useState(false);
+
   useEffect(() => {
     setCurrentAsset(asset);
     setActiveTab(initialTab);
@@ -193,6 +247,14 @@ export default function UniversalAssetDossierModal({
     setLookalikeReport(null);
     setTitleAuditReport(null);
     setZoningReport(null);
+    setDagReport(null);
+    setDagNodes([]);
+    setWaterfallReport(null);
+    setConcentrationReport(null);
+    setTax1031Report(null);
+    setCostSegReport(null);
+    setReplayReport(null);
+    setMacroRegimeReport(null);
     setLookalikeSearchQuery(asset ? `${asset.title} ${asset.asset_class}` : "");
   }, [asset, initialTab]);
 
@@ -222,7 +284,20 @@ export default function UniversalAssetDossierModal({
       if (radarSubTab === "TITLE_CURATIVE" && !titleAuditReport) loadTitleAudit();
       if (radarSubTab === "ZONING_PERMITS" && !zoningReport) loadZoning();
     }
-  }, [activeTab, currentAsset, playbookType, radarSubTab]);
+    if (activeTab === "TITAN_ANALYTICS" && currentAsset) {
+      if (titanSubTab === "DAG_REACTIVE" && !dagReport) loadDagEvaluation();
+      if (titanSubTab === "PE_WATERFALL" && !waterfallReport) {
+        loadWaterfall();
+        loadConcentration();
+      }
+      if (titanSubTab === "TAX_ALPHA" && !tax1031Report) {
+        load1031Audit();
+        loadCostSegregation();
+      }
+      if (titanSubTab === "JANE_STREET_REPLAY" && !replayReport) loadEventReplay();
+      if (titanSubTab === "MACRO_REGIME" && !macroRegimeReport) loadMacroRegime();
+    }
+  }, [activeTab, currentAsset, playbookType, radarSubTab, titanSubTab]);
 
   const loadAssetHealth = async () => {
     if (!currentAsset) return;
@@ -491,6 +566,147 @@ export default function UniversalAssetDossierModal({
     }
   };
 
+  const loadDagEvaluation = async () => {
+    if (!currentAsset) return;
+    setLoadingDag(true);
+    try {
+      const res = await fetchReactiveDAGEvaluation({
+        purchase_price_usd: dagPurchasePrice,
+        buyer_equity_pct: dagBuyerEquityPct,
+        sofr_benchmark_rate: dagSofrRate,
+        bank_spread_bps: dagBankSpreadBps,
+        historical_ebitda_usd: dagEbitda,
+        replacement_gm_salary_usd: 85000,
+        assessed_cre_value_usd: 2200000,
+        seller_standby_note_usd: 0,
+        seller_consulting_months: 12,
+        loan_term_years: 25,
+      });
+      setDagReport(res.dag_report);
+      setDagNodes(res.node_states);
+    } catch (err) {
+      console.error("Failed to evaluate reactive DAG:", err);
+    } finally {
+      setLoadingDag(false);
+    }
+  };
+
+  const loadWaterfall = async () => {
+    if (!currentAsset) return;
+    setLoadingWaterfall(true);
+    try {
+      const res = await fetchPEWaterfall({
+        deal_id: currentAsset.asset_id,
+        total_distributable_proceeds_usd: distributableProceeds,
+        lp_equity_contributed_usd: lpCapital,
+        gp_equity_contributed_usd: 0,
+        preferred_return_rate_pct: 8.0,
+        holding_period_years: 3.0,
+        carried_interest_pct: 20.0,
+        waterfall_structure: "EUROPEAN_WHOLE_FUND",
+      });
+      setWaterfallReport(res.waterfall_report);
+    } catch (err) {
+      console.error("Failed to calculate PE waterfall:", err);
+    } finally {
+      setLoadingWaterfall(false);
+    }
+  };
+
+  const loadConcentration = async () => {
+    setLoadingConcentration(true);
+    try {
+      const res = await fetchPortfolioConcentration();
+      setConcentrationReport(res.concentration_report);
+    } catch (err) {
+      console.error("Failed to audit concentration:", err);
+    } finally {
+      setLoadingConcentration(false);
+    }
+  };
+
+  const load1031Audit = async () => {
+    if (!currentAsset) return;
+    setLoading1031(true);
+    try {
+      const price = parseFloat(currentAsset.asking_or_estimated_value_usd || "2200000");
+      const res = await fetch1031ExchangeAudit({
+        exchange_id: `EX-${currentAsset.asset_id}`,
+        relinquished_property_name: currentAsset.title || "Relinquished Commercial Asset",
+        sale_price_usd: price,
+        adjusted_cost_basis_usd: Math.round(price * 0.55),
+        existing_mortgage_payoff_usd: Math.round(price * 0.25),
+      });
+      setTax1031Report(res.exchange_report);
+    } catch (err) {
+      console.error("Failed to audit 1031 exchange:", err);
+    } finally {
+      setLoading1031(false);
+    }
+  };
+
+  const loadCostSegregation = async () => {
+    if (!currentAsset) return;
+    setLoadingCostSeg(true);
+    try {
+      const price = parseFloat(currentAsset.asking_or_estimated_value_usd || "2200000");
+      const res = await fetchCostSegregationAnalysis({
+        parcel_id: currentAsset.parcel_id || "51161-ROA-001",
+        deal_id: currentAsset.asset_id,
+        total_acquisition_basis_usd: price,
+        land_value_ratio: 0.18,
+        five_year_ratio: 0.185,
+        fifteen_year_ratio: 0.125,
+        bonus_depreciation_pct: 60.0,
+        marginal_tax_rate_pct: 42.75,
+      });
+      setCostSegReport(res.cost_segregation_report);
+    } catch (err) {
+      console.error("Failed to calculate cost segregation:", err);
+    } finally {
+      setLoadingCostSeg(false);
+    }
+  };
+
+  const loadEventReplay = async () => {
+    if (!currentAsset) return;
+    setLoadingReplay(true);
+    try {
+      const res = await fetchCanonicalEventReplay({
+        aggregate_id: currentAsset.asset_id,
+      });
+      setReplayReport(res.replay_report);
+    } catch (err) {
+      console.error("Failed to replay canonical events:", err);
+    } finally {
+      setLoadingReplay(false);
+    }
+  };
+
+  const loadMacroRegime = async () => {
+    if (!currentAsset) return;
+    setLoadingMacroRegime(true);
+    try {
+      const rev = parseFloat(currentAsset.estimated_annual_revenue_usd || "2500000");
+      const ebitda = parseFloat(currentAsset.estimated_sde_or_ebitda_usd || "450000");
+      const debtService = Math.round(ebitda * 0.52);
+      const res = await fetchMacroRegimeStressTest({
+        deal_id: currentAsset.asset_id,
+        entity_name: currentAsset.title,
+        naics_code: currentAsset.naics_code || "332710",
+        base_annual_revenue_usd: rev,
+        base_normalized_ebitda_usd: ebitda,
+        base_annual_debt_service_usd: debtService,
+        base_interest_rate_pct: 8.05,
+      });
+      setMacroRegimeReport(res.macro_regime_report);
+    } catch (err) {
+      console.error("Failed to run macro regime stress test:", err);
+    } finally {
+      setLoadingMacroRegime(false);
+    }
+  };
+
   if (!isOpen || !currentAsset) return null;
 
   const handleRunOsint = async () => {
@@ -680,6 +896,20 @@ export default function UniversalAssetDossierModal({
             <span>Sourcing &amp; Debt Radar</span>
             <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-rose-950 border border-rose-800 text-rose-300 font-bold">
               Inven/Trepp
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("TITAN_ANALYTICS")}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition ${
+              activeTab === "TITAN_ANALYTICS"
+                ? "bg-cyan-600 text-white shadow-md shadow-cyan-950"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Titan Analytics</span>
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-cyan-950 border border-cyan-800 text-cyan-300 font-bold">
+              5 Systems
             </span>
           </button>
           <button
@@ -2866,6 +3096,756 @@ export default function UniversalAssetDossierModal({
                       </div>
                     </div>
                   ) : null}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* INSTITUTIONAL TITAN ANALYTICS SUITE (GOLDMAN/BLACKROCK/VANGUARD/JANE/BRIDGEWATER) */}
+          {/* ========================================================================= */}
+          {activeTab === "TITAN_ANALYTICS" && (
+            <div className="space-y-6">
+              {/* Titan Sub-Tab Navigation */}
+              <div className="flex items-center gap-1.5 p-1 bg-zinc-950/80 rounded-xl border border-zinc-800 text-xs font-semibold overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTitanSubTab("DAG_REACTIVE");
+                    if (!dagReport) loadDagEvaluation();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition whitespace-nowrap ${
+                    titanSubTab === "DAG_REACTIVE"
+                      ? "bg-cyan-600 text-white shadow-md shadow-cyan-950"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5 text-cyan-300" />
+                  <span>Goldman SecDB DAG</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTitanSubTab("PE_WATERFALL");
+                    if (!waterfallReport) {
+                      loadWaterfall();
+                      loadConcentration();
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition whitespace-nowrap ${
+                    titanSubTab === "PE_WATERFALL"
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-950"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <Coins className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>BlackRock eFront Waterfall</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTitanSubTab("TAX_ALPHA");
+                    if (!tax1031Report) {
+                      load1031Audit();
+                      loadCostSegregation();
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition whitespace-nowrap ${
+                    titanSubTab === "TAX_ALPHA"
+                      ? "bg-amber-600 text-white shadow-md shadow-amber-950"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <DollarSign className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Vanguard Tax Alpha (§1031 / MACRS)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTitanSubTab("JANE_STREET_REPLAY");
+                    if (!replayReport) loadEventReplay();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition whitespace-nowrap ${
+                    titanSubTab === "JANE_STREET_REPLAY"
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-950"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <GitCommit className="w-3.5 h-3.5 text-indigo-300" />
+                  <span>Jane Street Event Stream</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTitanSubTab("MACRO_REGIME");
+                    if (!macroRegimeReport) loadMacroRegime();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition whitespace-nowrap ${
+                    titanSubTab === "MACRO_REGIME"
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-950"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5 text-purple-300" />
+                  <span>Bridgewater 4-Quadrant Macro</span>
+                </button>
+              </div>
+
+              {/* 1. GOLDMAN SECDB / J.P. MORGAN ATHENA REACTIVE UNDERWRITING DAG */}
+              {titanSubTab === "DAG_REACTIVE" && (
+                <div className="space-y-4">
+                  {/* Interactive Parameter Controls */}
+                  <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-cyan-400" />
+                        Reactive DAG Underwriting Parameters
+                      </span>
+                      <button
+                        type="button"
+                        onClick={loadDagEvaluation}
+                        disabled={loadingDag}
+                        className="px-3 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition flex items-center gap-1"
+                      >
+                        {loadingDag ? "Evaluating..." : "Evaluate DAG (<50μs)"}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-zinc-500 block">Purchase Price ($)</label>
+                        <input
+                          type="number"
+                          value={dagPurchasePrice}
+                          onChange={(e) => setDagPurchasePrice(parseFloat(e.target.value) || 0)}
+                          className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-zinc-500 block">Buyer Cash Equity (%)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={dagBuyerEquityPct}
+                          onChange={(e) => setDagBuyerEquityPct(parseFloat(e.target.value) || 0)}
+                          className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-zinc-500 block">SOFR Benchmark Rate</label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          value={dagSofrRate}
+                          onChange={(e) => setDagSofrRate(parseFloat(e.target.value) || 0)}
+                          className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-zinc-500 block">Historical EBITDA ($)</label>
+                        <input
+                          type="number"
+                          value={dagEbitda}
+                          onChange={(e) => setDagEbitda(parseFloat(e.target.value) || 0)}
+                          className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {loadingDag ? (
+                    <div className="p-8 text-center text-xs text-zinc-400">
+                      Executing topological sort &amp; reactive DAG memoized evaluation...
+                    </div>
+                  ) : dagReport ? (
+                    <div className="space-y-4">
+                      {/* Highlight Cards */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">Execution Latency</span>
+                          <span className="text-lg font-extrabold text-cyan-400 font-mono mt-0.5 block">
+                            {dagReport.execution_time_microseconds} μs
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block">Sub-millisecond</span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">Caching Efficiency</span>
+                          <span className="text-lg font-extrabold text-emerald-400 font-mono mt-0.5 block">
+                            {dagReport.incremental_efficiency_pct}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block">
+                            {dagReport.dirty_nodes_recalculated_count} of {dagReport.total_dag_nodes_count} recalculated
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">SBA SOP 50 10 8.1</span>
+                          <span className={`text-sm font-extrabold mt-1 block ${dagReport.is_sba_compliant ? "text-emerald-400" : "text-red-400"}`}>
+                            {dagReport.is_sba_compliant ? "COMPLIANT (>=1.25x)" : "NON-COMPLIANT"}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block">October 1, 2026 rules</span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">Principal Hurdle</span>
+                          <span className={`text-sm font-extrabold mt-1 block ${dagReport.is_principal_hurdle_passed ? "text-emerald-400" : "text-amber-400"}`}>
+                            {dagReport.is_principal_hurdle_passed ? "PASSED (>=1.35x)" : "FAILED"}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block">Post-$85k GM Deduction</span>
+                        </div>
+                      </div>
+
+                      {/* DAG Formula Node Grid */}
+                      <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 block">
+                          Reactive Formula Nodes ({Object.keys(dagReport.computed_formulas).length} Computed)
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                          {Object.entries(dagReport.computed_formulas).map(([k, v]) => (
+                            <div key={k} className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-between">
+                              <div>
+                                <span className="font-mono text-[10px] text-zinc-400 uppercase block">{k.replace(/_/g, " ")}</span>
+                                <span className="font-mono font-bold text-white mt-0.5 block">{v}</span>
+                              </div>
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800">
+                                CACHED
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Executive Synthesis */}
+                      <div className="p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-800 text-xs space-y-1">
+                        <span className="font-bold text-cyan-300 uppercase tracking-wider text-[10px]">
+                          Goldman SecDB DAG Synthesis
+                        </span>
+                        <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                          {dagReport.executive_synthesis}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {/* 2. BLACKROCK EFRONT WATERFALL & CITADEL CONCENTRATION */}
+              {titanSubTab === "PE_WATERFALL" && (
+                <div className="space-y-4">
+                  {/* Parameter Controls */}
+                  <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <Coins className="w-4 h-4 text-emerald-400" />
+                        Private Capital Distribution Parameters
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          loadWaterfall();
+                          loadConcentration();
+                        }}
+                        disabled={loadingWaterfall}
+                        className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1"
+                      >
+                        {loadingWaterfall ? "Solving..." : "Solve 4-Tier Waterfall"}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-zinc-500 block">Distributable Proceeds ($)</label>
+                        <input
+                          type="number"
+                          value={distributableProceeds}
+                          onChange={(e) => setDistributableProceeds(parseFloat(e.target.value) || 0)}
+                          className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-zinc-500 block">LP Contributed Equity ($)</label>
+                        <input
+                          type="number"
+                          value={lpCapital}
+                          onChange={(e) => setLpCapital(parseFloat(e.target.value) || 0)}
+                          className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-zinc-500 block">Preferred Return Hurdle</label>
+                        <span className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono text-xs block">
+                          8.00% Annually
+                        </span>
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-zinc-500 block">Carried Interest</label>
+                        <span className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono text-xs block">
+                          20.00% to GP
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {loadingWaterfall ? (
+                    <div className="p-8 text-center text-xs text-zinc-400">
+                      Calculating BlackRock eFront 4-tier distribution waterfall...
+                    </div>
+                  ) : waterfallReport ? (
+                    <div className="space-y-4">
+                      {/* Metric Badges */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">LP Total Received</span>
+                          <span className="text-lg font-extrabold text-emerald-400 font-mono mt-0.5 block">
+                            {formatUSD(waterfallReport.lp_total_received_usd)}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block font-mono">MOIC: {waterfallReport.lp_moic}</span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">LP Annualized ROI</span>
+                          <span className="text-lg font-extrabold text-white font-mono mt-0.5 block">
+                            {waterfallReport.lp_annualized_roi_pct}%
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block">3.0 Year Hold</span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">GP Total Received</span>
+                          <span className="text-lg font-extrabold text-purple-400 font-mono mt-0.5 block">
+                            {formatUSD(waterfallReport.gp_total_received_usd)}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block font-mono">Carried Interest</span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">Structure</span>
+                          <span className="text-sm font-extrabold text-zinc-200 mt-1 block">
+                            {waterfallReport.waterfall_structure.replace(/_/g, " ")}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 block">European Whole-Fund</span>
+                        </div>
+                      </div>
+
+                      {/* 4-Tier Breakdown Table */}
+                      <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 block">
+                          Distribution Tiers Breakdown
+                        </span>
+                        <div className="space-y-2">
+                          {waterfallReport.tier_breakdown.map((tier) => (
+                            <div key={tier.tier_number} className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                              <div>
+                                <span className="font-bold text-white">Tier {tier.tier_number}: {tier.tier_name}</span>
+                                <p className="text-[11px] text-zinc-400 mt-0.5">{tier.description}</p>
+                              </div>
+                              <div className="flex items-center gap-3 font-mono text-[11px]">
+                                <div className="text-right">
+                                  <span className="text-[10px] text-zinc-500 block">LP Share</span>
+                                  <span className="text-emerald-400 font-bold">{formatUSD(tier.lp_distribution_usd)}</span>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-[10px] text-zinc-500 block">GP Share</span>
+                                  <span className="text-purple-400 font-bold">{formatUSD(tier.gp_distribution_usd)}</span>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-[10px] text-zinc-500 block">Total</span>
+                                  <span className="text-white font-bold">{formatUSD(tier.total_tier_distribution_usd)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Citadel Concentration Limit Audit */}
+                      {concentrationReport && (
+                        <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                              <Shield className="w-3.5 h-3.5 text-blue-400" />
+                              Citadel Factor Neutrality &amp; Concentration Limits
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              concentrationReport.is_all_concentration_limits_compliant ? "bg-emerald-950 text-emerald-300 border border-emerald-800" : "bg-red-950 text-red-300 border border-red-800"
+                            }`}>
+                              {concentrationReport.is_all_concentration_limits_compliant ? "ALL LIMITS COMPLIANT" : "BREACH DETECTED"}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                            <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                              <span className="text-[10px] text-zinc-500 uppercase block">Dry Powder Liquidity</span>
+                              <span className="text-sm font-bold text-white font-mono mt-0.5 block">{formatUSD(concentrationReport.dry_powder_liquidity_usd)}</span>
+                              <span className="text-[10px] text-emerald-400 font-mono">{concentrationReport.dry_powder_ratio_pct}% Available</span>
+                            </div>
+                            <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                              <span className="text-[10px] text-zinc-500 uppercase block">Total Committed Capital</span>
+                              <span className="text-sm font-bold text-white font-mono mt-0.5 block">{formatUSD(concentrationReport.total_committed_family_capital_usd)}</span>
+                              <span className="text-[10px] text-zinc-400 font-mono">Family Allocation</span>
+                            </div>
+                            <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                              <span className="text-[10px] text-zinc-500 uppercase block">Active Deployed Positions</span>
+                              <span className="text-sm font-bold text-white font-mono mt-0.5 block">{concentrationReport.active_deals_count} Deals</span>
+                              <span className="text-[10px] text-zinc-400 font-mono">{formatUSD(concentrationReport.total_deployed_equity_usd)} Deployed</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            {concentrationReport.concentration_rules.map((rule, idx) => (
+                              <div key={idx} className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-between text-xs">
+                                <div>
+                                  <span className="font-bold text-white">{rule.rule_name}</span>
+                                  <span className="text-[10px] text-zinc-400 ml-2 font-mono">{rule.dimension_type}: {rule.target_identifier}</span>
+                                </div>
+                                <div className="flex items-center gap-3 font-mono">
+                                  <span className="text-zinc-300">{rule.current_allocation_pct}% / {rule.max_allowable_allocation_pct}% Max</span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                    !rule.is_breached ? "bg-emerald-950 text-emerald-300" : "bg-red-950 text-red-300"
+                                  }`}>
+                                    {!rule.is_breached ? "PASS" : "BREACH"}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {/* 3. VANGUARD & CPA TAX ALPHA (§ 1031 & COST SEGREGATION) */}
+              {titanSubTab === "TAX_ALPHA" && (
+                <div className="space-y-4">
+                  {/* Section A: IRC § 1031 Exchange Countdown */}
+                  <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-amber-400" />
+                        26 U.S.C. § 1031 Like-Kind Exchange Statutory Timelines
+                      </span>
+                      <button
+                        type="button"
+                        onClick={load1031Audit}
+                        disabled={loading1031}
+                        className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition"
+                      >
+                        {loading1031 ? "Auditing..." : "Audit § 1031 Deadlines"}
+                      </button>
+                    </div>
+
+                    {tax1031Report && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Projected Tax Deferral</span>
+                            <span className="text-base font-extrabold text-amber-400 font-mono mt-0.5 block">
+                              {formatUSD(tax1031Report.projected_tax_deferral_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-mono block">@ {tax1031Report.effective_capital_gains_rate_pct}% Rate</span>
+                          </div>
+                          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">45-Day ID Window</span>
+                            <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
+                              {tax1031Report.days_remaining_45d_id} Days Left
+                            </span>
+                            <span className="text-[10px] text-emerald-400 font-mono block">Deadline: {tax1031Report.statutory_45_day_deadline_iso}</span>
+                          </div>
+                          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">180-Day Close Window</span>
+                            <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
+                              {tax1031Report.days_remaining_180d_close} Days Left
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-mono block">Deadline: {tax1031Report.statutory_180_day_deadline_iso}</span>
+                          </div>
+                          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Net Equity Proceeds</span>
+                            <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
+                              {formatUSD(tax1031Report.net_equity_proceeds_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-mono block">Must be fully redeployed</span>
+                          </div>
+                        </div>
+
+                        <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800 text-xs">
+                          <span className="text-[10px] font-bold uppercase text-zinc-400 block mb-1">CPA § 1031 Statutory Opinion</span>
+                          <p className="text-[11px] text-zinc-300 leading-relaxed">{tax1031Report.tax_opinion_summary}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Section B: MACRS Cost Segregation & Bonus Depreciation */}
+                  <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <DollarSign className="w-4 h-4 text-emerald-400" />
+                        MACRS Cost Segregation &amp; Bonus Depreciation Shelter
+                      </span>
+                      <button
+                        type="button"
+                        onClick={loadCostSegregation}
+                        disabled={loadingCostSeg}
+                        className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition"
+                      >
+                        {loadingCostSeg ? "Analyzing..." : "Calculate Cost Seg"}
+                      </button>
+                    </div>
+
+                    {costSegReport && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40">
+                            <span className="text-[10px] uppercase font-bold text-emerald-300 block">Year 1 Cash Tax Savings</span>
+                            <span className="text-lg font-extrabold text-emerald-400 font-mono mt-0.5 block">
+                              {formatUSD(costSegReport.year_1_cash_tax_savings_usd)}
+                            </span>
+                            <span className="text-[10px] text-emerald-200/80 font-mono block">Direct Cash Alpha</span>
+                          </div>
+                          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">5-Year NPV Benefit</span>
+                            <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
+                              {formatUSD(costSegReport.npv_5yr_tax_benefit_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-mono block">@ 7% Discount Rate</span>
+                          </div>
+                          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Yr 1 Accelerated Deduction</span>
+                            <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
+                              {formatUSD(costSegReport.year_1_accelerated_deduction_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-mono block">vs {formatUSD(costSegReport.year_1_straight_line_deduction_usd)} Straight Line</span>
+                          </div>
+                          <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Depreciable Basis</span>
+                            <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
+                              {formatUSD(costSegReport.depreciable_basis_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-mono block">Land: {formatUSD(costSegReport.land_value_non_depreciable_usd)}</span>
+                          </div>
+                        </div>
+
+                        {/* Class Allocations Table */}
+                        <div className="space-y-1.5">
+                          {costSegReport.class_allocations.map((cls, idx) => (
+                            <div key={idx} className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-between text-xs">
+                              <div>
+                                <span className="font-bold text-white">{cls.description}</span>
+                                <span className="text-[10px] text-zinc-400 ml-2 font-mono">
+                                  {cls.allocation_pct}% of Depreciable Basis • Bonus: {cls.bonus_depreciation_pct}%
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 font-mono">
+                                <span className="text-zinc-300">Basis: {formatUSD(cls.allocated_basis_usd)}</span>
+                                <span className="text-emerald-400 font-bold">Yr 1 Depr: {formatUSD(cls.year_1_depreciation_usd)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 4. JANE STREET DETERMINISTIC EVENT STREAM REPLAY */}
+              {titanSubTab === "JANE_STREET_REPLAY" && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                        <GitCommit className="w-4 h-4 text-indigo-400" />
+                        Canonical State Machine Event Replay
+                      </span>
+                      <button
+                        type="button"
+                        onClick={loadEventReplay}
+                        disabled={loadingReplay}
+                        className="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition"
+                      >
+                        {loadingReplay ? "Replaying..." : "Replay Canonical State"}
+                      </button>
+                    </div>
+
+                    {replayReport && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Hash Chain Verification</span>
+                            <span className={`text-sm font-extrabold mt-1 block ${replayReport.is_hash_chain_valid ? "text-emerald-400" : "text-red-400"}`}>
+                              {replayReport.is_hash_chain_valid ? "VALID HASH CHAIN" : "CHAIN CORRUPTED"}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-mono block">SHA-256 Provenance</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Total Events Replayed</span>
+                            <span className="text-lg font-extrabold text-white font-mono mt-0.5 block">
+                              {replayReport.total_events_replayed} Events
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-mono block">Tip Seq: #{replayReport.tip_sequence_no}</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 col-span-2">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Tip Event Hash</span>
+                            <span className="text-xs font-mono font-bold text-indigo-300 mt-1 block truncate">
+                              {replayReport.tip_event_hash}
+                            </span>
+                            <span className="text-[10px] text-zinc-500 font-mono block">
+                              {replayReport.earliest_event_timestamp} to {replayReport.latest_event_timestamp}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Reconstructed State Parameters */}
+                        <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 space-y-3">
+                          <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 block">
+                            Byte-for-Byte Reconstructed Pipeline State
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs font-mono">
+                            {Object.entries(replayReport.reconstructed_state).map(([k, v]) => (
+                              <div key={k} className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800">
+                                <span className="text-[10px] text-zinc-500 uppercase block">{k.replace(/_/g, " ")}</span>
+                                <span className="text-zinc-200 font-bold mt-0.5 block truncate">
+                                  {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Audit Opinion */}
+                        <div className="p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-800 text-xs space-y-1">
+                          <span className="font-bold text-indigo-300 uppercase tracking-wider text-[10px]">
+                            Jane Street SMR Audit Opinion
+                          </span>
+                          <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                            {replayReport.statutory_audit_opinion}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 5. BRIDGEWATER ASSOCIATES 4-QUADRANT MACRO REGIME */}
+              {titanSubTab === "MACRO_REGIME" && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                        <BarChart3 className="w-4 h-4 text-purple-400" />
+                        Bridgewater Associates 4-Quadrant Macro Economic Regime
+                      </span>
+                      <button
+                        type="button"
+                        onClick={loadMacroRegime}
+                        disabled={loadingMacroRegime}
+                        className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition"
+                      >
+                        {loadingMacroRegime ? "Simulating..." : "Simulate 4 Quadrants"}
+                      </button>
+                    </div>
+
+                    {macroRegimeReport && (
+                      <div className="space-y-4">
+                        {/* Summary Badges */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Resilience Score</span>
+                            <span className="text-xl font-extrabold text-purple-400 font-mono mt-0.5 block">
+                              {macroRegimeReport.composite_resilience_score} / 100
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">Composite Grade</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">All-Weather Rating</span>
+                            <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
+                              {macroRegimeReport.all_weather_grade.replace(/_/g, " ")}
+                            </span>
+                            <span className="text-[10px] text-emerald-400 block">Dalio All-Weather</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Base DSCR</span>
+                            <span className="text-lg font-extrabold text-white font-mono mt-0.5 block">
+                              {macroRegimeReport.base_dscr}x
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">Historical Coverage</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Primary Vulnerability</span>
+                            <span className="text-xs font-extrabold text-red-400 mt-1 block truncate">
+                              {macroRegimeReport.most_severe_threat_quadrant.replace(/_/g, " ")}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block">Severe Shock</span>
+                          </div>
+                        </div>
+
+                        {/* 4-Quadrant Matrix */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {macroRegimeReport.quadrant_results.map((q) => {
+                            const isSevere = q.quadrant === macroRegimeReport.most_severe_threat_quadrant;
+                            return (
+                              <div
+                                key={q.quadrant}
+                                className={`p-4 rounded-xl border text-xs space-y-2 transition ${
+                                  isSevere
+                                    ? "bg-red-950/30 border-red-500/50"
+                                    : "bg-zinc-900/80 border-zinc-800"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-white text-sm">{q.regime_name}</span>
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                                    q.solvency_status === "ROBUST_SOLVENT"
+                                      ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                                      : q.solvency_status === "MARGINAL_STRESS"
+                                      ? "bg-amber-950 text-amber-300 border border-amber-800"
+                                      : "bg-red-950 text-red-300 border border-red-800"
+                                  }`}>
+                                    {q.solvency_status}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-[11px] text-zinc-400 font-mono">
+                                  <span>Growth: {q.growth_trend}</span>
+                                  <span>•</span>
+                                  <span>Inflation: {q.inflation_trend}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
+                                  <div>
+                                    <span className="text-[10px] text-zinc-500 block">Stressed Rev:</span>
+                                    <span className="text-zinc-200 font-bold">{formatUSD(q.stressed_revenue_usd)}</span>
+                                    <span className="text-[10px] text-zinc-500 block">({q.revenue_shock_pct} Shock)</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-zinc-500 block">Stressed EBITDA:</span>
+                                    <span className="text-zinc-200 font-bold">{formatUSD(q.stressed_ebitda_usd)}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-zinc-500 block">Debt Service:</span>
+                                    <span className="text-zinc-200 font-bold">{formatUSD(q.stressed_annual_debt_service_usd)}</span>
+                                    <span className="text-[10px] text-zinc-500 block">({q.rate_shock_bps})</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-zinc-500 block">Stressed DSCR:</span>
+                                    <span className={`font-extrabold text-sm ${parseFloat(q.stressed_dscr) >= 1.25 ? "text-emerald-400" : parseFloat(q.stressed_dscr) >= 1.0 ? "text-amber-400" : "text-red-400"}`}>
+                                      {q.stressed_dscr}x
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Recommended Hedging Strategy */}
+                        <div className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/40 text-xs space-y-1">
+                          <span className="font-bold text-purple-300 uppercase tracking-wider text-[10px]">
+                            Recommended Institutional Hedging Strategy
+                          </span>
+                          <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
+                            {macroRegimeReport.recommended_hedging_strategy}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

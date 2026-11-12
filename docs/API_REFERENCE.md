@@ -270,3 +270,52 @@ The platform exposes an Anthropic Model Context Protocol (MCP 2024-11-05) gatewa
 - `POST /v1/sourcing/title-curative-audit`: PropertyRadar/TaxSaleResources title curative screener. Audits recorded deeds of trust, tax liens, and mechanic's claims, enforces 26 U.S.C. § 7425 IRS 120-day statutory redemption rights, and calculates required curative escrow holdbacks.
 - `POST /v1/sourcing/permit-zoning-scan`: Cherre/Bowery municipal building permit and zoning scanner. Audits recorded municipal permits, flags unpermitted alteration risks, and quantifies Floor Area Ratio (FAR) expansion potential and unused envelope square footage.
 
+---
+
+## 13. Institutional Titan Systems (Goldman Sachs / BlackRock / Vanguard / Jane Street / Bridgewater)
+
+- `POST /v1/titan/reactive-dag/evaluate`: Goldman Sachs SecDB / J.P. Morgan Athena reactive underwriting directed acyclic graph. Evaluates financial metrics with fine-grained dependency tracking, forward incremental invalidation, and sub-50μs caching efficiency.
+- `POST /v1/titan/capital-allocator/waterfall`: BlackRock eFront-grade private capital distribution waterfall solver. Computes 4 tiers (Return of Capital, 8% Preferred Return, GP 80/20 Catch-Up, Carried Interest), LP/GP MOIC, and annualized ROI.
+- `POST /v1/titan/capital-allocator/concentration-audit`: Citadel-grade multi-mandate portfolio factor neutrality and concentration gate. Enforces strict limits: NAICS sector <= 25%, County FIPS <= 40%, Lender counterparty <= 30%, and dry powder liquidity pacing.
+- `POST /v1/titan/tax-alpha/1031-exchange`: Vanguard & CPA-Grade 26 U.S.C. § 1031 like-kind exchange engine. Audits statutory 45-day identification and 180-day closing deadlines and calculates capital gains tax deferral.
+- `POST /v1/titan/tax-alpha/cost-segregation`: CPA-grade MACRS cost segregation and bonus depreciation solver. Decomposes real estate basis into 5-year tangible property (60% bonus), 15-year land improvements (60% bonus), and 39-year building straight-line, calculating Year 1 cash tax savings.
+- `POST /v1/titan/event-stream/replay`: Jane Street-grade deterministic canonical state machine replication (SMR) event stream replay. Reconstructs byte-for-byte pipeline state from cryptographic SHA-256 hash chains.
+- `POST /v1/titan/macro-regime/stress-test`: Bridgewater Associates 4-Quadrant macro economic regime stress-tester (Ray Dalio model). Simulates Reflation, Productivity Expansion, Stagflation, and Deflationary Deleveraging, generating composite All-Weather Resilience Scores (0–100) and hedging strategies.
+
+---
+
+## 14. Model Context Protocol (MCP 2024-11-05) Agent Gateway (30 Tools Catalog)
+
+Argus exposes 30 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
+1. `filter_deal_by_mandate`: Stage 2 zero-cost mandate evaluation.
+2. `solve_sba_sop_50_10_8_1`: Stage 4 pure decimal SBA underwriting solver.
+3. `solve_va_foreclosure_compliance`: Virginia Code § 55.1-321 14-day notice & basis solver.
+4. `audit_owner_addbacks`: $85,000 replacement GM deduction and addback audit.
+5. `ingest_roanoke_dockets`: Stage 1 docket ingestion across VAWBK, The Roanoke Times, TACS, Judicial.
+6. `normalize_roanoke_gis`: Roanoke City & County GIS parcel normalization.
+7. `route_conditional_enrichment`: SCC CIS, FEMA, EPA UST, and FMCSA enrichment router.
+8. `generate_citation_locked_memo`: Stage 5 memo generation with citation verification.
+9. `dispatch_human_gated_outreach`: Single-recipient fiduciary outreach gate with DNC validation.
+10. `export_sba_lender_pack`: SBA 7(a)/504 lender package generation.
+11. `evaluate_merkle_audit_chain`: Merkle tree integrity verification.
+12. `generate_sensitivity_matrix`: Aladdin 2D revenue compression vs SOFR rate shock matrix.
+13. `audit_upstream_dependencies`: Open-source dependency manifest and air-gap verification.
+14. `calculate_asset_health_score`: Augury composite asset health and physical holdback solver.
+15. `parse_equipment_schedule`: Docling equipment schedule and table parser.
+16. `scan_aerial_facility`: TorchGeo roof condition and yard logistics sentinel.
+17. `predict_capex_reserve`: Darts time-series machinery degradation model.
+18. `audit_maintenance_ledger`: Cleanlab maintenance ledger and add-back audit.
+19. `get_ontology_knowledge_graph`: Palantir Gotham link graph and cross-collateralization cycle detection.
+20. `resolve_entity_splink`: Splink Fellegi-Sunter probabilistic record linkage.
+21. `query_contour_micro_olap`: Foundry Contour sub-50ms columnar micro-OLAP aggregator.
+22. `fuse_gaia_spatial_twin`: Palantir Gaia setback encroachment and floodway intersection engine.
+23. `find_semantic_lookalikes`: Inven private peer M&A lookalike finder.
+24. `scan_debt_maturity_radar`: Reonomy/Trepp commercial debt wall and refi cliff scanner.
+25. `audit_title_curative`: PropertyRadar 26 U.S.C. § 7425 title curative and IRS 120-day screener.
+26. `evaluate_reactive_dag`: Goldman SecDB / Athena reactive underwriting DAG (<50μs latency).
+27. `calculate_pe_waterfall`: BlackRock eFront 4-tier private capital distribution waterfall solver.
+28. `audit_portfolio_concentration`: Citadel multi-mandate portfolio factor neutrality and allocation gate.
+29. `audit_1031_exchange_and_cost_seg`: Vanguard & CPA § 1031 statutory countdown and MACRS cost seg solver.
+30. `simulate_macro_regimes`: Bridgewater Associates 4-Quadrant macro economic regime stress-tester.
+
+
