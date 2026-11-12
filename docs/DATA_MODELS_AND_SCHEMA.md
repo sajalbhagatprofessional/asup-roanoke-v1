@@ -182,3 +182,46 @@ Append-only tamper-evident audit record for all fiduciary actions.
 - `payload_json` (`JSONB` NOT NULL)
 - `previous_block_hash` (`VARCHAR(64)` NOT NULL)
 - `merkle_record_hash` (`VARCHAR(64)` NOT NULL) - SHA-256 of `(previous_block_hash + payload + timestamp)`.
+
+---
+
+## 7. Palantir Operational Ontology & Gotham Link Graph Contracts
+
+### `OntologyNodeType` & `OntologyEdgeType`
+- Node Types: `ENTITY_CORPORATE`, `NATURAL_PERSON`, `REAL_ESTATE_PARCEL`, `EQUIPMENT_ASSET`, `COURT_DOCKET`, `LIEN_DEED_OF_TRUST`, `FIDUCIARY_TRUSTEE`, `FINANCIAL_LENDER`.
+- Edge Types: `OWNS_EQUITY`, `OFFICER_OR_DIRECTOR`, `TITLED_OWNER_OF_PARCEL`, `EQUIPMENT_LOCATED_AT`, `SECURED_BY_LIEN`, `PERSONAL_GUARANTOR_OF`, `SUBSTITUTE_TRUSTEE_FOR`, `BANKRUPTCY_DEBTOR_IN`, `CROSS_COLLATERALIZED_WITH`.
+
+### `OntologyGraphReport`
+- `asset_id`: Target distressed asset / corporate identifier.
+- `total_nodes` (`int`), `total_edges` (`int`): Graph size metrics.
+- `nodes` (`List[OntologyNodeRecord]`): Semantic entities with confidence scores and provenance URLs.
+- `edges` (`List[OntologyEdgeRecord]`): Directed links with weights, legal instruments, and properties.
+- `leverage_hub_node_id` (`str`), `leverage_hub_role` (`str`): Primary betweenness centrality leverage node.
+- `cross_collateralization_detected` (`bool`): Cycle or multi-parcel encumbrance indicator.
+- `shortest_leverage_path` (`List[str]`): Sequential workout route from buyer to trustee.
+- `graph_density` (`Decimal`): Network connectivity density quantized to 0.0001.
+- `executive_intel_summary` (`str`): Legal and epistemic executive synthesis.
+
+### `EntityResolutionMatchResult` (Splink / Fellegi-Sunter)
+- `source_record_id`, `candidate_record_id`: Matched record IDs.
+- `match_probability` (`Decimal`): 0.00 to 1.00 probabilistic score.
+- `match_tier` (`str`): `"CERTAIN"`, `"HIGH_PROBABILITY"`, `"POSSIBLE_ASSOCIATION"`, `"DISTINCT"`.
+- `jaro_winkler_name_score` (`Decimal`), `address_similarity_score` (`Decimal`).
+- `tax_id_exact_match` (`bool`), `is_merged` (`bool`), `canonical_entity_id` (`str`).
+- `epistemic_reasoning` (`str`): Epistemic explanation of linkage.
+
+### `TopologicalParcelFusionReport` (Gaia / Shapely)
+- `parcel_id`: Target GPIN.
+- `parcel_area_acres` (`Decimal`), `building_footprint_sqft` (`Decimal`).
+- `setback_encroachment_detected` (`bool`): Building infringement on statutory boundary setbacks (<15ft).
+- `floodway_intersection_sqft` (`Decimal`), `flood_coverage_pct` (`Decimal`).
+- `contiguous_roll_up_candidate_parcels` (`List[str]`): Adjoining parcels under common ownership.
+- `rail_spur_adjacent` (`bool`): Proximity to active Norfolk Southern rail corridor (<=150ft).
+
+### `ContourAnalyticalQueryResult` (Foundry Contour / DuckDB)
+- `query_description`: Natural language filter summary.
+- `matched_records_count` (`int`).
+- `execution_time_ms` (`Decimal`): Sub-50ms execution latency metric.
+- `aggregate_ebitda_usd` (`Decimal`), `aggregate_cure_basis_usd` (`Decimal`).
+- `records`: Filtered columnar records.
+

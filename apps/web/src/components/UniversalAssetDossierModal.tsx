@@ -54,6 +54,10 @@ import {
   BenchmarkYieldCurve,
   MacroStressMatrixReport,
   CompositeAssetHealthScore,
+  OntologyGraphReport,
+  EntityResolutionMatchResult,
+  TopologicalParcelFusionReport,
+  ContourAnalyticalQueryResult,
 } from "../lib/types";
 import {
   runAssetDeepOsint,
@@ -68,6 +72,10 @@ import {
   fetchBenchmarkYieldCurve,
   runMacroSofrScenarios,
   fetchAssetHealthScore,
+  fetchOntologyGraph,
+  resolveEntitySplink,
+  queryContourMicroOlap,
+  fuseGaiaSpatialTwin,
 } from "../lib/api";
 
 interface UniversalAssetDossierModalProps {
@@ -86,7 +94,7 @@ export default function UniversalAssetDossierModal({
   onAssetUpdated,
 }: UniversalAssetDossierModalProps) {
   const [activeTab, setActiveTab] = useState<
-    "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "OUTREACH" | "PIPELINE"
+    "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "OUTREACH" | "PIPELINE"
   >(initialTab);
   const [currentAsset, setCurrentAsset] = useState<UniversalAsset | null>(asset);
   const [spatialTwin, setSpatialTwin] = useState<ParcelSpatialTwin | null>(null);
@@ -127,6 +135,15 @@ export default function UniversalAssetDossierModal({
   const [assetHealth, setAssetHealth] = useState<CompositeAssetHealthScore | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
 
+  // Palantir Gotham & Operational Ontology States
+  const [ontologyGraph, setOntologyGraph] = useState<OntologyGraphReport | null>(null);
+  const [loadingOntology, setLoadingOntology] = useState(false);
+  const [selectedGraphNode, setSelectedGraphNode] = useState<any | null>(null);
+  const [contourResult, setContourResult] = useState<ContourAnalyticalQueryResult | null>(null);
+  const [loadingContour, setLoadingContour] = useState(false);
+  const [splinkMatch, setSplinkMatch] = useState<EntityResolutionMatchResult | null>(null);
+  const [resolvingSplink, setResolvingSplink] = useState(false);
+
   useEffect(() => {
     setCurrentAsset(asset);
     setActiveTab(initialTab);
@@ -140,6 +157,10 @@ export default function UniversalAssetDossierModal({
     setYieldCurve(null);
     setMacroMatrix(null);
     setAssetHealth(null);
+    setOntologyGraph(null);
+    setSelectedGraphNode(null);
+    setContourResult(null);
+    setSplinkMatch(null);
   }, [asset, initialTab]);
 
   useEffect(() => {
@@ -158,6 +179,9 @@ export default function UniversalAssetDossierModal({
     }
     if (activeTab === "ASSET_HEALTH" && currentAsset && !assetHealth) {
       loadAssetHealth();
+    }
+    if (activeTab === "GOTHAM_ONTOLOGY" && currentAsset && !ontologyGraph) {
+      loadOntologyGraph();
     }
   }, [activeTab, currentAsset, playbookType]);
 
@@ -179,6 +203,53 @@ export default function UniversalAssetDossierModal({
       console.error("Failed to load asset physical health:", err);
     } finally {
       setLoadingHealth(false);
+    }
+  };
+
+  const loadOntologyGraph = async () => {
+    if (!currentAsset) return;
+    setLoadingOntology(true);
+    try {
+      const res = await fetchOntologyGraph(currentAsset.asset_id);
+      setOntologyGraph(res.ontology_graph);
+    } catch (err) {
+      console.error("Failed to load Gotham ontology graph:", err);
+    } finally {
+      setLoadingOntology(false);
+    }
+  };
+
+  const runContourMicroOlap = async () => {
+    setLoadingContour(true);
+    try {
+      const prefix = currentAsset?.naics_code ? currentAsset.naics_code.substring(0, 3) : "484";
+      const res = await queryContourMicroOlap({
+        naics_prefix: prefix,
+        max_cure_basis_usd: "3500000.00",
+        min_dscr: "1.25",
+      });
+      setContourResult(res.contour_query_result);
+    } catch (err) {
+      console.error("Failed to query Contour micro-OLAP:", err);
+    } finally {
+      setLoadingContour(false);
+    }
+  };
+
+  const runSplinkResolution = async () => {
+    if (!currentAsset) return;
+    setResolvingSplink(true);
+    try {
+      const addr = `${currentAsset.city || "Roanoke"}, ${currentAsset.state || "VA"}`;
+      const res = await resolveEntitySplink(
+        { id: currentAsset.asset_id, name: currentAsset.title, address: addr, tax_id: "VA-1284910" },
+        { id: `${currentAsset.asset_id}-SCC`, name: `${currentAsset.title.toUpperCase()} LLC`, address: addr, tax_id: "VA-1284910" }
+      );
+      setSplinkMatch(res.entity_resolution);
+    } catch (err) {
+      console.error("Failed to resolve entity via Splink:", err);
+    } finally {
+      setResolvingSplink(false);
     }
   };
 
@@ -471,6 +542,20 @@ export default function UniversalAssetDossierModal({
             <span>Augury AssetHealth™</span>
             <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-amber-950 border border-amber-800 text-amber-300 font-bold">
               AI Health
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("GOTHAM_ONTOLOGY")}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition ${
+              activeTab === "GOTHAM_ONTOLOGY"
+                ? "bg-indigo-600 text-white shadow-md shadow-indigo-950"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
+          >
+            <Network className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Palantir Gotham™ Graph</span>
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-indigo-950 border border-indigo-800 text-indigo-300 font-bold">
+              Ontology
             </span>
           </button>
           <button
@@ -1828,6 +1913,260 @@ export default function UniversalAssetDossierModal({
                             </div>
                           ))}
                         </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+          {activeTab === "GOTHAM_ONTOLOGY" && (
+            <div className="space-y-6">
+              {loadingOntology ? (
+                <div className="py-20 text-center space-y-3">
+                  <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                  <p className="text-sm font-semibold text-zinc-300">
+                    Constructing Palantir Gotham™ Multi-Relational Knowledge Graph...
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    Traversing Virginia SCC records, WDVA court dockets, deeds of trust, and Roanoke GIS parcel layers.
+                  </p>
+                </div>
+              ) : ontologyGraph ? (
+                <div className="space-y-6">
+                  {/* 1. Header Metrics Bar */}
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div className="p-3.5 rounded-xl bg-zinc-950/90 border border-zinc-800">
+                      <span className="text-zinc-500 block text-[10px] uppercase font-bold tracking-wider">Total Nodes</span>
+                      <span className="text-xl font-mono font-bold text-white">{ontologyGraph.total_nodes}</span>
+                      <span className="text-[10px] text-zinc-400 block mt-0.5">Semantic Entities</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-zinc-950/90 border border-zinc-800">
+                      <span className="text-zinc-500 block text-[10px] uppercase font-bold tracking-wider">Directed Edges</span>
+                      <span className="text-xl font-mono font-bold text-white">{ontologyGraph.total_edges}</span>
+                      <span className="text-[10px] text-zinc-400 block mt-0.5">Legal &amp; Debt Links</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-zinc-950/90 border border-zinc-800">
+                      <span className="text-zinc-500 block text-[10px] uppercase font-bold tracking-wider">Graph Density</span>
+                      <span className="text-xl font-mono font-bold text-indigo-400">{ontologyGraph.graph_density}</span>
+                      <span className="text-[10px] text-zinc-400 block mt-0.5">Network Connectivity</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-zinc-950/90 border border-zinc-800">
+                      <span className="text-zinc-500 block text-[10px] uppercase font-bold tracking-wider">Cross-Collateral</span>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {ontologyGraph.cross_collateralization_detected ? (
+                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-950 border border-amber-800 text-amber-300">
+                            DETECTED
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-950 border border-emerald-800 text-emerald-300">
+                            UNENCUMBERED
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-zinc-400 block mt-0.5">Multi-Parcel Lien Cycle</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-zinc-950/90 border border-zinc-800">
+                      <span className="text-zinc-500 block text-[10px] uppercase font-bold tracking-wider">Key Leverage Hub</span>
+                      <span className="text-xs font-mono font-bold text-emerald-400 block truncate mt-1" title={ontologyGraph.leverage_hub_node_id}>
+                        {ontologyGraph.leverage_hub_role}
+                      </span>
+                      <span className="text-[10px] text-zinc-400 block mt-0.5">Betweenness Centrality</span>
+                    </div>
+                  </div>
+
+                  {/* 2. Executive Intel Summary */}
+                  <div className="p-4 rounded-xl bg-indigo-950/30 border border-indigo-500/40 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                      <span className="font-bold text-white text-xs uppercase tracking-wide">
+                        Palantir Gotham™ Epistemic Link Intelligence
+                      </span>
+                    </div>
+                    <p className="text-xs text-indigo-200/90 leading-relaxed font-sans">
+                      {ontologyGraph.executive_intel_summary}
+                    </p>
+                  </div>
+
+                  {/* 3. Shortest Fiduciary Leverage Path */}
+                  <div className="p-4 rounded-xl bg-zinc-950/90 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ArrowRight className="w-4 h-4 text-emerald-400" />
+                        <span className="font-bold text-white text-xs uppercase tracking-wide">
+                          Shortest Fiduciary Workout Path
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-zinc-500">
+                        {ontologyGraph.shortest_leverage_path.length} Hops to Relief
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 overflow-x-auto py-2">
+                      {ontologyGraph.shortest_leverage_path.map((nodeId, idx) => (
+                        <React.Fragment key={idx}>
+                          <div className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-xs font-mono font-bold text-zinc-200 whitespace-nowrap shadow-sm">
+                            {nodeId}
+                          </div>
+                          {idx < ontologyGraph.shortest_leverage_path.length - 1 && (
+                            <ArrowRight className="w-3.5 h-3.5 text-zinc-600 flex-shrink-0" />
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 4. Multi-Relational Knowledge Graph Nodes */}
+                  <div className="p-4 rounded-xl bg-zinc-950/90 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Network className="w-4 h-4 text-indigo-400" />
+                        <span className="font-bold text-white text-xs uppercase tracking-wide">
+                          Dynamic Ontology Objects ({ontologyGraph.nodes.length} Verified Nodes)
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-zinc-500 font-mono">Click Node to Inspect Properties</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {ontologyGraph.nodes.map((node) => (
+                        <div
+                          key={node.node_id}
+                          onClick={() => setSelectedGraphNode(node)}
+                          className={`p-3 rounded-lg border text-left cursor-pointer transition ${
+                            selectedGraphNode?.node_id === node.node_id
+                              ? "bg-indigo-950/50 border-indigo-500 text-white shadow-lg"
+                              : "bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:bg-zinc-900 hover:border-zinc-700"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-zinc-800 text-indigo-300 border border-zinc-700">
+                              {node.node_type}
+                            </span>
+                            <span className="text-[10px] font-mono text-zinc-500">
+                              Conf: {(parseFloat(node.confidence_score) * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                          <p className="font-bold text-xs text-white truncate">{node.label}</p>
+                          <p className="text-[10px] font-mono text-zinc-500 truncate mt-0.5">ID: {node.node_id}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {selectedGraphNode && (
+                      <div className="p-3.5 rounded-lg bg-indigo-950/20 border border-indigo-900/60 mt-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-indigo-300">
+                            Node Properties: {selectedGraphNode.label}
+                          </span>
+                          <button
+                            onClick={() => setSelectedGraphNode(null)}
+                            className="text-[10px] text-zinc-400 hover:text-white"
+                          >
+                            Close
+                          </button>
+                        </div>
+                        <div className="p-2 rounded bg-zinc-950/80 border border-zinc-800 text-[11px] font-mono space-y-1 text-zinc-300">
+                          {Object.entries(selectedGraphNode.properties).map(([k, v]) => (
+                            <div key={k} className="flex justify-between">
+                              <span className="text-zinc-500">{k}:</span>
+                              <span className="text-zinc-200">{String(v)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {selectedGraphNode.provenance_sources && selectedGraphNode.provenance_sources.length > 0 && (
+                          <div className="text-[10px] text-zinc-500">
+                            <span className="font-semibold text-zinc-400">Provenance: </span>
+                            {selectedGraphNode.provenance_sources.join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 5. Palantir Engine Action Center (Splink & Contour) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Splink Probabilistic Entity Linkage */}
+                    <div className="p-4 rounded-xl bg-zinc-950/90 border border-zinc-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <UserCheck className="w-4 h-4 text-emerald-400" />
+                          <span className="font-bold text-white text-xs">Splink Entity Resolution (Fellegi-Sunter)</span>
+                        </div>
+                        <button
+                          onClick={runSplinkResolution}
+                          disabled={resolvingSplink}
+                          className="px-2.5 py-1 rounded text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition disabled:opacity-50"
+                        >
+                          {resolvingSplink ? "Resolving..." : "Run Linkage"}
+                        </button>
+                      </div>
+
+                      {splinkMatch ? (
+                        <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 space-y-2 text-xs">
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400">Match Probability:</span>
+                            <span className="font-mono font-bold text-emerald-400">
+                              {(parseFloat(splinkMatch.match_probability) * 100).toFixed(1)}% ({splinkMatch.match_tier})
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400">Jaro-Winkler Name Score:</span>
+                            <span className="font-mono text-zinc-300">{splinkMatch.jaro_winkler_name_score}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400">Canonical Entity ID:</span>
+                            <span className="font-mono text-indigo-300">{splinkMatch.canonical_entity_id}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-400 italic pt-1 border-t border-zinc-800">
+                            {splinkMatch.epistemic_reasoning}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-zinc-500 leading-relaxed">
+                          Executes probabilistic Fellegi-Sunter multi-modal record linkage across court dockets, Virginia SCC corporate records, and Roanoke GIS parcels.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Foundry Contour Micro-OLAP Vectorized Engine */}
+                    <div className="p-4 rounded-xl bg-zinc-950/90 border border-zinc-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-cyan-400" />
+                          <span className="font-bold text-white text-xs">Foundry Contour Micro-OLAP (DuckDB)</span>
+                        </div>
+                        <button
+                          onClick={runContourMicroOlap}
+                          disabled={loadingContour}
+                          className="px-2.5 py-1 rounded text-[10px] font-bold bg-cyan-600 hover:bg-cyan-500 text-white transition disabled:opacity-50"
+                        >
+                          {loadingContour ? "Running..." : "Execute OLAP"}
+                        </button>
+                      </div>
+
+                      {contourResult ? (
+                        <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 space-y-2 text-xs">
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400">Execution Latency:</span>
+                            <span className="font-mono font-bold text-cyan-400">{contourResult.execution_time_ms} ms</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400">Matched Distressed Assets:</span>
+                            <span className="font-mono text-white">{contourResult.matched_records_count}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400">Aggregate Distressed EBITDA:</span>
+                            <span className="font-mono text-emerald-400">{formatUSD(contourResult.aggregate_ebitda_usd)}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400">Aggregate Cure/Acquisition Basis:</span>
+                            <span className="font-mono text-amber-400">{formatUSD(contourResult.aggregate_cure_basis_usd)}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-zinc-500 leading-relaxed">
+                          In-process vectorized columnar micro-OLAP analytical queries executing sub-50ms multi-dimensional aggregations over regional distressed assets.
+                        </p>
                       )}
                     </div>
                   </div>

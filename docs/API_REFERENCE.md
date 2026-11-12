@@ -244,3 +244,10 @@ The platform exposes an Anthropic Model Context Protocol (MCP 2024-11-05) gatewa
 - `POST /v1/assets/{asset_id}/aerial-facility-scan`: TorchGeo-inspired aerial sentinel analyzing satellite roof condition, surface area, and yard logistics occupancy.
 - `POST /v1/assets/{asset_id}/predict-capex-reserve`: Darts-inspired time-series machinery degradation model computing Year 1-3 mandatory capex and testing SBA 1.25x DSCR stress breach.
 - `POST /v1/assets/{asset_id}/audit-maintenance-ledger`: Cleanlab-inspired data-centric audit flagging personal commingled expenses (boats, golf carts, luxury travel) and phantom tooling write-offs.
+
+### 11. Palantir Foundry, Gotham, Gaia, Contour & AIP Endpoints
+- `GET /v1/ontology/graph/{asset_id}`: Palantir Gotham link analysis returning multi-relational knowledge graph (semantic nodes, directed legal/debt edges), betweenness centrality leverage hub, cross-collateralization cycle detection, and shortest fiduciary workout path.
+- `POST /v1/ontology/resolve-entity`: Splink-inspired probabilistic record linkage (Fellegi-Sunter model) computing Jaro-Winkler name similarity, address token overlap, statutory tax ID linkage, match tier (`CERTAIN`, `HIGH_PROBABILITY`, `POSSIBLE_ASSOCIATION`, `DISTINCT`), and canonical entity ID.
+- `POST /v1/ontology/contour-query`: Foundry Contour in-process vectorized columnar micro-OLAP engine (DuckDB-inspired) executing sub-50ms multi-dimensional aggregations over distressed dockets, parcels, EBITDA, and cure prices.
+- `POST /v1/ontology/spatial-fusion`: Palantir Gaia topological parcel fusion engine (Shapely/GeoPandas) computing setback encroachments, FEMA 100-year floodway intersection sqft, flood coverage percentage, and rail spur corridor proximity.
+- `POST /v1/ontology/aip-validate`: Palantir AIP structured schema guardrails deterministically enforcing statutory SBA SOP 50 10 8.1 minimum equity (>= 10%), baseline DSCR (>= 1.25x), Va. Code § 55.1-321 notice (>= 14 days), and mandatory $85,000/yr replacement GM deduction.

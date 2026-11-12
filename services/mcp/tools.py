@@ -338,6 +338,84 @@ MCP_TOOLS_CATALOG: List[McpTool] = [
             },
         },
     ),
+    McpTool(
+        name="generate_gotham_knowledge_graph",
+        description=(
+            "Palantir Gotham link analysis: constructs multi-relational knowledge graph of corporate entities, "
+            "parcels, deeds of trust, substitute trustees, and lenders. Computes betweenness leverage hub, "
+            "detects cross-collateralization cycles, and identifies shortest fiduciary workout path."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["asset_id"],
+            "properties": {
+                "asset_id": {"type": "string", "description": "Target distressed asset or company identifier (e.g. 'ROA-GD-01')"},
+            },
+        },
+    ),
+    McpTool(
+        name="resolve_entity_splink",
+        description=(
+            "Splink-inspired probabilistic record linkage (Fellegi-Sunter model): resolves true beneficial ownership "
+            "and entity matching across court dockets, Virginia SCC corporate records, and county GIS tax rolls."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["source_record", "candidate_record"],
+            "properties": {
+                "source_record": {"type": "object", "description": "Source record {id, name, address, tax_id}"},
+                "candidate_record": {"type": "object", "description": "Candidate record {id, name, address, tax_id}"},
+            },
+        },
+    ),
+    McpTool(
+        name="query_contour_micro_olap",
+        description=(
+            "Palantir Foundry Contour in-process vectorized micro-OLAP analytical engine: executes sub-50ms multi-dimensional "
+            "aggregations across distressed dockets and parcels (filtering by NAICS, cure basis, DSCR, and notice days)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "naics_prefix": {"type": "string", "description": "NAICS prefix filter (e.g. '484', '332', '493')"},
+                "max_cure_basis_usd": {"type": "string", "description": "Maximum cure basis in USD"},
+                "min_dscr": {"type": "string", "description": "Minimum baseline DSCR floor"},
+                "min_notice_days": {"type": "integer", "description": "Minimum statutory foreclosure notice days"},
+                "jurisdiction": {"type": "string", "description": "Jurisdiction filter (e.g. 'Roanoke City')"},
+            },
+        },
+    ),
+    McpTool(
+        name="fuse_gaia_spatial_twin",
+        description=(
+            "Palantir Gaia topological parcel fusion engine: analyzes GIS boundaries, building footprints, "
+            "property setback encroachments, FEMA 100-year flood zone overlap, and Norfolk Southern rail adjacency."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["parcel_id"],
+            "properties": {
+                "parcel_id": {"type": "string", "description": "Target county GIS parcel GPIN"},
+                "flood_hazard_zone": {"type": "string", "default": "X", "description": "FEMA flood zone (e.g. 'X', 'A', 'AE')"},
+                "distance_to_boundary_ft": {"type": "number", "description": "Distance from building to parcel boundary in feet"},
+                "distance_to_rail_ft": {"type": "number", "description": "Distance from parcel to rail corridor in feet"},
+            },
+        },
+    ),
+    McpTool(
+        name="validate_aip_guardrails",
+        description=(
+            "Palantir AIP structured schema guardrails: strictly enforces SBA SOP 50 10 8.1 minimum equity (10%) and DSCR (1.25x), "
+            "Va. Code § 55.1-321 14-day notice, and mandatory $85,000 replacement GM salary deductions."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["raw_proposal"],
+            "properties": {
+                "raw_proposal": {"type": "object", "description": "Raw acquisition proposal dictionary"},
+            },
+        },
+    ),
 ]
 
 
@@ -586,6 +664,53 @@ def execute_mcp_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any
             invs = arguments.get("invoices")
             audit_res = auditor.audit_maintenance_invoices(invs)
             return {"maintenance_audit": audit_res.to_dict()}
+
+        elif tool_name == "generate_gotham_knowledge_graph":
+            from packages.ontology_engine import GothamLinkGraphEngine
+            aid = arguments["asset_id"]
+            report = GothamLinkGraphEngine.generate_roanoke_dossier_graph(asset_id=aid)
+            return {"ontology_graph": report.to_dict()}
+
+        elif tool_name == "resolve_entity_splink":
+            from packages.ontology_engine import SplinkEntityResolver
+            src = arguments["source_record"]
+            cand = arguments["candidate_record"]
+            match_res = SplinkEntityResolver.resolve_entity(src, cand)
+            return {"entity_resolution": match_res.to_dict()}
+
+        elif tool_name == "query_contour_micro_olap":
+            from packages.ontology_engine import ContourEngineDuckDB
+            engine = ContourEngineDuckDB()
+            cure_dec = Decimal(str(arguments["max_cure_basis_usd"])) if arguments.get("max_cure_basis_usd") else None
+            dscr_dec = Decimal(str(arguments["min_dscr"])) if arguments.get("min_dscr") else None
+            res = engine.execute_contour_query(
+                naics_prefix=arguments.get("naics_prefix"),
+                max_cure_basis_usd=cure_dec,
+                min_dscr=dscr_dec,
+                min_notice_days=arguments.get("min_notice_days"),
+                jurisdiction=arguments.get("jurisdiction"),
+            )
+            return {"contour_query_result": res.to_dict()}
+
+        elif tool_name == "fuse_gaia_spatial_twin":
+            from packages.ontology_engine import GaiaSpatialFusionEngine
+            pid = arguments["parcel_id"]
+            fzone = arguments.get("flood_hazard_zone", "X")
+            dist_bound = Decimal(str(arguments["distance_to_boundary_ft"])) if arguments.get("distance_to_boundary_ft") is not None else None
+            dist_rail = Decimal(str(arguments["distance_to_rail_ft"])) if arguments.get("distance_to_rail_ft") is not None else None
+            report = GaiaSpatialFusionEngine.fuse_parcel_spatial_twin(
+                parcel_id=pid,
+                flood_hazard_zone=fzone,
+                distance_to_boundary_ft=dist_bound,
+                distance_to_rail_ft=dist_rail,
+            )
+            return {"spatial_fusion": report.to_dict()}
+
+        elif tool_name == "validate_aip_guardrails":
+            from packages.ontology_engine import AIPGuardrailsInstructor
+            raw = arguments["raw_proposal"]
+            guardrail_res = AIPGuardrailsInstructor.validate_deal_proposal(raw)
+            return {"guardrail_validation": guardrail_res.to_dict()}
 
         else:
             return {"error": f"Unknown tool: {tool_name}"}

@@ -59,8 +59,10 @@ def dispatch_jsonrpc(request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     "Provides air-gapped SBA SOP 50 10 8.1 underwriting, add-back forensic auditing, "
                     "SEC EDGAR public comps multiple expansion arbitrage, OpenSanctions/Yente AML/KYC screening, "
                     "OpenBB macro SOFR stress testing, IRS Form 1040/1120-S OCR parsing, God's Eye 3D digital twins, "
-                    "and Augury-inspired AssetHealth™ (Docling equipment parser, TorchGeo aerial roof scan, "
-                    "Darts 3-year predictive capex reserve, Alibi-detect operational drift, Cleanlab maintenance ledger audit)."
+                    "Augury-inspired AssetHealth™ (Docling equipment parser, TorchGeo aerial roof scan, "
+                    "Darts 3-year predictive capex reserve, Alibi-detect operational drift, Cleanlab maintenance ledger audit), "
+                    "and Palantir Foundry & Gotham Operational Ontology (Splink entity resolution, Gotham multi-relational link graph, "
+                    "Contour sub-50ms micro-OLAP analytics, Gaia topological parcel fusion, and AIP schema guardrails)."
                 ),
             }
             return JsonRpcResponse(id=req_id, result=result).to_dict()

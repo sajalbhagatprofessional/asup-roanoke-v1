@@ -6,7 +6,7 @@
     "key_hash": "e2bef8fd319f032547f5d1d6245a34b8f2c3fe190ab5c511c55a7b81bc816d76",
     "role": "ADMIN",
     "created_at": "2026-05-01T00:00:00Z",
-    "last_used_at": "2026-11-12T18:34:34.012903+00:00",
+    "last_used_at": "2026-11-12T19:06:53.893817+00:00",
     "is_active": true,
     "rate_limit_rpm": 300
   },
@@ -205,6 +205,50 @@
     "role": "ANALYST",
     "created_at": "2026-11-12T18:34:33.857851+00:00",
     "last_used_at": "2026-11-12T18:34:33.868253+00:00",
+    "is_active": false,
+    "rate_limit_rpm": 100
+  },
+  {
+    "key_id": "KEY-FD1E830D",
+    "name": "Hermes CI/CD Agent",
+    "key_prefix": "asup_live_ndl-...",
+    "key_hash": "f5890972f2c0d6e071de7bf6247fc4c16df85f93c3eff1e17784073b5a77e748",
+    "role": "ANALYST",
+    "created_at": "2026-11-12T18:45:36.110180+00:00",
+    "last_used_at": "2026-11-12T18:45:36.120589+00:00",
+    "is_active": false,
+    "rate_limit_rpm": 100
+  },
+  {
+    "key_id": "KEY-BAE06821",
+    "name": "Hermes CI/CD Agent",
+    "key_prefix": "asup_live_hych...",
+    "key_hash": "dfd48b77ccfde0aa366049c1a2ce75dec26dacc8e80de752cbfcf4a61b33a23a",
+    "role": "ANALYST",
+    "created_at": "2026-11-12T18:53:58.871736+00:00",
+    "last_used_at": "2026-11-12T18:53:58.888064+00:00",
+    "is_active": false,
+    "rate_limit_rpm": 100
+  },
+  {
+    "key_id": "KEY-62982E09",
+    "name": "Hermes CI/CD Agent",
+    "key_prefix": "asup_live_fHNG...",
+    "key_hash": "a9f517a72573466999e831fa34fca8257fa8b104902796bfb364488efc1695d4",
+    "role": "ANALYST",
+    "created_at": "2026-11-12T18:54:58.273556+00:00",
+    "last_used_at": "2026-11-12T18:54:58.284193+00:00",
+    "is_active": false,
+    "rate_limit_rpm": 100
+  },
+  {
+    "key_id": "KEY-72F50B7F",
+    "name": "Hermes CI/CD Agent",
+    "key_prefix": "asup_live_evCK...",
+    "key_hash": "d582a24501dbc00d6f5f7f32b6135b0f907d7504cbeddad5a176aa9d3959d474",
+    "role": "ANALYST",
+    "created_at": "2026-11-12T19:06:53.741085+00:00",
+    "last_used_at": "2026-11-12T19:06:53.750477+00:00",
     "is_active": false,
     "rate_limit_rpm": 100
   }

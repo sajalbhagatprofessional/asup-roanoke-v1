@@ -51,11 +51,11 @@ pip install -r requirements.txt
 ```
 
 ### 2. Run the Master Verification Gate
-Verify that all 110 unit, integration, RBAC, and golden backtests pass with 100% coverage:
+Verify that all 117 unit, integration, RBAC, and golden backtests pass with 100% coverage:
 ```bash
 python scripts/run_all_tests.py
 ```
-*(Expected Output: `Total Test Suite: 110/110 Tests PASSED (100% Coverage)!` and `[GOLDEN SUITE] 50-Deal Accuracy: 50/50`)*
+*(Expected Output: `Total Test Suite: 117/117 Tests PASSED (100% Coverage)!` and `[GOLDEN SUITE] 50-Deal Accuracy: 50/50`)*
 
 ### 3. Launch Local Backend Server
 ```bash
@@ -118,6 +118,12 @@ asup-roanoke-v1/
 │   │   ├── operational_drift_detector.py          # Alibi-detect operational efficiency drift detector
 │   │   ├── maintenance_auditor.py                 # Cleanlab maintenance ledger & add-back audit
 │   │   └── asset_health_solver.py                 # Master composite health score & holdback solver
+│   ├── ontology_engine/                           # Palantir Foundry, Gotham, Gaia, Contour & AIP Suite
+│   │   ├── entity_resolver_splink.py              # Splink Fellegi-Sunter probabilistic record linkage
+│   │   ├── gotham_link_graph.py                   # Gotham link analysis, betweenness & cross-collateral cycles
+│   │   ├── contour_engine_duckdb.py               # Foundry Contour sub-50ms vectorized micro-OLAP
+│   │   ├── gaia_spatial_fusion.py                 # Gaia topological parcel boundary & FEMA floodway fusion
+│   │   └── aip_guardrails_instructor.py           # AIP structured schema guardrails & statutory invariants
 │   └── underwriting_engine/                       # 100% Deterministic Pure Decimal Math
 │       ├── sba_sop_50_10_8_1.py                   # SBA SOP 50 10 8.1 compliant solver
 │       ├── va_foreclosure_solver.py               # Va. Code § 55.1-321 14d notice & basis solver
@@ -140,14 +146,14 @@ asup-roanoke-v1/
 │   ├── src/components/                            # High-density Apple Card components & Modals
 │   └── src/lib/api.ts                             # Typed client API integration
 ├── scripts/                                       # Automation & Deployment Scripts
-│   ├── run_all_tests.py                           # Master 102-test verification runner
+│   ├── run_all_tests.py                           # Master 117-test verification runner
 │   ├── run_golden_backtest.py                     # 50-deal golden dataset backtest
 │   ├── sync_upstream_dependencies.py              # Upstream dependency tracker CLI
 │   ├── provision_oci_arm64_vps.sh                 # Oracle OCI Ubuntu 24.04 ARM64 bootstrap
 │   └── rollback_vps.sh                            # Rapid container rollback script
 └── tests/                                         # Test Suite (100% Coverage)
     ├── unit/                                      # AST air-gap, SBA SOP, Va. foreclosure tests
-    ├── integration/                               # Milestones 1–16 integration tests
+    ├── integration/                               # Milestones 1–18 integration tests
     └── golden_suite/roanoke_golden_50.json        # 50 stratified Roanoke golden deals
 ```
 
@@ -162,13 +168,13 @@ For in-depth technical documentation, consult the dedicated guides in the [`docs
 3. **[REST & MCP API Reference (`docs/API_REFERENCE.md`)](docs/API_REFERENCE.md)**: Full endpoint definitions, request/response schemas, RBAC requirements, and Model Context Protocol specification.
 4. **[Data Models & Database Schema (`docs/DATA_MODELS_AND_SCHEMA.md`)](docs/DATA_MODELS_AND_SCHEMA.md)**: PostgreSQL 16 + PostGIS DDL, Pydantic data models, and `ProvenancedValue[T]` epistemic definitions.
 5. **[Operations & Deployment (`docs/OPERATIONS_AND_DEPLOYMENT.md`)](docs/OPERATIONS_AND_DEPLOYMENT.md)**: Oracle Cloud Infrastructure ARM64 VPS setup, Docker Compose, Caddy reverse proxy, and rollback procedures.
-6. **[Product Roadmap & Evolution (`docs/ROADMAP_AND_FUTURE_PLANS.md`)](docs/ROADMAP_AND_FUTURE_PLANS.md)**: Complete milestone ledger (Milestones 1–16) and future strategic roadmap (Milestones 17–20).
+6. **[Product Roadmap & Evolution (`docs/ROADMAP_AND_FUTURE_PLANS.md`)](docs/ROADMAP_AND_FUTURE_PLANS.md)**: Complete milestone ledger (Milestones 1–18) and future strategic roadmap (Milestones 19–21).
 
 ---
 
 ## 6. Guidelines for Autonomous AI Agents
 
 If you are an AI assistant (Google Antigravity, Claude, Hermes, Copilot, etc.) working on this repository:
-1. **Always Run Verification First**: Execute `python scripts/run_all_tests.py` and confirm all 102 tests pass before touching any code.
+1. **Always Run Verification First**: Execute `python scripts/run_all_tests.py` and confirm all 117 tests pass before touching any code.
 2. **Preserve Underwriting Air-Gap**: Never introduce floating-point math, unverified network calls, or LLM hallucinations into `packages/underwriting_engine/`.
 3. **Keep Documentation Synchronized**: Whenever you introduce a new feature, API endpoint, or architectural component, immediately update `README.md` and the appropriate files in `docs/` according to the **Autonomous Documentation Protocol** in [`AGENTS.md`](AGENTS.md).

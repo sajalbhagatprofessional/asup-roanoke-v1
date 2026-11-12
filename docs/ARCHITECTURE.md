@@ -162,3 +162,52 @@ graph LR
 1. **Owner PII Isolation**: Owner personal identifiers are stored strictly in `OwnerPIIVault` encrypted with AES-256. Plaintext is never exposed to public views or API responses unless explicitly requested by Counsel or Principal possessing an active session token.
 2. **Immutable Merkle Audit Log**: All state transitions, approvals, outreach transmissions, and underwriting runs are recorded in `ImmutableAuditLedger`. Each record links to the previous entry's SHA-256 hash, forming an unbreakable cryptographic chain.
 3. **5-Role Isolation**: Each endpoint enforces role-based access control (RBAC). A Lender/Broker account can never view borrower distress details or unredacted tax documents.
+
+---
+
+## 7. Milestone 18: Palantir Foundry & Gotham Operational Ontology Architecture
+The platform integrates 5 open-source engines inspired by Palantir's flagship capabilities:
+
+```mermaid
+graph TD
+    RawRecords["Public Records Stream\n(PACER, VA SCC, Roanoke GIS, Column.us)"] --> SplinkEngine["moj-analytical-services/splink\n(Fellegi-Sunter Probabilistic Record Linkage)"]
+    SplinkEngine --> GothamGraph["networkx/networkx\n(Palantir Gotham Multi-Relational Link Graph)"]
+    
+    subgraph GothamGraphAnalysis["Gotham Graph Analysis Engine"]
+        Centrality["Brandes Betweenness Centrality\n(Key Fiduciary Leverage Hub)"]
+        CrossCollat["Cross-Collateral Cycle Detection\n(Multi-Parcel Liens)"]
+        ShortestPath["Shortest Workout Route\n(Principal -> Asset -> Trustee)"]
+    end
+    GothamGraph --> Centrality
+    GothamGraph --> CrossCollat
+    GothamGraph --> ShortestPath
+    
+    subgraph MicroOLAP["Foundry Contour Analytics"]
+        DuckDBEngine["duckdb/duckdb Vectorized Columnar\n(Sub-50ms Multi-Dimensional Slicing)"]
+    end
+    RawRecords --> DuckDBEngine
+    
+    subgraph SpatialGaia["Palantir Gaia Topological Spatial Fusion"]
+        ShapelyEngine["shapely/shapely & geopandas\n(Parcel Boundary Setbacks & FEMA Floodway)"]
+    end
+    RawRecords --> SpatialGaia
+    
+    subgraph AIPGuardrails["Palantir AIP Schema Guardrails"]
+        InstructorEngine["instructor-ai/instructor\n(SBA SOP 50 10 8.1 & Va. Code § 55.1-321 Invariants)"]
+    end
+    AI_Agents["AI Agent & Human Proposals"] --> AIPGuardrails
+```
+
+1. **Splink Probabilistic Entity Resolution (`moj-analytical-services/splink`)**:
+   - Resolves disparate corporate aliases, DBA names, and physical addresses across court dockets, Virginia SCC corporate records, and Roanoke GIS parcel rolls.
+   - Computes deterministic Jaro-Winkler string similarity and address token-set ratios, generating canonical entity identifiers (`CANONICAL-REC-01`).
+2. **Gotham Link Graph & Leverage Hubs (`networkx/networkx`)**:
+   - Models the multi-relational network connecting corporate operating companies, natural person guarantors, GIS parcels, equipment assets, deeds of trust, substitute trustees, and senior lenders.
+   - Computes Brandes betweenness centrality to isolate the single leverage hub (frequently the Substitute Trustee appointed under Va. Code § 55.1-321), uncovers hidden cross-collateralization riders encumbering multiple parcels, and computes the shortest fiduciary workout path.
+3. **Foundry Contour Vectorized Micro-OLAP (`duckdb/duckdb`)**:
+   - Provides sub-50ms in-process columnar multi-dimensional analytical queries across regional distressed assets, aggregating EBITDA, cure bases, and notice day distributions without external database roundtrips.
+4. **Palantir Gaia Topological Spatial Fusion (`shapely/shapely` & `geopandas/geopandas`)**:
+   - Performs geometric intersection and buffer analysis to detect property boundary setback encroachments (<15ft), calculate exact square footage and percentage of FEMA 100-year flood zone overlap, and verify industrial rail corridor proximity.
+5. **Palantir AIP Deterministic Guardrails (`instructor-ai/instructor`)**:
+   - Enforces strict Pydantic schema validation preventing AI agents or LLM proposals from violating SBA SOP 50 10 8.1 minimum equity injection (10%), buyer unborrowed cash (5%), seller note standby lock (36 months), or Virginia foreclosure notice (14 days).
+

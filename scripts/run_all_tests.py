@@ -31,6 +31,7 @@ import tests.integration.test_five_aladdin_engines as i14
 import tests.integration.test_mcp_agent_gateway as i15
 import tests.integration.test_upstream_dependency_manager as i16
 import tests.integration.test_augury_asset_health_engines as i17
+import tests.integration.test_palantir_ontology_engines as i18
 
 
 def main() -> int:
@@ -222,6 +223,20 @@ def main() -> int:
 
     print(f"All {augury_passed}/{augury_passed} Augury Industrial AssetHealth™ Engines Suite Tests PASSED!")
 
+    # Milestone 18: Palantir Foundry, Gotham, Gaia, Contour & AIP Suite
+    palantir_passed = 0
+    tc18 = i18.TestPalantirOntologyEngines()
+    tc18.setUp()
+    for attr in sorted(dir(tc18)):
+        if attr.startswith("test_"):
+            fn = getattr(tc18, attr)
+            if callable(fn):
+                fn()
+                palantir_passed += 1
+                print(f"[PASS] {i18.__name__}.{attr}")
+
+    print(f"All {palantir_passed}/{palantir_passed} Palantir Operational Ontology Suite Tests PASSED!")
+
     total_passed = (
         core_passed
         + api_passed
@@ -238,6 +253,7 @@ def main() -> int:
         + mcp_passed
         + dep_passed
         + augury_passed
+        + palantir_passed
     )
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 

@@ -3132,6 +3132,121 @@ def audit_maintenance_ledger_endpoint(
     }
 
 
+# =========================================================================
+# PALANTIR OPERATIONAL ONTOLOGY, GOTHAM LINK GRAPH & CONTOUR OLAP
+# =========================================================================
+
+class ResolveEntityRequest(BaseModel):
+    source_record: Dict[str, Any] = Field(..., description="Source corporate or person record")
+    candidate_record: Dict[str, Any] = Field(..., description="Candidate record from docket or registry")
+
+class ContourQueryRequest(BaseModel):
+    naics_prefix: Optional[str] = Field(None, description="NAICS code prefix (e.g. 484, 332, 493)")
+    max_cure_basis_usd: Optional[str] = Field(None, description="Maximum cure/acquisition basis in USD")
+    min_dscr: Optional[str] = Field(None, description="Minimum baseline DSCR floor")
+    min_notice_days: Optional[int] = Field(None, description="Minimum statutory notice days remaining")
+    jurisdiction: Optional[str] = Field(None, description="City of Roanoke or Roanoke County")
+
+class SpatialFusionRequest(BaseModel):
+    parcel_id: str = Field(..., description="Assessor GPIN / parcel ID")
+    flood_hazard_zone: Optional[str] = Field("X", description="FEMA flood hazard zone (e.g. X, A, AE)")
+    distance_to_boundary_ft: Optional[float] = Field(None, description="Distance from building to property boundary")
+    distance_to_rail_ft: Optional[float] = Field(None, description="Distance from parcel to active rail spur")
+    adjacent_parcels: Optional[List[str]] = Field(None, description="List of neighboring parcel GPINs")
+
+class AIPValidateProposalRequest(BaseModel):
+    raw_proposal: Dict[str, Any] = Field(..., description="Raw deal parameters or AI agent proposal")
+
+
+@app.get("/v1/ontology/graph/{asset_id}", tags=["Palantir Operational Ontology"])
+def get_ontology_graph_endpoint(asset_id: str) -> Dict[str, Any]:
+    """
+    Palantir Gotham link analysis: Returns multi-relational knowledge graph,
+    betweenness centrality leverage hub, cross-collateral cycles, and shortest leverage path.
+    """
+    from packages.ontology_engine import GothamLinkGraphEngine
+    report = GothamLinkGraphEngine.generate_roanoke_dossier_graph(asset_id=asset_id)
+    return {
+        "status": "success",
+        "asset_id": asset_id,
+        "ontology_graph": report.to_dict(),
+    }
+
+
+@app.post("/v1/ontology/resolve-entity", tags=["Palantir Operational Ontology"])
+def resolve_entity_endpoint(req: ResolveEntityRequest) -> Dict[str, Any]:
+    """
+    Splink-inspired probabilistic record linkage: Resolves entity identity across
+    court dockets, Virginia SCC corporate records, and Roanoke GIS tax parcels.
+    """
+    from packages.ontology_engine import SplinkEntityResolver
+    result = SplinkEntityResolver.resolve_entity(req.source_record, req.candidate_record)
+    return {
+        "status": "success",
+        "entity_resolution": result.to_dict(),
+    }
+
+
+@app.post("/v1/ontology/contour-query", tags=["Palantir Operational Ontology"])
+def contour_query_endpoint(req: ContourQueryRequest) -> Dict[str, Any]:
+    """
+    Foundry Contour vectorized micro-OLAP: Executes sub-50ms multi-dimensional aggregations
+    across distressed dockets, parcels, EBITDA, and cure prices.
+    """
+    from packages.ontology_engine import ContourEngineDuckDB
+    engine = ContourEngineDuckDB()
+    cure_dec = Decimal(req.max_cure_basis_usd) if req.max_cure_basis_usd else None
+    dscr_dec = Decimal(req.min_dscr) if req.min_dscr else None
+    result = engine.execute_contour_query(
+        naics_prefix=req.naics_prefix,
+        max_cure_basis_usd=cure_dec,
+        min_dscr=dscr_dec,
+        min_notice_days=req.min_notice_days,
+        jurisdiction=req.jurisdiction,
+    )
+    return {
+        "status": "success",
+        "contour_query_result": result.to_dict(),
+    }
+
+
+@app.post("/v1/ontology/spatial-fusion", tags=["Palantir Operational Ontology"])
+def spatial_fusion_endpoint(req: SpatialFusionRequest) -> Dict[str, Any]:
+    """
+    Palantir Gaia topological parcel fusion: Computes setback encroachment,
+    FEMA floodway hazard intersection, and rail corridor proximity.
+    """
+    from packages.ontology_engine import GaiaSpatialFusionEngine
+    dist_bound = Decimal(str(req.distance_to_boundary_ft)) if req.distance_to_boundary_ft is not None else None
+    dist_rail = Decimal(str(req.distance_to_rail_ft)) if req.distance_to_rail_ft is not None else None
+    report = GaiaSpatialFusionEngine.fuse_parcel_spatial_twin(
+        parcel_id=req.parcel_id,
+        flood_hazard_zone=req.flood_hazard_zone or "X",
+        distance_to_boundary_ft=dist_bound,
+        distance_to_rail_ft=dist_rail,
+        adjacent_parcels=req.adjacent_parcels,
+    )
+    return {
+        "status": "success",
+        "spatial_fusion": report.to_dict(),
+    }
+
+
+@app.post("/v1/ontology/aip-validate", tags=["Palantir Operational Ontology"])
+def aip_validate_proposal_endpoint(req: AIPValidateProposalRequest) -> Dict[str, Any]:
+    """
+    Palantir AIP structured schema guardrails: Validates deal proposals against
+    SBA SOP 50 10 8.1, Va. Code § 55.1-321, and replacement GM deductions.
+    """
+    from packages.ontology_engine import AIPGuardrailsInstructor
+    result = AIPGuardrailsInstructor.validate_deal_proposal(req.raw_proposal)
+    return {
+        "status": "success",
+        "guardrail_validation": result.to_dict(),
+    }
+
+
+
 
 
 

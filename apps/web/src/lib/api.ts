@@ -1073,6 +1073,78 @@ export async function fetchAssetHealthScore(
   return res.json();
 }
 
+// =========================================================================
+// PALANTIR OPERATIONAL ONTOLOGY & GOTHAM LINK GRAPH CLIENT
+// =========================================================================
+
+export async function fetchOntologyGraph(assetId: string): Promise<{
+  status: string;
+  asset_id: string;
+  ontology_graph: import("./types").OntologyGraphReport;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/ontology/graph/${assetId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to fetch ontology graph: ${res.statusText}`);
+  return res.json();
+}
+
+export async function resolveEntitySplink(
+  sourceRecord: Record<string, any>,
+  candidateRecord: Record<string, any>
+): Promise<{
+  status: string;
+  entity_resolution: import("./types").EntityResolutionMatchResult;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/ontology/resolve-entity`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source_record: sourceRecord, candidate_record: candidateRecord }),
+  });
+  if (!res.ok) throw new Error(`Failed to execute Splink entity resolution: ${res.statusText}`);
+  return res.json();
+}
+
+export async function queryContourMicroOlap(params: {
+  naics_prefix?: string;
+  max_cure_basis_usd?: string;
+  min_dscr?: string;
+  min_notice_days?: number;
+  jurisdiction?: string;
+}): Promise<{
+  status: string;
+  contour_query_result: import("./types").ContourAnalyticalQueryResult;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/ontology/contour-query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to execute Contour micro-OLAP query: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fuseGaiaSpatialTwin(params: {
+  parcel_id: string;
+  flood_hazard_zone?: string;
+  distance_to_boundary_ft?: number;
+  distance_to_rail_ft?: number;
+}): Promise<{
+  status: string;
+  spatial_fusion: import("./types").TopologicalParcelFusionReport;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/ontology/spatial-fusion`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to execute Gaia spatial fusion: ${res.statusText}`);
+  return res.json();
+}
+
+
 
 
 

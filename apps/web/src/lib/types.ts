@@ -1015,6 +1015,77 @@ export interface AssetHealthResponse {
   health: CompositeAssetHealthScore;
 }
 
+// =========================================================================
+// PALANTIR OPERATIONAL ONTOLOGY & GOTHAM LINK GRAPH
+// =========================================================================
+
+export interface OntologyNodeRecord {
+  node_id: string;
+  label: string;
+  node_type: string;
+  properties: Record<string, any>;
+  confidence_score: string;
+  provenance_sources: string[];
+}
+
+export interface OntologyEdgeRecord {
+  source_id: string;
+  target_id: string;
+  edge_type: string;
+  weight: string;
+  legal_instrument_ref: string;
+  properties: Record<string, any>;
+}
+
+export interface OntologyGraphReport {
+  asset_id: string;
+  total_nodes: number;
+  total_edges: number;
+  nodes: OntologyNodeRecord[];
+  edges: OntologyEdgeRecord[];
+  leverage_hub_node_id: string;
+  leverage_hub_role: string;
+  cross_collateralization_detected: boolean;
+  shortest_leverage_path: string[];
+  graph_density: string;
+  executive_intel_summary: string;
+}
+
+export interface EntityResolutionMatchResult {
+  source_record_id: string;
+  candidate_record_id: string;
+  match_probability: string;
+  match_tier: string;
+  jaro_winkler_name_score: string;
+  address_similarity_score: string;
+  tax_id_exact_match: boolean;
+  is_merged: boolean;
+  canonical_entity_id: string;
+  epistemic_reasoning: string;
+}
+
+export interface TopologicalParcelFusionReport {
+  parcel_id: string;
+  parcel_area_acres: string;
+  building_footprint_sqft: string;
+  setback_encroachment_detected: boolean;
+  floodway_intersection_sqft: string;
+  flood_coverage_pct: string;
+  contiguous_roll_up_candidate_parcels: string[];
+  rail_spur_adjacent: boolean;
+  confidence_score: string;
+}
+
+export interface ContourAnalyticalQueryResult {
+  query_description: string;
+  matched_records_count: number;
+  execution_time_ms: string;
+  aggregate_ebitda_usd: string;
+  aggregate_cure_basis_usd: string;
+  records: Array<Record<string, any>>;
+}
+
+
 
 
 
