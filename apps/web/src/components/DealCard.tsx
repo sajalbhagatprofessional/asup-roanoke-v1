@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Deal, TeamRole } from "../lib/types";
+import InfoPop from "./InfoPop";
 
 interface DealCardProps {
   deal: Deal;
@@ -101,12 +102,24 @@ export default function DealCard({
         <div className="flex flex-col xs:flex-row xs:items-start justify-between gap-2 sm:gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${signalBadge.style}`}>
-                {signalBadge.label}
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border flex items-center gap-1 ${signalBadge.style}`}>
+                <span>{signalBadge.label}</span>
+                <InfoPop
+                  term={
+                    deal.signal_type === "BANKRUPTCY"
+                      ? "BANKRUPTCY_363"
+                      : deal.signal_type === "TAX_SALE"
+                      ? "TACS_TAX_SALE"
+                      : "SUBSTITUTE_TRUSTEE_SALE"
+                  }
+                  size="xs"
+                />
               </span>
               {deal.basis_ratio && (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-800 font-bold">
-                  {(Number(deal.basis_ratio) * 100).toFixed(0)}% Basis
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-800 font-bold inline-flex items-center gap-1">
+                  <InfoPop term="BASIS_RATIO">
+                    {(Number(deal.basis_ratio) * 100).toFixed(0)}% Basis
+                  </InfoPop>
                 </span>
               )}
               {deal.building_sqft && (
@@ -142,9 +155,10 @@ export default function DealCard({
         {/* Financial Highlights Strip (Adaptive Touch Grid) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mt-3.5 p-2.5 sm:p-3 rounded-xl bg-slate-950/50 border border-slate-800/60 font-mono text-xs">
           <div>
-            <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 block font-sans">
-              Asking / Basis
-            </span>
+            <div className="flex items-center justify-between text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 font-sans">
+              <span>Asking / Basis</span>
+              <InfoPop term="ASKING_BASIS" size="xs" align="left" />
+            </div>
             <span className="text-xs sm:text-sm font-bold text-white mt-0.5 block">
               {formatCurrency(deal.asking_or_cure_price_usd)}
             </span>
@@ -156,9 +170,10 @@ export default function DealCard({
           </div>
 
           <div>
-            <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 block font-sans">
-              Base DSCR
-            </span>
+            <div className="flex items-center justify-between text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 font-sans">
+              <span>Base DSCR</span>
+              <InfoPop term="BASE_DSCR" size="xs" />
+            </div>
             <span
               className={`text-xs sm:text-sm font-bold mt-0.5 block ${
                 parseFloat(deal.base_dscr) >= 1.35
@@ -172,9 +187,10 @@ export default function DealCard({
           </div>
 
           <div>
-            <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 block font-sans">
-              Stress DSCR
-            </span>
+            <div className="flex items-center justify-between text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 font-sans">
+              <span>Stress DSCR</span>
+              <InfoPop term="STRESS_DSCR" size="xs" />
+            </div>
             <span className="text-xs sm:text-sm font-bold text-slate-200 mt-0.5 block">
               {deal.stress_dscr ? `${deal.stress_dscr}x` : "1.18x"}
             </span>
@@ -182,9 +198,10 @@ export default function DealCard({
           </div>
 
           <div>
-            <span className="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 block font-sans">
-              Collateral Floor
-            </span>
+            <div className="flex items-center justify-between text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 font-sans">
+              <span>Collateral Floor</span>
+              <InfoPop term="COLLATERAL_FLOOR" size="xs" align="right" />
+            </div>
             <span className="text-xs sm:text-sm font-bold text-blue-300 mt-0.5 block">
               {formatCurrency(deal.flv_total_liquidation_floor_usd || deal.assessed_or_replacement_usd)}
             </span>

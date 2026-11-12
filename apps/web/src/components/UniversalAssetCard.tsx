@@ -16,6 +16,7 @@ import {
   Gauge,
 } from "lucide-react";
 import { UniversalAsset, AssetClass, PipelineStage } from "../lib/types";
+import InfoPop from "./InfoPop";
 
 interface UniversalAssetCardProps {
   asset: UniversalAsset;
@@ -169,8 +170,11 @@ export default function UniversalAssetCard({
                 </span>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-zinc-500 block">SDE / Cashflow</span>
-                <span className="text-xs font-bold text-emerald-400">
+                <div className="flex items-center justify-center gap-1 text-[10px] uppercase font-bold text-zinc-500">
+                  <span>SDE / Cashflow</span>
+                  <InfoPop term="SDE" size="xs" />
+                </div>
+                <span className="text-xs font-bold text-emerald-400 mt-0.5 block">
                   {formatUSD(asset.estimated_sde_or_ebitda_usd)}
                 </span>
               </div>

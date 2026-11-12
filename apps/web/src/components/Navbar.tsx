@@ -21,6 +21,7 @@ import {
   LogOut,
   Layers,
   GitBranch,
+  BookOpen,
 } from "lucide-react";
 import { fetchActiveMandate, fetchHealth } from "../lib/api";
 import { HealthStatus, MandateProfile, TeamRole } from "../lib/types";
@@ -29,6 +30,7 @@ import SourceTrackerModal from "./SourceTrackerModal";
 import InstitutionalAladdinModal from "./InstitutionalAladdinModal";
 import McpGatewayModal from "./McpGatewayModal";
 import UpstreamDependencyModal from "./UpstreamDependencyModal";
+import GlossaryModal from "./GlossaryModal";
 import PWAInstallAndStatus from "./PWAInstallAndStatus";
 import AuthModal from "./AuthModal";
 import { useAuth } from "../context/AuthContext";
@@ -65,6 +67,8 @@ export default function Navbar() {
   const [isAladdinModalOpen, setIsAladdinModalOpen] = useState(false);
   const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
   const [isDependencyModalOpen, setIsDependencyModalOpen] = useState(false);
+  const [isGlossaryModalOpen, setIsGlossaryModalOpen] = useState(false);
+  const [glossaryInitialTerm, setGlossaryInitialTerm] = useState<string | undefined>();
 
   const loadMandateAndHealth = () => {
     fetchHealth().then(setHealth).catch(() => {});
@@ -73,6 +77,16 @@ export default function Navbar() {
 
   useEffect(() => {
     loadMandateAndHealth();
+
+    // Listen for custom open-argus-glossary events triggered from InfoPop
+    const handleOpenGlossaryEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ termId?: string }>;
+      setGlossaryInitialTerm(customEvent.detail?.termId);
+      setIsGlossaryModalOpen(true);
+    };
+
+    window.addEventListener("open-argus-glossary", handleOpenGlossaryEvent);
+    return () => window.removeEventListener("open-argus-glossary", handleOpenGlossaryEvent);
   }, []);
 
   // Close menus on outside click
@@ -267,6 +281,26 @@ export default function Navbar() {
                         <div className="text-[10px] text-zinc-400">29 repos, PyPI & air-gap gate</div>
                       </div>
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsToolsMenuOpen(false);
+                        setGlossaryInitialTerm(undefined);
+                        setIsGlossaryModalOpen(true);
+                      }}
+                      className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-left hover:bg-zinc-900 transition group cursor-pointer"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-amber-950/80 border border-amber-700/50 flex items-center justify-center shrink-0">
+                        <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white group-hover:text-amber-300 transition-colors">
+                          Financial &amp; Legal Glossary
+                        </div>
+                        <div className="text-[10px] text-zinc-400">45+ terms, statutory rules &amp; formulas</div>
+                      </div>
+                    </button>
                   </div>
                 )}
               </div>
@@ -429,6 +463,13 @@ export default function Navbar() {
       <UpstreamDependencyModal
         isOpen={isDependencyModalOpen}
         onClose={() => setIsDependencyModalOpen(false)}
+      />
+
+      {/* Financial, Statutory & Institutional Glossary Modal */}
+      <GlossaryModal
+        isOpen={isGlossaryModalOpen}
+        onClose={() => setIsGlossaryModalOpen(false)}
+        initialTermId={glossaryInitialTerm}
       />
 
       {/* User Authentication & Identity Modal */}

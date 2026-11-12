@@ -140,10 +140,18 @@ timeline
   8. **Next.js 15 Web UI**: Interactive "Titan Analytics" tab in `UniversalAssetDossierModal.tsx` with 5 dedicated institutional views for Reactive DAG, PE Waterfall, Vanguard Tax Alpha, Jane Street Event Replay, and Bridgewater Macro Quadrants.
   9. **Verification**: Master verification gate expanded to **131/131 tests (100% coverage)** and **50/50 Golden Suite accuracy** with zero false positives.
 
+### Milestone 28: Financial & Legal Glossary & Contextual InfoPop Knowledge System (Delivered & Verified)
+- **Status**: Completed, Fully Wired & Live in Production Web UI.
+- **Key Deliverables**:
+  1. **Knowledge Base Registry (`apps/web/src/lib/glossary.ts`)**: 46 structured financial, statutory, institutional, and compliance terms across 5 categories (`UNDERWRITING_FINANCE`, `LEGAL_STATUTORY`, `INSTITUTIONAL_TITANS`, `TAX_ALPHA`, `COMPLIANCE_OPERATIONS`) complete with plain-English definitions, formulas, why it matters, ideal ranges, examples, and legal citations.
+  2. **Contextual InfoPop Component (`apps/web/src/components/InfoPop.tsx`)**: Apple-style micro-popover triggered via subtle `(i)` button or inline badge, designed for mobile tap and desktop hover with automatic dismissal.
+  3. **Master Financial & Legal Glossary Modal (`apps/web/src/components/GlossaryModal.tsx`)**: Searchable, category-filtered full-screen translucent modal accessible globally from the navigation bar or from any contextual InfoPop with 1-click citation copying.
+  4. **Universal Integration**: Wired across `DealCard.tsx`, `UniversalAssetCard.tsx`, `Navbar.tsx`, and all sections of `UniversalAssetDossierModal.tsx`.
+  5. **Verification**: Next.js production build verified clean (Exit Code 0), and all 131/131 backend tests passing.
 
 ---
 
-## 3. Future Strategic Roadmap (Milestones 28–31)
+## 3. Future Strategic Roadmap (Milestones 29–32)
 
 Any future AI agent or engineer continuing this project should tackle the following milestones in strict sequence:
 
@@ -181,5 +189,5 @@ Any future AI agent or engineer continuing this project should tackle the follow
 
 When implementing any future milestone:
 1. **Never Compromise Underwriting Determinism**: Never replace pure `decimal.Decimal` math with floating-point arithmetic or LLM approximations.
-2. **Never Break Test Suite**: Run `python scripts/run_all_tests.py` and confirm all 123 tests and the 50/50 Golden Suite pass.
+2. **Never Break Test Suite**: Run `python scripts/run_all_tests.py` and confirm all 131 tests and the 50/50 Golden Suite pass.
 3. **Always Update Documentation**: Record your architectural decisions in `docs/ARCHITECTURE.md`, API changes in `docs/API_REFERENCE.md`, and data structures in `docs/DATA_MODELS_AND_SCHEMA.md`.

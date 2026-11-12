@@ -279,5 +279,31 @@ flowchart TD
    - Ray Dalio 4-quadrant economic regime simulation: Quadrant 1 (Reflation), Quadrant 2 (Productivity Boom), Quadrant 3 (Stagflation Shock: -15% revenue drop + 12% input cost inflation + 250 bps rate shock), and Quadrant 4 (Deflationary Deleveraging).
    - Computes stressed revenue, stressed EBITDA, stressed DSCR, composite All-Weather Resilience Score (0–100), All-Weather Rating (`ALL_WEATHER_AAA`), and synthesized institutional hedging recommendations.
 
+---
+
+## 13. Financial & Legal Glossary & Contextual InfoPop Architecture (Milestone 28)
+
+To eliminate ambiguity across sophisticated underwriting, statutory, private equity, and institutional terminology for all 5 team roles (`PRINCIPAL`, `ANALYST`, `COUNSEL`, `CPA`, `LENDER_BROKER`), the platform provides an Apple HIG-inspired contextual knowledge system:
+
+```mermaid
+flowchart LR
+    A["Dashboard & Cards\n(DealCard, UniversalAssetCard, DossierModal)"] -->|Hover / Tap Info Badge| B["Contextual InfoPop\n(Popover with formula, why it matters, ideal range)"]
+    B -->|Click 'Open Master Glossary'| C["Master Glossary Modal\n(Search, 5 Category Filters, Copy Citations)"]
+    D["Navigation Bar\n(Tools > Financial & Legal Glossary)"] -->|Open Directly / Global Event| C
+    E["Central Knowledge Base\n(apps/web/src/lib/glossary.ts)"] --> B
+    E --> C
+```
+
+1. **Central Knowledge Base (`apps/web/src/lib/glossary.ts`)**:
+   - Structured registry of 46 comprehensive, plain-English definitions across 5 categories: `UNDERWRITING_FINANCE`, `LEGAL_STATUTORY`, `INSTITUTIONAL_TITANS`, `TAX_ALPHA`, `COMPLIANCE_OPERATIONS`.
+   - Every term features: plain-English simple definition, mathematical formula or statutory rule, "Why It Matters" rationale, ideal range/threshold, concrete numerical example, and formal statutory citations (e.g. `SBA SOP 50 10 8.1`, `Va. Code § 55.1-321`, `26 U.S.C. § 1031`, `26 U.S.C. § 7425`).
+2. **Contextual InfoPop Component (`apps/web/src/components/InfoPop.tsx`)**:
+   - Apple-style micro-popover triggered via subtle `(i)` button or inline badge.
+   - Designed for desktop hover and mobile tap, auto-dismissing on outside clicks or Escape key presses.
+   - Shows category badges, plain-English definitions, formulas, and target ranges, plus a 1-click shortcut to launch the full glossary.
+3. **Master Financial & Legal Glossary Modal (`apps/web/src/components/GlossaryModal.tsx`)**:
+   - Searchable, category-filtered full-screen translucent modal accessible globally from the navigation bar or from any contextual InfoPop.
+   - Real-time search across terms, formulas, and legal statutes, with 1-click citation copying to the clipboard.
+
 
 

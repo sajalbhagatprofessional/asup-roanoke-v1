@@ -108,6 +108,7 @@ import {
   fetchCanonicalEventReplay,
   fetchMacroRegimeStressTest,
 } from "../lib/api";
+import InfoPop from "./InfoPop";
 
 interface UniversalAssetDossierModalProps {
   asset: UniversalAsset | null;
@@ -944,17 +945,23 @@ export default function UniversalAssetDossierModal({
               {/* Valuation & Downside Protection */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-zinc-800/40 p-4 rounded-xl border border-zinc-800">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-zinc-500 block">
-                    Asking / Valuation
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                      Asking / Valuation
+                    </span>
+                    <InfoPop term="ASKING_BASIS" size="xs" />
+                  </div>
                   <span className="text-lg font-extrabold text-white">
                     {formatUSD(currentAsset.asking_or_estimated_value_usd)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-zinc-500 block">
-                    Downside Liquidation Floor
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                      Downside Liquidation Floor
+                    </span>
+                    <InfoPop term="COLLATERAL_FLOOR" size="xs" />
+                  </div>
                   <span className="text-lg font-bold text-emerald-400">
                     {formatUSD(currentAsset.downside_liquidation_floor_usd)}
                   </span>
@@ -1032,7 +1039,10 @@ export default function UniversalAssetDossierModal({
                       </span>
                     </div>
                     <div>
-                      <span className="text-zinc-500 block">SDE / Net Cashflow</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-zinc-500 block">SDE / Net Cashflow</span>
+                        <InfoPop term="SDE" size="xs" />
+                      </div>
                       <span className="font-semibold text-emerald-400">
                         {formatUSD(currentAsset.estimated_sde_or_ebitda_usd)}
                       </span>
@@ -1755,6 +1765,7 @@ export default function UniversalAssetDossierModal({
                     <h4 className="text-xs font-bold text-white uppercase tracking-wider">
                       SEC EDGAR XBRL Public Comps &amp; Valuation Multiple Arbitrage
                     </h4>
+                    <InfoPop term="MULTIPLE_ARBITRAGE" size="xs" />
                   </div>
                   <span className="text-[10px] font-mono text-zinc-400">
                     NAICS: {currentAsset.naics_code || "5412"} • SEC.gov Live Multiples
@@ -1863,7 +1874,10 @@ export default function UniversalAssetDossierModal({
                       <span className="font-mono font-bold text-amber-400">{(parseFloat(yieldCurve.wsj_prime_rate) * 100).toFixed(2)}%</span>
                     </div>
                     <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-center">
-                      <span className="text-[10px] text-zinc-500 block uppercase font-bold">SBA SOP Cap</span>
+                      <div className="flex items-center justify-center gap-1">
+                        <span className="text-[10px] text-zinc-500 block uppercase font-bold">SBA SOP Cap</span>
+                        <InfoPop term="SBA_SOP_50_10_8_1" size="xs" />
+                      </div>
                       <span className="font-mono font-bold text-emerald-400">{(parseFloat(yieldCurve.sba_max_rate_prime_plus_275) * 100).toFixed(2)}%</span>
                     </div>
                   </div>
@@ -1889,7 +1903,12 @@ export default function UniversalAssetDossierModal({
                             <th className="p-2.5">Rate Shock</th>
                             <th className="p-2.5">All-In Rate</th>
                             <th className="p-2.5">Annual Debt Service</th>
-                            <th className="p-2.5">Stressed DSCR</th>
+                            <th className="p-2.5">
+                              <div className="flex items-center gap-1">
+                                <span>Stressed DSCR</span>
+                                <InfoPop term="STRESS_DSCR" size="xs" />
+                              </div>
+                            </th>
                             <th className="p-2.5">Covenant Headroom</th>
                             <th className="p-2.5">Compliance</th>
                           </tr>
@@ -1935,6 +1954,7 @@ export default function UniversalAssetDossierModal({
                     <h4 className="text-xs font-bold text-white uppercase tracking-wider">
                       Unstructured IRS Tax Return &amp; Schedule C / 1120-S OCR Auditor
                     </h4>
+                    <InfoPop term="SCHEDULE_C_ADD_BACK" size="xs" />
                   </div>
                   <button
                     onClick={handleSimulateTaxParse}
@@ -2619,9 +2639,12 @@ export default function UniversalAssetDossierModal({
                           </span>
                         </div>
                         <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
-                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">
-                            Total Maturing Debt Volume
-                          </span>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                              Total Maturing Debt Volume
+                            </span>
+                            <InfoPop term="DEBT_MATURITY_WALL" size="xs" />
+                          </div>
                           <span className="text-sm font-extrabold text-rose-400 mt-0.5 block font-mono">
                             {formatUSD(debtRadarReport.total_maturing_debt_volume_usd)}
                           </span>
@@ -2891,9 +2914,12 @@ export default function UniversalAssetDossierModal({
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">
-                            Recommended Escrow Holdback
-                          </span>
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                              Recommended Escrow Holdback
+                            </span>
+                            <InfoPop term="TITLE_CURATIVE_HOLDBACK" size="xs" />
+                          </div>
                           <span className="text-sm font-extrabold text-amber-400 font-mono">
                             {formatUSD(titleAuditReport.recommended_escrow_holdback_usd)}
                           </span>
@@ -2904,11 +2930,12 @@ export default function UniversalAssetDossierModal({
                       {titleAuditReport.irs_120_day_redemption_active ? (
                         <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-900/60 space-y-2">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <ShieldAlert className="w-4 h-4 text-amber-400" />
                               <span className="font-bold text-amber-300 text-xs uppercase tracking-wide">
                                 26 U.S.C. &sect; 7425 Statutory Redemption Period Active
                               </span>
+                              <InfoPop term="IRS_120_DAY_REDEMPTION" size="xs" />
                             </div>
                             <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-amber-900/60 text-amber-200 border border-amber-700">
                               {titleAuditReport.irs_redemption_days_remaining} Days Remaining
@@ -3197,10 +3224,13 @@ export default function UniversalAssetDossierModal({
                   {/* Interactive Parameter Controls */}
                   <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                        <Zap className="w-4 h-4 text-cyan-400" />
-                        Reactive DAG Underwriting Parameters
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                          <Zap className="w-4 h-4 text-cyan-400" />
+                          Reactive DAG Underwriting Parameters
+                        </span>
+                        <InfoPop term="GOLDMAN_SECDB_DAG" size="xs" />
+                      </div>
                       <button
                         type="button"
                         onClick={loadDagEvaluation}
@@ -3278,14 +3308,20 @@ export default function UniversalAssetDossierModal({
                           </span>
                         </div>
                         <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
-                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">SBA SOP 50 10 8.1</span>
+                          <div className="flex items-center justify-between text-[10px] uppercase font-bold text-zinc-500">
+                            <span>SBA SOP 50 10 8.1</span>
+                            <InfoPop term="SBA_SOP_50_10_8_1" size="xs" />
+                          </div>
                           <span className={`text-sm font-extrabold mt-1 block ${dagReport.is_sba_compliant ? "text-emerald-400" : "text-red-400"}`}>
                             {dagReport.is_sba_compliant ? "COMPLIANT (>=1.25x)" : "NON-COMPLIANT"}
                           </span>
                           <span className="text-[10px] text-zinc-400 block">October 1, 2026 rules</span>
                         </div>
                         <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
-                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">Principal Hurdle</span>
+                          <div className="flex items-center justify-between text-[10px] uppercase font-bold text-zinc-500">
+                            <span>Principal Hurdle</span>
+                            <InfoPop term="BASE_DSCR" size="xs" />
+                          </div>
                           <span className={`text-sm font-extrabold mt-1 block ${dagReport.is_principal_hurdle_passed ? "text-emerald-400" : "text-amber-400"}`}>
                             {dagReport.is_principal_hurdle_passed ? "PASSED (>=1.35x)" : "FAILED"}
                           </span>
@@ -3333,10 +3369,13 @@ export default function UniversalAssetDossierModal({
                   {/* Parameter Controls */}
                   <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                        <Coins className="w-4 h-4 text-emerald-400" />
-                        Private Capital Distribution Parameters
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                          <Coins className="w-4 h-4 text-emerald-400" />
+                          Private Capital Distribution Parameters
+                        </span>
+                        <InfoPop term="BLACKROCK_WATERFALL" size="xs" />
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
@@ -3370,13 +3409,19 @@ export default function UniversalAssetDossierModal({
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] uppercase font-bold text-zinc-500 block">Preferred Return Hurdle</label>
+                        <div className="flex items-center gap-1">
+                          <label className="text-[10px] uppercase font-bold text-zinc-500 block">Preferred Return Hurdle</label>
+                          <InfoPop term="PREFERRED_RETURN" size="xs" />
+                        </div>
                         <span className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono text-xs block">
                           8.00% Annually
                         </span>
                       </div>
                       <div>
-                        <label className="text-[10px] uppercase font-bold text-zinc-500 block">Carried Interest</label>
+                        <div className="flex items-center gap-1">
+                          <label className="text-[10px] uppercase font-bold text-zinc-500 block">Carried Interest</label>
+                          <InfoPop term="CARRIED_INTEREST" size="xs" />
+                        </div>
                         <span className="w-full mt-1 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 font-mono text-xs block">
                           20.00% to GP
                         </span>
@@ -3397,7 +3442,10 @@ export default function UniversalAssetDossierModal({
                           <span className="text-lg font-extrabold text-emerald-400 font-mono mt-0.5 block">
                             {formatUSD(waterfallReport.lp_total_received_usd)}
                           </span>
-                          <span className="text-[10px] text-zinc-400 block font-mono">MOIC: {waterfallReport.lp_moic}</span>
+                          <div className="flex items-center gap-1 text-[10px] text-zinc-400 font-mono">
+                            <span>MOIC: {waterfallReport.lp_moic}</span>
+                            <InfoPop term="MOIC" size="xs" />
+                          </div>
                         </div>
                         <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
                           <span className="text-[10px] uppercase font-bold text-zinc-500 block">LP Annualized ROI</span>
@@ -3457,10 +3505,13 @@ export default function UniversalAssetDossierModal({
                       {concentrationReport && (
                         <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
-                              <Shield className="w-3.5 h-3.5 text-blue-400" />
-                              Citadel Factor Neutrality &amp; Concentration Limits
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                                <Shield className="w-3.5 h-3.5 text-blue-400" />
+                                Citadel Factor Neutrality &amp; Concentration Limits
+                              </span>
+                              <InfoPop term="CITADEL_FACTOR_NEUTRALITY" size="xs" />
+                            </div>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                               concentrationReport.is_all_concentration_limits_compliant ? "bg-emerald-950 text-emerald-300 border border-emerald-800" : "bg-red-950 text-red-300 border border-red-800"
                             }`}>
@@ -3470,7 +3521,10 @@ export default function UniversalAssetDossierModal({
 
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                             <div className="p-2.5 rounded-lg bg-zinc-900 border border-zinc-800">
-                              <span className="text-[10px] text-zinc-500 uppercase block">Dry Powder Liquidity</span>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] text-zinc-500 uppercase block">Dry Powder Liquidity</span>
+                                <InfoPop term="DRY_POWDER" size="xs" />
+                              </div>
                               <span className="text-sm font-bold text-white font-mono mt-0.5 block">{formatUSD(concentrationReport.dry_powder_liquidity_usd)}</span>
                               <span className="text-[10px] text-emerald-400 font-mono">{concentrationReport.dry_powder_ratio_pct}% Available</span>
                             </div>
@@ -3517,10 +3571,13 @@ export default function UniversalAssetDossierModal({
                   {/* Section A: IRC § 1031 Exchange Countdown */}
                   <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                        <Clock className="w-4 h-4 text-amber-400" />
-                        26 U.S.C. § 1031 Like-Kind Exchange Statutory Timelines
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                          <Clock className="w-4 h-4 text-amber-400" />
+                          26 U.S.C. § 1031 Like-Kind Exchange Statutory Timelines
+                        </span>
+                        <InfoPop term="SECTION_1031_EXCHANGE" size="xs" />
+                      </div>
                       <button
                         type="button"
                         onClick={load1031Audit}
@@ -3542,14 +3599,20 @@ export default function UniversalAssetDossierModal({
                             <span className="text-[10px] text-zinc-400 font-mono block">@ {tax1031Report.effective_capital_gains_rate_pct}% Rate</span>
                           </div>
                           <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
-                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">45-Day ID Window</span>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] uppercase font-bold text-zinc-500 block">45-Day ID Window</span>
+                              <InfoPop term="ID_WINDOW_45_DAY" size="xs" />
+                            </div>
                             <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
                               {tax1031Report.days_remaining_45d_id} Days Left
                             </span>
                             <span className="text-[10px] text-emerald-400 font-mono block">Deadline: {tax1031Report.statutory_45_day_deadline_iso}</span>
                           </div>
                           <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
-                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">180-Day Close Window</span>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] uppercase font-bold text-zinc-500 block">180-Day Close Window</span>
+                              <InfoPop term="CLOSE_WINDOW_180_DAY" size="xs" />
+                            </div>
                             <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
                               {tax1031Report.days_remaining_180d_close} Days Left
                             </span>
@@ -3575,10 +3638,13 @@ export default function UniversalAssetDossierModal({
                   {/* Section B: MACRS Cost Segregation & Bonus Depreciation */}
                   <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                        <DollarSign className="w-4 h-4 text-emerald-400" />
-                        MACRS Cost Segregation &amp; Bonus Depreciation Shelter
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                          <DollarSign className="w-4 h-4 text-emerald-400" />
+                          MACRS Cost Segregation &amp; Bonus Depreciation Shelter
+                        </span>
+                        <InfoPop term="MACRS_COST_SEGREGATION" size="xs" />
+                      </div>
                       <button
                         type="button"
                         onClick={loadCostSegregation}
@@ -3593,7 +3659,10 @@ export default function UniversalAssetDossierModal({
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40">
-                            <span className="text-[10px] uppercase font-bold text-emerald-300 block">Year 1 Cash Tax Savings</span>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] uppercase font-bold text-emerald-300 block">Year 1 Cash Tax Savings</span>
+                              <InfoPop term="BONUS_DEPRECIATION" size="xs" />
+                            </div>
                             <span className="text-lg font-extrabold text-emerald-400 font-mono mt-0.5 block">
                               {formatUSD(costSegReport.year_1_cash_tax_savings_usd)}
                             </span>
@@ -3650,10 +3719,13 @@ export default function UniversalAssetDossierModal({
                 <div className="space-y-4">
                   <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
-                        <GitCommit className="w-4 h-4 text-indigo-400" />
-                        Canonical State Machine Event Replay
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                          <GitCommit className="w-4 h-4 text-indigo-400" />
+                          Canonical State Machine Event Replay
+                        </span>
+                        <InfoPop term="JANE_STREET_SMR" size="xs" />
+                      </div>
                       <button
                         type="button"
                         onClick={loadEventReplay}
@@ -3729,10 +3801,13 @@ export default function UniversalAssetDossierModal({
                 <div className="space-y-4">
                   <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
-                        <BarChart3 className="w-4 h-4 text-purple-400" />
-                        Bridgewater Associates 4-Quadrant Macro Economic Regime
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                          <BarChart3 className="w-4 h-4 text-purple-400" />
+                          Bridgewater Associates 4-Quadrant Macro Economic Regime
+                        </span>
+                        <InfoPop term="BRIDGEWATER_MACRO_REGIME" size="xs" />
+                      </div>
                       <button
                         type="button"
                         onClick={loadMacroRegime}
@@ -3769,7 +3844,10 @@ export default function UniversalAssetDossierModal({
                             <span className="text-[10px] text-zinc-400 block font-mono">Historical Coverage</span>
                           </div>
                           <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
-                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Primary Vulnerability</span>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] uppercase font-bold text-zinc-500 block">Primary Vulnerability</span>
+                              <InfoPop term="STAGFLATION_SHOCK" size="xs" />
+                            </div>
                             <span className="text-xs font-extrabold text-red-400 mt-1 block truncate">
                               {macroRegimeReport.most_severe_threat_quadrant.replace(/_/g, " ")}
                             </span>
