@@ -144,7 +144,7 @@ def test_mcp_tools_list():
     )
     assert res.status_code == 200
     tools = res.json()["result"]["tools"]
-    assert len(tools) == 21
+    assert len(tools) == 25
     tool_names = {t["name"] for t in tools}
     expected = {
         "search_deals_and_assets",
@@ -168,6 +168,10 @@ def test_mcp_tools_list():
         "query_contour_micro_olap",
         "fuse_gaia_spatial_twin",
         "validate_aip_guardrails",
+        "find_semantic_lookalikes",
+        "evaluate_debt_maturity_wall",
+        "audit_title_curative_redemption",
+        "scan_permits_and_zoning_envelope",
     }
     assert tool_names == expected
 

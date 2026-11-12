@@ -39,6 +39,10 @@ import {
   Gauge,
   Cpu,
   TrendingUp,
+  Radar,
+  Clock,
+  ShieldAlert,
+  FileText,
 } from "lucide-react";
 import {
   UniversalAsset,
@@ -58,6 +62,10 @@ import {
   EntityResolutionMatchResult,
   TopologicalParcelFusionReport,
   ContourAnalyticalQueryResult,
+  SemanticLookalikeReport,
+  DebtMaturityRadarReport,
+  TitleCurativeAuditReport,
+  ZoningEnvelopeReport,
 } from "../lib/types";
 import {
   runAssetDeepOsint,
@@ -76,13 +84,17 @@ import {
   resolveEntitySplink,
   queryContourMicroOlap,
   fuseGaiaSpatialTwin,
+  fetchSemanticLookalikes,
+  fetchDebtMaturityRadar,
+  fetchTitleCurativeAudit,
+  fetchPermitZoningScan,
 } from "../lib/api";
 
 interface UniversalAssetDossierModalProps {
   asset: UniversalAsset | null;
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "OUTREACH" | "PIPELINE";
+  initialTab?: "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "OUTREACH" | "PIPELINE";
   onAssetUpdated: (updated: UniversalAsset) => void;
 }
 
@@ -94,7 +106,7 @@ export default function UniversalAssetDossierModal({
   onAssetUpdated,
 }: UniversalAssetDossierModalProps) {
   const [activeTab, setActiveTab] = useState<
-    "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "OUTREACH" | "PIPELINE"
+    "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "OUTREACH" | "PIPELINE"
   >(initialTab);
   const [currentAsset, setCurrentAsset] = useState<UniversalAsset | null>(asset);
   const [spatialTwin, setSpatialTwin] = useState<ParcelSpatialTwin | null>(null);
@@ -144,6 +156,22 @@ export default function UniversalAssetDossierModal({
   const [splinkMatch, setSplinkMatch] = useState<EntityResolutionMatchResult | null>(null);
   const [resolvingSplink, setResolvingSplink] = useState(false);
 
+  // Sourcing Intelligence & Debt Radar States (Inven / Reonomy / PropertyRadar / Cherre)
+  const [radarSubTab, setRadarSubTab] = useState<"DEBT_WALL" | "LOOKALIKES" | "TITLE_CURATIVE" | "ZONING_PERMITS">("DEBT_WALL");
+  const [debtRadarReport, setDebtRadarReport] = useState<DebtMaturityRadarReport | null>(null);
+  const [loadingDebtRadar, setLoadingDebtRadar] = useState(false);
+  const [projectedRefiRate, setProjectedRefiRate] = useState<number>(0.0825);
+
+  const [lookalikeReport, setLookalikeReport] = useState<SemanticLookalikeReport | null>(null);
+  const [loadingLookalike, setLoadingLookalike] = useState(false);
+  const [lookalikeSearchQuery, setLookalikeSearchQuery] = useState("");
+
+  const [titleAuditReport, setTitleAuditReport] = useState<TitleCurativeAuditReport | null>(null);
+  const [loadingTitleAudit, setLoadingTitleAudit] = useState(false);
+
+  const [zoningReport, setZoningReport] = useState<ZoningEnvelopeReport | null>(null);
+  const [loadingZoning, setLoadingZoning] = useState(false);
+
   useEffect(() => {
     setCurrentAsset(asset);
     setActiveTab(initialTab);
@@ -161,6 +189,11 @@ export default function UniversalAssetDossierModal({
     setSelectedGraphNode(null);
     setContourResult(null);
     setSplinkMatch(null);
+    setDebtRadarReport(null);
+    setLookalikeReport(null);
+    setTitleAuditReport(null);
+    setZoningReport(null);
+    setLookalikeSearchQuery(asset ? `${asset.title} ${asset.asset_class}` : "");
   }, [asset, initialTab]);
 
   useEffect(() => {
@@ -183,7 +216,13 @@ export default function UniversalAssetDossierModal({
     if (activeTab === "GOTHAM_ONTOLOGY" && currentAsset && !ontologyGraph) {
       loadOntologyGraph();
     }
-  }, [activeTab, currentAsset, playbookType]);
+    if (activeTab === "SOURCING_RADAR" && currentAsset) {
+      if (radarSubTab === "DEBT_WALL" && !debtRadarReport) loadDebtRadar();
+      if (radarSubTab === "LOOKALIKES" && !lookalikeReport) loadLookalikes();
+      if (radarSubTab === "TITLE_CURATIVE" && !titleAuditReport) loadTitleAudit();
+      if (radarSubTab === "ZONING_PERMITS" && !zoningReport) loadZoning();
+    }
+  }, [activeTab, currentAsset, playbookType, radarSubTab]);
 
   const loadAssetHealth = async () => {
     if (!currentAsset) return;
@@ -250,6 +289,77 @@ export default function UniversalAssetDossierModal({
       console.error("Failed to resolve entity via Splink:", err);
     } finally {
       setResolvingSplink(false);
+    }
+  };
+
+  const loadDebtRadar = async (rate?: number) => {
+    if (!currentAsset) return;
+    setLoadingDebtRadar(true);
+    try {
+      const market = `${currentAsset.city || "Roanoke"}, ${currentAsset.state || "VA"}`;
+      const res = await fetchDebtMaturityRadar({
+        target_market: market,
+        max_months_to_maturity: 24,
+        projected_refinance_rate: rate !== undefined ? rate : projectedRefiRate,
+      });
+      setDebtRadarReport(res.maturity_radar);
+    } catch (err) {
+      console.error("Failed to load debt maturity radar:", err);
+    } finally {
+      setLoadingDebtRadar(false);
+    }
+  };
+
+  const loadLookalikes = async (queryOverride?: string) => {
+    if (!currentAsset) return;
+    setLoadingLookalike(true);
+    try {
+      const q = queryOverride || lookalikeSearchQuery || `${currentAsset.title} ${currentAsset.asset_class}`;
+      const res = await fetchSemanticLookalikes({
+        query: q,
+        exemplary_entity_id: currentAsset.asset_id,
+        min_similarity: 0.30,
+        max_distance_miles: 50.0,
+      });
+      setLookalikeReport(res.lookalike_report);
+    } catch (err) {
+      console.error("Failed to load semantic lookalikes:", err);
+    } finally {
+      setLoadingLookalike(false);
+    }
+  };
+
+  const loadTitleAudit = async () => {
+    if (!currentAsset) return;
+    setLoadingTitleAudit(true);
+    try {
+      const res = await fetchTitleCurativeAudit({
+        parcel_id: currentAsset.parcel_id || "51161-ROA-001",
+        deal_id: currentAsset.asset_id,
+      });
+      setTitleAuditReport(res.title_curative_audit);
+    } catch (err) {
+      console.error("Failed to load title curative audit:", err);
+    } finally {
+      setLoadingTitleAudit(false);
+    }
+  };
+
+  const loadZoning = async () => {
+    if (!currentAsset) return;
+    setLoadingZoning(true);
+    try {
+      const res = await fetchPermitZoningScan({
+        parcel_id: currentAsset.parcel_id || "51161-ROA-001",
+        parcel_area_acres: 3.85,
+        building_footprint_sqft: 48500.0,
+        zoning_code: "I-2",
+      });
+      setZoningReport(res.zoning_envelope);
+    } catch (err) {
+      console.error("Failed to load permit and zoning scan:", err);
+    } finally {
+      setLoadingZoning(false);
     }
   };
 
@@ -556,6 +666,20 @@ export default function UniversalAssetDossierModal({
             <span>Palantir Gotham™ Graph</span>
             <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-indigo-950 border border-indigo-800 text-indigo-300 font-bold">
               Ontology
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("SOURCING_RADAR")}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition ${
+              activeTab === "SOURCING_RADAR"
+                ? "bg-rose-600 text-white shadow-md shadow-rose-950"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
+          >
+            <Radar className="w-3.5 h-3.5 text-rose-400" />
+            <span>Sourcing &amp; Debt Radar</span>
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-rose-950 border border-rose-800 text-rose-300 font-bold">
+              Inven/Trepp
             </span>
           </button>
           <button
@@ -2174,6 +2298,579 @@ export default function UniversalAssetDossierModal({
               ) : null}
             </div>
           )}
+
+          {/* TAB: SOURCING & DEBT RADAR (INVEN / REONOMY / PROPERTYRADAR / CHERRE) */}
+          {activeTab === "SOURCING_RADAR" && (
+            <div className="space-y-6">
+              {/* Sourcing Intelligence Sub-nav */}
+              <div className="flex items-center gap-2 p-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRadarSubTab("DEBT_WALL");
+                    if (!debtRadarReport) loadDebtRadar();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition font-semibold ${
+                    radarSubTab === "DEBT_WALL"
+                      ? "bg-rose-600 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>Debt Maturity Wall (Trepp)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRadarSubTab("LOOKALIKES");
+                    if (!lookalikeReport) loadLookalikes();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition font-semibold ${
+                    radarSubTab === "LOOKALIKES"
+                      ? "bg-rose-600 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <Radar className="w-3.5 h-3.5" />
+                  <span>Semantic Lookalikes (Inven)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRadarSubTab("TITLE_CURATIVE");
+                    if (!titleAuditReport) loadTitleAudit();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition font-semibold ${
+                    radarSubTab === "TITLE_CURATIVE"
+                      ? "bg-rose-600 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Title &amp; IRS 120-Day Clock</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRadarSubTab("ZONING_PERMITS");
+                    if (!zoningReport) loadZoning();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition font-semibold ${
+                    radarSubTab === "ZONING_PERMITS"
+                      ? "bg-rose-600 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <Building className="w-3.5 h-3.5" />
+                  <span>Permits &amp; FAR Zoning (Cherre)</span>
+                </button>
+              </div>
+
+              {/* 1. DEBT MATURITY WALL (REONOMY / TREPP) */}
+              {radarSubTab === "DEBT_WALL" && (
+                <div className="space-y-4">
+                  {loadingDebtRadar ? (
+                    <div className="p-8 text-center text-xs text-zinc-400">
+                      Scanning regional commercial mortgage maturity dockets &amp; interest rate shock envelopes...
+                    </div>
+                  ) : debtRadarReport ? (
+                    <div className="space-y-4">
+                      {/* Top Metrics Banner */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                            Target Regional Market
+                          </span>
+                          <span className="text-sm font-bold text-white mt-0.5 block">
+                            {debtRadarReport.target_market}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 font-mono">
+                            {debtRadarReport.total_loans_tracked} Commercial Mortgages
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                            Total Maturing Debt Volume
+                          </span>
+                          <span className="text-sm font-extrabold text-rose-400 mt-0.5 block font-mono">
+                            {formatUSD(debtRadarReport.total_maturing_debt_volume_usd)}
+                          </span>
+                          <span className="text-[10px] text-zinc-400">
+                            Maturing within &le; 24 Months
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                            High Refinance Stress / Default
+                          </span>
+                          <span className="text-sm font-extrabold text-amber-400 mt-0.5 block font-mono">
+                            {debtRadarReport.high_stress_loans_count} Loans Critical
+                          </span>
+                          <span className="text-[10px] text-zinc-400">
+                            Post-Refi DSCR &lt; 1.05x
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Strategic Refinance Thesis Banner */}
+                      <div className="p-3.5 rounded-xl bg-rose-950/20 border border-rose-900/40 text-xs space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <Activity className="w-4 h-4 text-rose-400" />
+                          <span className="font-bold text-rose-300 uppercase tracking-wide text-[11px]">
+                            Trepp Refinance Cliff Thesis
+                          </span>
+                        </div>
+                        <p className="text-zinc-300 text-[11px] leading-relaxed">
+                          {debtRadarReport.refinance_stress_thesis}
+                        </p>
+                      </div>
+
+                      {/* Interest Rate Shock Selector */}
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-950/60 border border-zinc-800 text-xs">
+                        <span className="font-semibold text-zinc-300">
+                          Projected Refinance Benchmark Coupon:
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {[
+                            { rate: 0.075, label: "7.50% (SOFR+200)" },
+                            { rate: 0.0825, label: "8.25% (Base SOFR+275)" },
+                            { rate: 0.090, label: "9.00% (High Stress)" },
+                            { rate: 0.100, label: "10.00% (Severe Shock)" },
+                          ].map((opt) => (
+                            <button
+                              key={opt.rate}
+                              type="button"
+                              onClick={() => {
+                                setProjectedRefiRate(opt.rate);
+                                loadDebtRadar(opt.rate);
+                              }}
+                              className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold transition ${
+                                Math.abs(projectedRefiRate - opt.rate) < 0.001
+                                  ? "bg-rose-600 text-white"
+                                  : "bg-zinc-900 text-zinc-400 hover:text-white"
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Maturing Commercial Mortgages Table */}
+                      <div className="space-y-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 block">
+                          Maturing Commercial Mortgages Schedule
+                        </span>
+                        <div className="space-y-2">
+                          {debtRadarReport.loans.map((loan) => (
+                            <div
+                              key={loan.loan_id}
+                              className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800 hover:border-zinc-700 transition space-y-2.5"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white text-xs">
+                                      {loan.borrower_name}
+                                    </span>
+                                    <span className="text-[10px] font-mono text-zinc-500">
+                                      Parcel: {loan.parcel_id}
+                                    </span>
+                                  </div>
+                                  <span className="text-[11px] text-zinc-400 mt-0.5 block">
+                                    Balance: {formatUSD(loan.current_balance_usd)} (Orig. {formatUSD(loan.original_principal_usd)}) • {loan.months_to_maturity} mos to maturity ({loan.maturity_date_iso})
+                                  </span>
+                                </div>
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono ${
+                                    loan.distress_tier === "IMMINENT_DEFAULT"
+                                      ? "bg-red-950 text-red-300 border border-red-800"
+                                      : loan.distress_tier === "HIGH_REFINANCE_STRESS"
+                                      ? "bg-amber-950 text-amber-300 border border-amber-800"
+                                      : "bg-blue-950 text-blue-300 border border-blue-800"
+                                  }`}
+                                >
+                                  {loan.distress_tier.replace(/_/g, " ")} • Cliff Score {loan.refinance_cliff_score}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-zinc-800/80 text-[11px]">
+                                <div>
+                                  <span className="text-zinc-500 block text-[10px]">Coupon Shock:</span>
+                                  <span className="font-mono text-zinc-300 font-semibold">
+                                    {loan.origination_coupon_pct}% &rarr; {loan.projected_refinance_coupon_pct}%
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-zinc-500 block text-[10px]">Annual Debt Service:</span>
+                                  <span className="font-mono text-rose-300 font-semibold">
+                                    {formatUSD(loan.current_annual_debt_service_usd)} &rarr; {formatUSD(loan.projected_annual_debt_service_usd)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-zinc-500 block text-[10px]">DSCR Compression:</span>
+                                  <span
+                                    className={`font-mono font-bold ${
+                                      parseFloat(loan.refinanced_dscr) < 1.05
+                                        ? "text-red-400"
+                                        : "text-amber-400"
+                                    }`}
+                                  >
+                                    {loan.current_dscr}x &rarr; {loan.refinanced_dscr}x
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-zinc-500 block text-[10px]">Historical EBITDA:</span>
+                                  <span className="font-mono text-emerald-400 font-semibold">
+                                    {formatUSD(loan.historical_ebitda_usd)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {/* 2. SEMANTIC LOOKALIKES (INVEN) */}
+              {radarSubTab === "LOOKALIKES" && (
+                <div className="space-y-4">
+                  {/* Search Query Input */}
+                  <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-2">
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                      Inven Vectorized Sourcing Thesis
+                    </span>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={lookalikeSearchQuery}
+                        onChange={(e) => setLookalikeSearchQuery(e.target.value)}
+                        placeholder="Search operational profile, machinery, or industrial vertical..."
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white focus:outline-none focus:border-rose-500 font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => loadLookalikes(lookalikeSearchQuery)}
+                        disabled={loadingLookalike}
+                        className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition disabled:opacity-50"
+                      >
+                        {loadingLookalike ? "Cloning..." : "Find Lookalikes"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {loadingLookalike ? (
+                    <div className="p-8 text-center text-xs text-zinc-400">
+                      Executing semantic embedding similarity across unlisted regional operating entities...
+                    </div>
+                  ) : lookalikeReport ? (
+                    <div className="space-y-4">
+                      <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-900/40 text-xs">
+                        <span className="font-bold text-rose-300 block mb-1">
+                          Inven Sourcing Analysis ({lookalikeReport.total_matched} Matched Private Clones)
+                        </span>
+                        <p className="text-zinc-300 text-[11px] leading-relaxed">
+                          {lookalikeReport.executive_summary}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {lookalikeReport.candidates.map((cand) => (
+                          <div
+                            key={cand.candidate_id}
+                            className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800 hover:border-zinc-700 transition space-y-2"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <span className="font-bold text-white text-xs block">
+                                  {cand.company_name}
+                                </span>
+                                <span className="text-[10px] text-zinc-400">
+                                  {cand.city_and_state} • {cand.distance_miles} miles away
+                                </span>
+                              </div>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                {(parseFloat(cand.semantic_similarity_score) * 100).toFixed(0)}% Similarity
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
+                              {cand.operational_thesis}
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800 text-[10px] font-mono">
+                              <div>
+                                <span className="text-zinc-500 block">Est. Normalized EBITDA:</span>
+                                <span className="text-emerald-400 font-bold">
+                                  {formatUSD(cand.estimated_ebitda_usd)}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-zinc-500 block">Estimated Asking Basis:</span>
+                                <span className="text-zinc-200 font-bold">
+                                  {formatUSD(cand.estimated_asking_basis_usd)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10px] pt-1 text-zinc-400">
+                              <span>Fiduciary Route: <strong className="text-rose-300">{cand.contact_fiduciary_type}</strong></span>
+                              <span className="font-mono text-zinc-500">NAICS {cand.naics_code}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {/* 3. TITLE CURATIVE & IRS 120-DAY CLOCK (PROPERTYRADAR) */}
+              {radarSubTab === "TITLE_CURATIVE" && (
+                <div className="space-y-4">
+                  {loadingTitleAudit ? (
+                    <div className="p-8 text-center text-xs text-zinc-400">
+                      Querying recorded instruments, title encumbrance index &amp; IRS 120-day redemption clocks...
+                    </div>
+                  ) : titleAuditReport ? (
+                    <div className="space-y-4">
+                      {/* Title Clearance Status Header */}
+                      <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold uppercase text-zinc-400">
+                              Title Marketability Status:
+                            </span>
+                            <span
+                              className={`px-2.5 py-0.5 rounded text-xs font-bold uppercase font-mono ${
+                                titleAuditReport.title_status === "TITLE_MARKETABLE_INSURABLE"
+                                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                                  : titleAuditReport.title_status === "TITLE_CLOUDED_REDEMPTION_RISK"
+                                  ? "bg-amber-950 text-amber-300 border border-amber-800"
+                                  : "bg-red-950 text-red-300 border border-red-800"
+                              }`}
+                            >
+                              {titleAuditReport.title_status.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-zinc-400 mt-1 block">
+                            Parcel: {titleAuditReport.parcel_id} • Total Encumbrances: {formatUSD(titleAuditReport.total_encumbrance_basis_usd)} ({titleAuditReport.total_liens_count} Recorded Liens)
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                            Recommended Escrow Holdback
+                          </span>
+                          <span className="text-sm font-extrabold text-amber-400 font-mono">
+                            {formatUSD(titleAuditReport.recommended_escrow_holdback_usd)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 26 U.S.C. § 7425 IRS 120-Day Statutory Redemption Alert */}
+                      {titleAuditReport.irs_120_day_redemption_active ? (
+                        <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-900/60 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <ShieldAlert className="w-4 h-4 text-amber-400" />
+                              <span className="font-bold text-amber-300 text-xs uppercase tracking-wide">
+                                26 U.S.C. &sect; 7425 Statutory Redemption Period Active
+                              </span>
+                            </div>
+                            <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-amber-900/60 text-amber-200 border border-amber-700">
+                              {titleAuditReport.irs_redemption_days_remaining} Days Remaining
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
+                            Under 26 U.S.C. &sect; 7425, the Internal Revenue Service retains a 120-day right of statutory redemption following non-judicial trustee foreclosure. A standard title policy will except this cloud unless an IRS Form 14135 Certificate of Discharge or affirmative escrow indemnity is secured prior to closing.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-900/40 text-xs text-emerald-300 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>IRS 120-day statutory redemption period has lapsed or does not apply to this title.</span>
+                        </div>
+                      )}
+
+                      {/* Schedule of Recorded Encumbrances */}
+                      <div className="space-y-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 block">
+                          Recorded Encumbrance Schedule
+                        </span>
+                        <div className="space-y-2">
+                          {titleAuditReport.liens.map((lien) => (
+                            <div
+                              key={lien.lien_id}
+                              className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 text-xs space-y-1.5"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-white">
+                                    {lien.lien_type.replace(/_/g, " ")}
+                                  </span>
+                                  <span className="font-mono text-[10px] text-zinc-500">
+                                    Doc #{lien.recording_instrument_no} ({lien.recorded_date_iso})
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono font-bold text-rose-300">
+                                    {formatUSD(lien.claimed_amount_usd)}
+                                  </span>
+                                  {lien.is_senior_priority && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-red-950 text-red-300 border border-red-800">
+                                      Senior Priority
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-[11px] text-zinc-400 font-sans">
+                                <strong className="text-zinc-300">Curative Action: </strong>
+                                {lien.curative_action_required}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Counsel Closing Opinion */}
+                      <div className="p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-800 text-xs space-y-1">
+                        <span className="font-bold text-zinc-300 uppercase tracking-wider text-[10px]">
+                          Title Counsel Opinion
+                        </span>
+                        <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                          {titleAuditReport.counsel_closing_opinion}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {/* 4. PERMITS & FAR ZONING ENVELOPE (CHERRE / BOWERY) */}
+              {radarSubTab === "ZONING_PERMITS" && (
+                <div className="space-y-4">
+                  {loadingZoning ? (
+                    <div className="p-8 text-center text-xs text-zinc-400">
+                      Querying municipal building permit ledgers, FAR envelopes &amp; zoning ordinances...
+                    </div>
+                  ) : zoningReport ? (
+                    <div className="space-y-4">
+                      {/* Zoning Envelope Overview */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                            Zoning Code &amp; Use Status
+                          </span>
+                          <span className="text-sm font-bold text-white mt-0.5 block">
+                            {zoningReport.zone_code} • {zoningReport.permitted_use_status.replace(/_/g, " ")}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 truncate block">
+                            {zoningReport.zone_description}
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                            Floor Area Ratio (FAR)
+                          </span>
+                          <span className="text-sm font-extrabold text-white mt-0.5 block font-mono">
+                            {zoningReport.current_far} / {zoningReport.max_allowable_far} Max FAR
+                          </span>
+                          <span className="text-[10px] text-zinc-400">
+                            Footprint: {parseFloat(zoningReport.building_footprint_sqft).toLocaleString()} sqft
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800">
+                          <span className="text-[10px] uppercase font-bold text-zinc-500 block">
+                            Unused Expansion Potential
+                          </span>
+                          <span className="text-sm font-extrabold text-emerald-400 mt-0.5 block font-mono">
+                            +{parseFloat(zoningReport.expansion_potential_sqft).toLocaleString()} SQFT
+                          </span>
+                          <span className="text-[10px] text-zinc-400">
+                            Permitted Building Envelope
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Unpermitted Alteration Risk Banner */}
+                      {zoningReport.unpermitted_alteration_risk_detected ? (
+                        <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-900/60 text-xs flex items-start gap-2.5">
+                          <ShieldAlert className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <span className="font-bold text-amber-300">
+                              Unpermitted Structural Alteration Risk Detected
+                            </span>
+                            <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
+                              Municipal permit records reflect open citations or substantial interior industrial modifications without final certificate of occupancy. A physical engineering and code inspection is required prior to contract execution.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-900/40 text-xs text-emerald-300 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>Municipal permit status clean. No unpermitted structural alteration citations on file.</span>
+                        </div>
+                      )}
+
+                      {/* Municipal Building Permits Ledger */}
+                      <div className="space-y-2">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 block">
+                          Municipal Building Permits Ledger ({zoningReport.permits.length} Records)
+                        </span>
+                        <div className="space-y-2">
+                          {zoningReport.permits.map((pmt) => (
+                            <div
+                              key={pmt.permit_id}
+                              className="p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 text-xs space-y-1.5"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-white">
+                                    {pmt.permit_type}
+                                  </span>
+                                  <span className="font-mono text-[10px] text-zinc-500">
+                                    Permit #{pmt.permit_id} ({pmt.issue_date_iso})
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono font-bold text-emerald-400">
+                                    Valuation: {formatUSD(pmt.estimated_valuation_usd)}
+                                  </span>
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase bg-zinc-800 text-zinc-300 border border-zinc-700">
+                                    {pmt.status}
+                                  </span>
+                                </div>
+                              </div>
+                              <p className="text-[11px] text-zinc-300 font-sans">
+                                {pmt.description}
+                              </p>
+                              <div className="text-[10px] text-zinc-500 font-mono">
+                                Contractor: {pmt.contractor_name}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Analyst Zoning Summary */}
+                      <div className="p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-800 text-xs space-y-1">
+                        <span className="font-bold text-zinc-300 uppercase tracking-wider text-[10px]">
+                          Zoning &amp; Land Use Analysis
+                        </span>
+                        <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                          {zoningReport.analyst_zoning_summary}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === "OUTREACH" && (
             <div className="space-y-5">
               {/* Playbook Switcher */}

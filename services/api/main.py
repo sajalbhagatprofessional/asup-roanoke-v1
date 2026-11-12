@@ -3246,6 +3246,121 @@ def aip_validate_proposal_endpoint(req: AIPValidateProposalRequest) -> Dict[str,
     }
 
 
+# =========================================================================
+# ADVANCED SOURCING INTELLIGENCE & RADAR (INVEN/REONOMY/PROPERTYRADAR/CHERRE)
+# =========================================================================
+
+class SemanticLookalikesRequest(BaseModel):
+    query: str = Field(..., description="Natural language search query or operational thesis")
+    exemplary_entity_id: Optional[str] = Field(None, description="Optional target entity ID to find lookalikes of")
+    min_similarity: Optional[float] = Field(0.30, description="Minimum operational similarity score (0.00 to 1.00)")
+    naics_prefix: Optional[str] = Field(None, description="Optional NAICS prefix filter")
+    max_distance_miles: Optional[float] = Field(None, description="Optional maximum geographic distance in miles")
+
+class DebtMaturityRadarRequest(BaseModel):
+    target_market: Optional[str] = Field("Roanoke, VA", description="Target metropolitan or regional market")
+    max_months_to_maturity: Optional[int] = Field(24, description="Maximum months to mortgage maturity date")
+    projected_refinance_rate: Optional[float] = Field(None, description="Projected refinance interest rate (e.g. 0.0825)")
+
+class TitleCurativeAuditRequest(BaseModel):
+    parcel_id: str = Field(..., description="Target county GIS parcel GPIN")
+    deal_id: Optional[str] = Field("DEAL-001", description="Internal deal ID")
+    foreclosure_sale_date_iso: Optional[str] = Field(None, description="ISO date of foreclosure sale for 120-day IRS clock")
+    custom_liens: Optional[List[Dict[str, Any]]] = Field(None, description="Optional recorded liens list")
+
+class PermitZoningScanRequest(BaseModel):
+    parcel_id: str = Field(..., description="Target county GIS parcel GPIN")
+    parcel_area_acres: Optional[float] = Field(3.85, description="Total parcel acreage")
+    building_footprint_sqft: Optional[float] = Field(48500.0, description="Existing building footprint square footage")
+    zoning_code: Optional[str] = Field("I-2", description="Municipal zoning designation code")
+    custom_permits: Optional[List[Dict[str, Any]]] = Field(None, description="Optional municipal permit list")
+
+
+@app.post("/v1/sourcing/semantic-lookalikes", tags=["Sourcing Intelligence"])
+def get_semantic_lookalikes_endpoint(req: SemanticLookalikesRequest) -> Dict[str, Any]:
+    """
+    Inven-grade semantic M&A lookalikes: Discovers unlisted private peers and competitors
+    matching an exemplary acquisition target or natural language operational thesis.
+    """
+    from packages.sourcing_intelligence import SemanticLookalikeEngine
+    engine = SemanticLookalikeEngine()
+    min_sim = Decimal(str(req.min_similarity or 0.30))
+    max_dist = Decimal(str(req.max_distance_miles)) if req.max_distance_miles is not None else None
+    report = engine.find_lookalikes(
+        query=req.query,
+        exemplary_entity_id=req.exemplary_entity_id,
+        min_similarity=min_sim,
+        naics_prefix=req.naics_prefix,
+        max_distance_miles=max_dist,
+    )
+    return {
+        "status": "success",
+        "lookalike_report": report.to_dict(),
+    }
+
+
+@app.post("/v1/sourcing/debt-maturity-radar", tags=["Sourcing Intelligence"])
+def scan_debt_maturity_radar_endpoint(req: DebtMaturityRadarRequest) -> Dict[str, Any]:
+    """
+    Reonomy/Trepp-grade Debt Maturity Wall radar: Identifies commercial mortgages facing
+    impending maturity cliff shocks under current SOFR + 275 bps benchmark environments.
+    """
+    from packages.sourcing_intelligence import DebtMaturityRadarEngine
+    engine = DebtMaturityRadarEngine()
+    refi_rate = Decimal(str(req.projected_refinance_rate)) if req.projected_refinance_rate is not None else None
+    report = engine.scan_debt_maturity_wall(
+        target_market=req.target_market or "Roanoke, VA",
+        max_months_to_maturity=req.max_months_to_maturity or 24,
+        projected_refi_rate=refi_rate,
+    )
+    return {
+        "status": "success",
+        "maturity_radar": report.to_dict(),
+    }
+
+
+@app.post("/v1/sourcing/title-curative-audit", tags=["Sourcing Intelligence"])
+def audit_title_curative_endpoint(req: TitleCurativeAuditRequest) -> Dict[str, Any]:
+    """
+    PropertyRadar-grade Title Curative Screener: Audits recorded land title encumbrances,
+    enforces 26 U.S.C. § 7425 IRS 120-day redemption clocks, and calculates required curative escrow holdbacks.
+    """
+    from packages.sourcing_intelligence import TitleCurativeEngine
+    report = TitleCurativeEngine.audit_parcel_title(
+        parcel_id=req.parcel_id,
+        deal_id=req.deal_id or "DEAL-001",
+        custom_liens=req.custom_liens,
+        foreclosure_sale_date_iso=req.foreclosure_sale_date_iso,
+    )
+    return {
+        "status": "success",
+        "title_curative_audit": report.to_dict(),
+    }
+
+
+@app.post("/v1/sourcing/permit-zoning-scan", tags=["Sourcing Intelligence"])
+def scan_permits_and_zoning_endpoint(req: PermitZoningScanRequest) -> Dict[str, Any]:
+    """
+    Cherre/Bowery-grade Municipal Permit & Zoning Scanner: Audits building permits,
+    flags unpermitted alteration risks, and quantifies Floor Area Ratio (FAR) expansion capacity.
+    """
+    from packages.sourcing_intelligence import PermitZoningScanner
+    acres = Decimal(str(req.parcel_area_acres or 3.85))
+    footprint = Decimal(str(req.building_footprint_sqft or 48500.0))
+    report = PermitZoningScanner.scan_parcel_zoning_and_permits(
+        parcel_id=req.parcel_id,
+        parcel_area_acres=acres,
+        building_footprint_sqft=footprint,
+        zoning_code=req.zoning_code or "I-2",
+        custom_permits=req.custom_permits,
+    )
+    return {
+        "status": "success",
+        "zoning_envelope": report.to_dict(),
+    }
+
+
+
 
 
 

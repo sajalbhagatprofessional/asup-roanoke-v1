@@ -115,11 +115,19 @@ python scripts/run_all_tests.py
    - Nationwide sovereign scrapers (94 federal districts, 50-state press portals).
    - Five Aladdin engines (Uber H3, SEC EDGAR, OpenSanctions, Unstructured tax parser, OpenBB SOFR matrix).
 6. **AI Agent MCP & Upstream Dependency Suites (Milestones 15–16)**:
-   - Model Context Protocol (MCP 2024-11-05) JSON-RPC, SSE, and tools execution.
+   - Model Context Protocol (MCP 2024-11-05) JSON-RPC, SSE, and 25 tools execution.
    - Autonomous upstream dependency auto-discovery, PyPI/npm/GitHub polling, and air-gap verification.
-7. **The 50-Deal Roanoke Golden Suite**:
+7. **Augury Industrial Physical AI & Palantir Operational Ontology Suites (Milestones 17–18)**:
+   - Equipment schedule parsing (Docling), aerial sentinel (TorchGeo), predictive capex (Darts), maintenance auditor (Cleanlab).
+   - Palantir Gotham link graph, Splink Fellegi-Sunter entity resolution, Contour micro-OLAP (DuckDB), Gaia spatial boundary fusion, AIP guardrails (Instructor).
+8. **Advanced Sourcing Intelligence & Debt Radar Suite (Milestones 19–22)**:
+   - Inven-grade semantic M&A lookalikes, Trepp commercial mortgage maturity wall & SOFR rate shock radar.
+   - PropertyRadar title curative screener & 26 U.S.C. § 7425 IRS 120-day redemption clock with escrow holdback.
+   - Cherre/Bowery municipal building permits & Floor Area Ratio (FAR) zoning expansion scanner.
+9. **The 50-Deal Roanoke Golden Suite**:
    - Executes `scripts/run_golden_backtest.py` against `tests/golden_suite/roanoke_golden_50.json`.
    - Requires **50/50 Accuracy (100.0%)**, **0 False Positives** reaching the Principal, and **>= 95% Raw Filing Kill Rate**.
+   - Verified across all **123/123 Tests PASSED (100% Coverage)**.
 
 ---
 

@@ -416,6 +416,72 @@ MCP_TOOLS_CATALOG: List[McpTool] = [
             },
         },
     ),
+    McpTool(
+        name="find_semantic_lookalikes",
+        description=(
+            "Inven-grade semantic M&A lookalike discovery engine: finds off-market private operating peers and competitors "
+            "matching an exemplary target asset or natural language thesis across Virginia and Mid-Atlantic industrial markets."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["query"],
+            "properties": {
+                "query": {"type": "string", "description": "Natural language search thesis (e.g. 'cold-chain logistics near I-81')"},
+                "exemplary_entity_id": {"type": "string", "description": "Optional exemplary company ID to clone"},
+                "min_similarity": {"type": "number", "default": 0.30, "description": "Minimum similarity score (0.00 to 1.00)"},
+                "naics_prefix": {"type": "string", "description": "Optional NAICS prefix filter"},
+                "max_distance_miles": {"type": "number", "description": "Optional radius in miles"},
+            },
+        },
+    ),
+    McpTool(
+        name="evaluate_debt_maturity_wall",
+        description=(
+            "Reonomy/Trepp-grade commercial Debt Maturity Wall radar: tracks mortgages originated at 3.5%-5.0% facing "
+            "refinance shocks under benchmark SOFR + 275 bps. Calculates post-refi DSCR and Refinance Cliff Score (0-100)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "target_market": {"type": "string", "default": "Roanoke, VA", "description": "Target metropolitan market"},
+                "max_months_to_maturity": {"type": "integer", "default": 24, "description": "Horizon in months"},
+                "projected_refinance_rate": {"type": "number", "default": 0.0825, "description": "Projected post-refi interest rate"},
+            },
+        },
+    ),
+    McpTool(
+        name="audit_title_curative_redemption",
+        description=(
+            "PropertyRadar-grade Title Curative Screener: audits recorded land title encumbrances, enforces 26 U.S.C. § 7425 "
+            "IRS 120-day redemption clocks, Va. Code § 43-4 mechanics' liens, and calculates required curative escrow holdback."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["parcel_id"],
+            "properties": {
+                "parcel_id": {"type": "string", "description": "Target county GIS parcel GPIN"},
+                "deal_id": {"type": "string", "default": "DEAL-001", "description": "Associated deal identifier"},
+                "foreclosure_sale_date_iso": {"type": "string", "description": "Foreclosure auction date for IRS 120-day clock"},
+            },
+        },
+    ),
+    McpTool(
+        name="scan_permits_and_zoning_envelope",
+        description=(
+            "Cherre/Bowery-grade Municipal Building Permit & Zoning Scanner: audits city building permits, flags unpermitted "
+            "alteration risks, and quantifies Floor Area Ratio (FAR) expansion potential on industrial parcels."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["parcel_id"],
+            "properties": {
+                "parcel_id": {"type": "string", "description": "Target county GIS parcel GPIN"},
+                "parcel_area_acres": {"type": "number", "default": 3.85, "description": "Parcel acreage"},
+                "building_footprint_sqft": {"type": "number", "default": 48500.0, "description": "Existing building footprint"},
+                "zoning_code": {"type": "string", "default": "I-2", "description": "Zoning designation code"},
+            },
+        },
+    ),
 ]
 
 
@@ -711,6 +777,43 @@ def execute_mcp_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any
             raw = arguments["raw_proposal"]
             guardrail_res = AIPGuardrailsInstructor.validate_deal_proposal(raw)
             return {"guardrail_validation": guardrail_res.to_dict()}
+
+        elif tool_name == "find_semantic_lookalikes":
+            from packages.sourcing_intelligence import SemanticLookalikeEngine
+            engine = SemanticLookalikeEngine()
+            q = arguments["query"]
+            ex_id = arguments.get("exemplary_entity_id")
+            min_s = Decimal(str(arguments.get("min_similarity", 0.30)))
+            prefix = arguments.get("naics_prefix")
+            dist = Decimal(str(arguments["max_distance_miles"])) if arguments.get("max_distance_miles") is not None else None
+            rep = engine.find_lookalikes(query=q, exemplary_entity_id=ex_id, min_similarity=min_s, naics_prefix=prefix, max_distance_miles=dist)
+            return {"lookalike_report": rep.to_dict()}
+
+        elif tool_name == "evaluate_debt_maturity_wall":
+            from packages.sourcing_intelligence import DebtMaturityRadarEngine
+            engine = DebtMaturityRadarEngine()
+            mkt = arguments.get("target_market", "Roanoke, VA")
+            max_m = int(arguments.get("max_months_to_maturity", 24))
+            r_rate = Decimal(str(arguments["projected_refinance_rate"])) if arguments.get("projected_refinance_rate") is not None else None
+            rep = engine.scan_debt_maturity_wall(target_market=mkt, max_months_to_maturity=max_m, projected_refi_rate=r_rate)
+            return {"maturity_radar": rep.to_dict()}
+
+        elif tool_name == "audit_title_curative_redemption":
+            from packages.sourcing_intelligence import TitleCurativeEngine
+            pid = arguments["parcel_id"]
+            did = arguments.get("deal_id", "DEAL-001")
+            sale_date = arguments.get("foreclosure_sale_date_iso")
+            rep = TitleCurativeEngine.audit_parcel_title(parcel_id=pid, deal_id=did, foreclosure_sale_date_iso=sale_date)
+            return {"title_curative_audit": rep.to_dict()}
+
+        elif tool_name == "scan_permits_and_zoning_envelope":
+            from packages.sourcing_intelligence import PermitZoningScanner
+            pid = arguments["parcel_id"]
+            acres = Decimal(str(arguments.get("parcel_area_acres", 3.85)))
+            sqft = Decimal(str(arguments.get("building_footprint_sqft", 48500.0)))
+            zcode = arguments.get("zoning_code", "I-2")
+            rep = PermitZoningScanner.scan_parcel_zoning_and_permits(parcel_id=pid, parcel_area_acres=acres, building_footprint_sqft=sqft, zoning_code=zcode)
+            return {"zoning_envelope": rep.to_dict()}
 
         else:
             return {"error": f"Unknown tool: {tool_name}"}

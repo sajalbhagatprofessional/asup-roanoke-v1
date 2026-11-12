@@ -468,6 +468,7 @@ export interface UniversalAsset {
   zip_code: string;
   county: string;
   metro_area: string;
+  parcel_id?: string;
   asking_or_estimated_value_usd: string;
   downside_liquidation_floor_usd: string;
   pipeline_stage: PipelineStage;
@@ -1084,6 +1085,115 @@ export interface ContourAnalyticalQueryResult {
   aggregate_cure_basis_usd: string;
   records: Array<Record<string, any>>;
 }
+
+// =========================================================================
+// SOURCING INTELLIGENCE (INVEN / REONOMY / PROPERTYRADAR / CHERRE)
+// =========================================================================
+
+export interface LookalikeMatchResult {
+  candidate_id: string;
+  company_name: string;
+  naics_code: string;
+  industry_description: string;
+  semantic_similarity_score: string;
+  estimated_ebitda_usd: string;
+  estimated_asking_basis_usd: string;
+  distance_miles: string;
+  city_and_state: string;
+  operational_thesis: string;
+  contact_fiduciary_type: string;
+}
+
+export interface SemanticLookalikeReport {
+  query_text: string;
+  exemplary_entity_id?: string;
+  total_matched: number;
+  candidates: LookalikeMatchResult[];
+  executive_summary: string;
+}
+
+export interface MaturityWallLoanRecord {
+  loan_id: string;
+  borrower_name: string;
+  parcel_id: string;
+  original_principal_usd: string;
+  current_balance_usd: string;
+  origination_year: number;
+  maturity_date_iso: string;
+  origination_coupon_pct: string;
+  projected_refinance_coupon_pct: string;
+  historical_ebitda_usd: string;
+  current_annual_debt_service_usd: string;
+  projected_annual_debt_service_usd: string;
+  current_dscr: string;
+  refinanced_dscr: string;
+  refinance_cliff_score: string;
+  distress_tier: "IMMINENT_DEFAULT" | "HIGH_REFINANCE_STRESS" | "MODERATE_PRESSURE" | "STABLE_COVERAGE";
+  months_to_maturity: number;
+}
+
+export interface DebtMaturityRadarReport {
+  target_market: string;
+  total_loans_tracked: number;
+  total_maturing_debt_volume_usd: string;
+  high_stress_loans_count: number;
+  loans: MaturityWallLoanRecord[];
+  refinance_stress_thesis: string;
+}
+
+export interface TitleLienRecord {
+  lien_id: string;
+  lien_type: string;
+  recording_instrument_no: string;
+  recorded_date_iso: string;
+  claimed_amount_usd: string;
+  is_senior_priority: boolean;
+  statutory_redemption_period_days: number;
+  redemption_deadline_iso?: string;
+  is_blocking_clearance: boolean;
+  curative_action_required: string;
+}
+
+export interface TitleCurativeAuditReport {
+  parcel_id: string;
+  deal_id: string;
+  title_status: "TITLE_MARKETABLE_INSURABLE" | "TITLE_CLOUDED_REDEMPTION_RISK" | "TITLE_FATAL_SUPERIOR_LIEN";
+  is_clearance_blocked: boolean;
+  total_liens_count: number;
+  total_encumbrance_basis_usd: string;
+  irs_120_day_redemption_active: boolean;
+  irs_redemption_days_remaining: number;
+  recommended_escrow_holdback_usd: string;
+  liens: TitleLienRecord[];
+  counsel_closing_opinion: string;
+}
+
+export interface BuildingPermitRecord {
+  permit_id: string;
+  issue_date_iso: string;
+  permit_type: string;
+  estimated_valuation_usd: string;
+  status: string;
+  contractor_name: string;
+  description: string;
+}
+
+export interface ZoningEnvelopeReport {
+  parcel_id: string;
+  zone_code: string;
+  zone_description: string;
+  permitted_use_status: "PERMITTED_BY_RIGHT" | "LEGAL_NON_CONFORMING_GRANDFATHERED" | "SPECIAL_USE_PERMIT_REQUIRED";
+  parcel_sqft: string;
+  building_footprint_sqft: string;
+  max_allowable_far: string;
+  current_far: string;
+  expansion_potential_sqft: string;
+  open_permit_citations_count: number;
+  permits: BuildingPermitRecord[];
+  unpermitted_alteration_risk_detected: boolean;
+  analyst_zoning_summary: string;
+}
+
 
 
 

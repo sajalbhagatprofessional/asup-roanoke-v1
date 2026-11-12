@@ -225,3 +225,37 @@ Append-only tamper-evident audit record for all fiduciary actions.
 - `aggregate_ebitda_usd` (`Decimal`), `aggregate_cure_basis_usd` (`Decimal`).
 - `records`: Filtered columnar records.
 
+---
+
+## 8. Sourcing Intelligence & Debt Radar Models (Inven / Trepp / PropertyRadar / Cherre)
+
+### `LookalikeMatchResult` & `SemanticLookalikeReport` (Inven-Grade Sourcing)
+- `candidate_id` (`str`), `company_name` (`str`), `naics_code` (`str`), `industry_description` (`str`).
+- `semantic_similarity_score` (`Decimal`): 0.00 to 1.00 cosine/Jaccard similarity.
+- `estimated_ebitda_usd` (`Decimal`), `estimated_asking_basis_usd` (`Decimal`).
+- `distance_miles` (`Decimal`), `city_and_state` (`str`).
+- `operational_thesis` (`str`): Quantitative fit narrative.
+- `contact_fiduciary_type` (`str`): Designated warm fiduciary (`SUBSTITUTE_TRUSTEE`, `COMMERCIAL_BROKER`, `MANAGING_PARTNER`).
+- `SemanticLookalikeReport`: Container with `query_text`, `exemplary_entity_id`, `total_matched`, `candidates`, and `executive_summary`.
+
+### `MaturityWallLoanRecord` & `DebtMaturityRadarReport` (Reonomy/Trepp Debt Radar)
+- `loan_id` (`str`), `borrower_name` (`str`), `parcel_id` (`str`).
+- `original_principal_usd` (`Decimal`), `current_balance_usd` (`Decimal`), `origination_year` (`int`), `maturity_date_iso` (`str`).
+- `origination_coupon_pct` (`Decimal`), `projected_refinance_coupon_pct` (`Decimal`).
+- `historical_ebitda_usd` (`Decimal`), `current_annual_debt_service_usd` (`Decimal`), `projected_annual_debt_service_usd` (`Decimal`).
+- `current_dscr` (`Decimal`), `refinanced_dscr` (`Decimal`), `refinance_cliff_score` (`Decimal`, 0.00 to 100.00).
+- `distress_tier` (`DistressMaturityTier`): `IMMINENT_DEFAULT`, `HIGH_REFINANCE_STRESS`, `MODERATE_PRESSURE`, `STABLE_COVERAGE`.
+- `months_to_maturity` (`int`).
+- `DebtMaturityRadarReport`: Aggregated report with `total_loans_tracked`, `total_maturing_debt_volume_usd`, `high_stress_loans_count`, `loans`, and `refinance_stress_thesis`.
+
+### `TitleLienRecord` & `TitleCurativeAuditReport` (PropertyRadar Title Curative)
+- `lien_id` (`str`), `lien_type` (`str`), `recording_instrument_no` (`str`), `recorded_date_iso` (`str`).
+- `claimed_amount_usd` (`Decimal`), `is_senior_priority` (`bool`), `statutory_redemption_period_days` (`int`).
+- `redemption_deadline_iso` (`Optional[str]`), `is_blocking_clearance` (`bool`), `curative_action_required` (`str`).
+- `TitleCurativeAuditReport`: Container with `title_status` (`TITLE_MARKETABLE_INSURABLE`, `TITLE_CLOUDED_REDEMPTION_RISK`, `TITLE_FATAL_SUPERIOR_LIEN`), `is_clearance_blocked` (`bool`), `total_encumbrance_basis_usd` (`Decimal`), `irs_120_day_redemption_active` (`bool`, 26 U.S.C. § 7425), `irs_redemption_days_remaining` (`int`), `recommended_escrow_holdback_usd` (`Decimal`), `liens`, and `counsel_closing_opinion`.
+
+### `BuildingPermitRecord` & `ZoningEnvelopeReport` (Cherre/Bowery Municipal Permits & FAR)
+- `permit_id` (`str`), `issue_date_iso` (`str`), `permit_type` (`str`), `estimated_valuation_usd` (`Decimal`), `status` (`str`), `contractor_name` (`str`), `description` (`str`).
+- `ZoningEnvelopeReport`: Container with `parcel_id`, `zone_code`, `zone_description`, `permitted_use_status` (`PERMITTED_BY_RIGHT`, `LEGAL_NON_CONFORMING_GRANDFATHERED`, `SPECIAL_USE_PERMIT_REQUIRED`), `parcel_sqft` (`Decimal`), `building_footprint_sqft` (`Decimal`), `max_allowable_far` (`Decimal`), `current_far` (`Decimal`), `expansion_potential_sqft` (`Decimal`), `open_permit_citations_count` (`int`), `permits`, `unpermitted_alteration_risk_detected` (`bool`), and `analyst_zoning_summary`.
+
+

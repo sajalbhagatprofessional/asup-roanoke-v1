@@ -214,6 +214,15 @@ The platform exposes an Anthropic Model Context Protocol (MCP 2024-11-05) gatewa
 14. `run_aerial_facility_sentinel`: TorchGeo satellite sentinel for roof albedo, replacement cost, and yard fleet occupancy.
 15. `predict_machinery_capex_reserve`: Darts time-series model forecasting Year 1-3 capex and testing SBA 1.25x DSCR stress breach.
 16. `audit_maintenance_ledger_cleanlab`: Cleanlab data-centric audit flagging personal commingled expenses and phantom write-offs.
+17. `get_gotham_knowledge_graph`: Palantir Gotham multi-relational knowledge graph, betweenness centrality, and shortest fiduciary path.
+18. `resolve_entity_splink`: Splink Fellegi-Sunter probabilistic record linkage (Jaro-Winkler + statutory tax ID match tiers).
+19. `query_contour_micro_olap`: Foundry Contour in-process vectorized columnar micro-OLAP aggregations over distressed parcels.
+20. `fuse_gaia_spatial_boundaries`: Gaia topological boundary fusion computing setback encroachments and FEMA floodway overlap.
+21. `validate_aip_statutory_guardrails`: AIP structured schema guardrails deterministically enforcing SBA SOP 50 10 8.1 and Virginia notice statutes.
+22. `find_semantic_lookalikes`: Inven-grade semantic M&A lookalike engine discovering unlisted private peers and operational clones.
+23. `evaluate_debt_maturity_wall`: Reonomy/Trepp commercial debt wall solver computing post-refi DSCR under SOFR spread shocks and cliff scores.
+24. `audit_title_curative_redemption`: PropertyRadar title curative screener enforcing 26 U.S.C. § 7425 IRS 120-day redemption clocks and holdbacks.
+25. `scan_permits_and_zoning_envelope`: Cherre/Bowery municipal building permit auditor and Floor Area Ratio (FAR) expansion calculator.
 
 ---
 
@@ -251,3 +260,13 @@ The platform exposes an Anthropic Model Context Protocol (MCP 2024-11-05) gatewa
 - `POST /v1/ontology/contour-query`: Foundry Contour in-process vectorized columnar micro-OLAP engine (DuckDB-inspired) executing sub-50ms multi-dimensional aggregations over distressed dockets, parcels, EBITDA, and cure prices.
 - `POST /v1/ontology/spatial-fusion`: Palantir Gaia topological parcel fusion engine (Shapely/GeoPandas) computing setback encroachments, FEMA 100-year floodway intersection sqft, flood coverage percentage, and rail spur corridor proximity.
 - `POST /v1/ontology/aip-validate`: Palantir AIP structured schema guardrails deterministically enforcing statutory SBA SOP 50 10 8.1 minimum equity (>= 10%), baseline DSCR (>= 1.25x), Va. Code § 55.1-321 notice (>= 14 days), and mandatory $85,000/yr replacement GM deduction.
+
+---
+
+## 12. Advanced Sourcing Intelligence & Debt Radar (Inven / Reonomy / PropertyRadar / Cherre)
+
+- `POST /v1/sourcing/semantic-lookalikes`: Inven-grade semantic M&A lookalikes. Discovers unlisted private peers and competitors matching an exemplary acquisition target or natural language operational thesis with geographic radius, NAICS filter, and fiduciary routing.
+- `POST /v1/sourcing/debt-maturity-radar`: Reonomy/Trepp-grade commercial mortgage maturity wall radar. Scans maturing commercial mortgages within <= 24 months, projects debt service expansion under benchmark SOFR + 275 bps coupons, computes post-refi DSCR, and ranks Refinance Cliff Scores (0-100).
+- `POST /v1/sourcing/title-curative-audit`: PropertyRadar/TaxSaleResources title curative screener. Audits recorded deeds of trust, tax liens, and mechanic's claims, enforces 26 U.S.C. § 7425 IRS 120-day statutory redemption rights, and calculates required curative escrow holdbacks.
+- `POST /v1/sourcing/permit-zoning-scan`: Cherre/Bowery municipal building permit and zoning scanner. Audits recorded municipal permits, flags unpermitted alteration risks, and quantifies Floor Area Ratio (FAR) expansion potential and unused envelope square footage.
+

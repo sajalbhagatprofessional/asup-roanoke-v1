@@ -109,6 +109,17 @@ timeline
   5. `instructor-ai/instructor`: Palantir AIP structured schema guardrails ensuring deterministic Pydantic-enforced AI agent interactions adhering strictly to SBA SOP 50 10 8.1, Va. Code § 55.1-321, and replacement GM deductions.
   6. 5 new REST endpoints (`/v1/ontology/graph/{id}`, `/v1/ontology/resolve-entity`, `/v1/ontology/contour-query`, `/v1/ontology/spatial-fusion`, `/v1/ontology/aip-validate`), 5 new MCP tools (total 21 MCP tools), 39 tracked upstream open-source dependencies, and Next.js 15 Palantir Gotham™ Graph & Ontology interactive visual tab. Total test suite expanded to **117/117 tests (100% coverage)** and **50/50 Golden Suite accuracy**.
 
+### Milestone 19–22: Advanced Sourcing Intelligence & Debt Radar Suite (COMPLETED 2026-11-12)
+- **Delivered Capabilities**:
+  1. **Engine 1: Inven-Grade Semantic Lookalike Sourcing Engine (`packages/sourcing_intelligence/semantic_lookalikes.py`)**: Vectorized token similarity with NAICS prefix weighting and geographic distance decay, identifying unlisted off-market private operating clones with dedicated fiduciary outreach routes.
+  2. **Engine 2: Reonomy/Trepp-Grade Commercial Debt Maturity Wall Radar (`packages/sourcing_intelligence/debt_maturity_radar.py`)**: Commercial mortgage cliff solver projecting post-refi annual debt service expansions and DSCR compressions under benchmark SOFR + 275 bps coupons, ranking loans with Refinance Cliff Scores (0–100).
+  3. **Engine 3: PropertyRadar-Grade Title Curative Screener & IRS 120-Day Clock (`packages/sourcing_intelligence/title_curative_engine.py`)**: Recorded land encumbrance auditor enforcing 26 U.S.C. § 7425 IRS 120-day statutory redemption rights following non-judicial trustee sales and calculating required curative escrow holdbacks.
+  4. **Engine 4: Cherre/Bowery-Grade Municipal Building Permit & FAR Zoning Scanner (`packages/sourcing_intelligence/permit_zoning_scanner.py`)**: Municipal building permit auditor flagging unpermitted alteration risks and calculating Floor Area Ratio (FAR) expansion potential and unused building envelopes.
+  5. **API & AI Agent Integration**: 4 new FastAPI REST endpoints (`/v1/sourcing/semantic-lookalikes`, `/v1/sourcing/debt-maturity-radar`, `/v1/sourcing/title-curative-audit`, `/v1/sourcing/permit-zoning-scan`) and 4 new Anthropic MCP tools (bringing total to **25 MCP tools**).
+  6. **Next.js 15 Web UI**: Interactive "Sourcing & Debt Radar" tab inside `UniversalAssetDossierModal.tsx` featuring 4 rich sub-tabs for debt maturity cliffs, semantic lookalikes, title curation with IRS countdown clock, and FAR zoning envelope metrics.
+  7. **Verification**: Full test suite expanded to **123/123 tests (100% coverage)** and **50/50 Golden Suite accuracy** with zero false positives.
+
+
 ---
 
 ## 3. Future Strategic Roadmap (Milestones 18–21)
@@ -149,5 +160,5 @@ Any future AI agent or engineer continuing this project should tackle the follow
 
 When implementing any future milestone:
 1. **Never Compromise Underwriting Determinism**: Never replace pure `decimal.Decimal` math with floating-point arithmetic or LLM approximations.
-2. **Never Break Test Suite**: Run `python scripts/run_all_tests.py` and confirm all 110+ tests and the 50/50 Golden Suite pass.
+2. **Never Break Test Suite**: Run `python scripts/run_all_tests.py` and confirm all 123 tests and the 50/50 Golden Suite pass.
 3. **Always Update Documentation**: Record your architectural decisions in `docs/ARCHITECTURE.md`, API changes in `docs/API_REFERENCE.md`, and data structures in `docs/DATA_MODELS_AND_SCHEMA.md`.

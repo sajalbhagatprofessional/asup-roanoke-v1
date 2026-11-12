@@ -1,14 +1,15 @@
 # Argus (v1.0)
 ### *Autonomous Asset Intelligence, Sourcing & Underwriting Platform*
 
-[![Test Suite](https://img.shields.io/badge/Test_Suite-110%2F110_Passing_(100%25)-emerald.svg)](tests/)
+[![Test Suite](https://img.shields.io/badge/Test_Suite-123%2F123_Passing_(100%25)-emerald.svg)](tests/)
 [![Golden Suite](https://img.shields.io/badge/Golden_Suite-50%2F50_Accuracy_(100%25)-blue.svg)](tests/golden_suite/)
 [![Underwriting Engine](https://img.shields.io/badge/Underwriting-Air--Gapped_Pure_Decimal-purple.svg)](packages/underwriting_engine/)
+[![Sourcing Intelligence](https://img.shields.io/badge/Sourcing_Radar-Inven_Trepp_PropertyRadar-rose.svg)](packages/sourcing_intelligence/)
 [![AssetHealth Physical AI](https://img.shields.io/badge/AssetHealth-Augury_5_Engines-amber.svg)](packages/asset_health/)
 [![SBA Compliance](https://img.shields.io/badge/SBA_Compliance-SOP_50_10_8.1-amber.svg)](packages/underwriting_engine/sba_sop_50_10_8_1.py)
 [![Virginia Foreclosure](https://img.shields.io/badge/Virginia_Statute-Va._Code_§§_55.1--320--322-red.svg)](packages/underwriting_engine/va_foreclosure_solver.py)
 [![Infrastructure](https://img.shields.io/badge/Infrastructure-Oracle_OCI_ARM64_Ubuntu_24.04-orange.svg)](infra/)
-[![AI Agent Protocol](https://img.shields.io/badge/AI_Agent_Gateway-Anthropic_MCP_2024--11--05-cyan.svg)](services/mcp/)
+[![AI Agent Protocol](https://img.shields.io/badge/AI_Agent_Gateway-Anthropic_MCP_25_Tools-cyan.svg)](services/mcp/)
 
 ---
 
@@ -51,11 +52,11 @@ pip install -r requirements.txt
 ```
 
 ### 2. Run the Master Verification Gate
-Verify that all 117 unit, integration, RBAC, and golden backtests pass with 100% coverage:
+Verify that all 123 unit, integration, RBAC, and golden backtests pass with 100% coverage:
 ```bash
 python scripts/run_all_tests.py
 ```
-*(Expected Output: `Total Test Suite: 117/117 Tests PASSED (100% Coverage)!` and `[GOLDEN SUITE] 50-Deal Accuracy: 50/50`)*
+*(Expected Output: `Total Test Suite: 123/123 Tests PASSED (100% Coverage)!` and `[GOLDEN SUITE] 50-Deal Accuracy: 50/50`)*
 
 ### 3. Launch Local Backend Server
 ```bash
@@ -124,6 +125,11 @@ asup-roanoke-v1/
 │   │   ├── contour_engine_duckdb.py               # Foundry Contour sub-50ms vectorized micro-OLAP
 │   │   ├── gaia_spatial_fusion.py                 # Gaia topological parcel boundary & FEMA floodway fusion
 │   │   └── aip_guardrails_instructor.py           # AIP structured schema guardrails & statutory invariants
+│   ├── sourcing_intelligence/                     # Advanced Sourcing Intelligence Suite
+│   │   ├── semantic_lookalikes.py                 # Inven-grade vectorized private peer clone finder
+│   │   ├── debt_maturity_radar.py                 # Reonomy/Trepp commercial debt wall & refi stress radar
+│   │   ├── title_curative_engine.py               # PropertyRadar 26 U.S.C. § 7425 IRS redemption & curative
+│   │   └── permit_zoning_scanner.py               # Cherre/Bowery municipal building permits & FAR scanner
 │   └── underwriting_engine/                       # 100% Deterministic Pure Decimal Math
 │       ├── sba_sop_50_10_8_1.py                   # SBA SOP 50 10 8.1 compliant solver
 │       ├── va_foreclosure_solver.py               # Va. Code § 55.1-321 14d notice & basis solver
@@ -168,13 +174,13 @@ For in-depth technical documentation, consult the dedicated guides in the [`docs
 3. **[REST & MCP API Reference (`docs/API_REFERENCE.md`)](docs/API_REFERENCE.md)**: Full endpoint definitions, request/response schemas, RBAC requirements, and Model Context Protocol specification.
 4. **[Data Models & Database Schema (`docs/DATA_MODELS_AND_SCHEMA.md`)](docs/DATA_MODELS_AND_SCHEMA.md)**: PostgreSQL 16 + PostGIS DDL, Pydantic data models, and `ProvenancedValue[T]` epistemic definitions.
 5. **[Operations & Deployment (`docs/OPERATIONS_AND_DEPLOYMENT.md`)](docs/OPERATIONS_AND_DEPLOYMENT.md)**: Oracle Cloud Infrastructure ARM64 VPS setup, Docker Compose, Caddy reverse proxy, and rollback procedures.
-6. **[Product Roadmap & Evolution (`docs/ROADMAP_AND_FUTURE_PLANS.md`)](docs/ROADMAP_AND_FUTURE_PLANS.md)**: Complete milestone ledger (Milestones 1–18) and future strategic roadmap (Milestones 19–21).
+6. **[Product Roadmap & Evolution (`docs/ROADMAP_AND_FUTURE_PLANS.md`)](docs/ROADMAP_AND_FUTURE_PLANS.md)**: Complete milestone ledger (Milestones 1–22) and future strategic roadmap.
 
 ---
 
 ## 6. Guidelines for Autonomous AI Agents
 
 If you are an AI assistant (Google Antigravity, Claude, Hermes, Copilot, etc.) working on this repository:
-1. **Always Run Verification First**: Execute `python scripts/run_all_tests.py` and confirm all 117 tests pass before touching any code.
+1. **Always Run Verification First**: Execute `python scripts/run_all_tests.py` and confirm all 123 tests pass before touching any code.
 2. **Preserve Underwriting Air-Gap**: Never introduce floating-point math, unverified network calls, or LLM hallucinations into `packages/underwriting_engine/`.
 3. **Keep Documentation Synchronized**: Whenever you introduce a new feature, API endpoint, or architectural component, immediately update `README.md` and the appropriate files in `docs/` according to the **Autonomous Documentation Protocol** in [`AGENTS.md`](AGENTS.md).

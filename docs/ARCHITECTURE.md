@@ -211,3 +211,37 @@ graph TD
 5. **Palantir AIP Deterministic Guardrails (`instructor-ai/instructor`)**:
    - Enforces strict Pydantic schema validation preventing AI agents or LLM proposals from violating SBA SOP 50 10 8.1 minimum equity injection (10%), buyer unborrowed cash (5%), seller note standby lock (36 months), or Virginia foreclosure notice (14 days).
 
+---
+
+## 11. Advanced Sourcing Intelligence & Debt Radar Suite (Milestones 19–22)
+
+```mermaid
+flowchart TD
+    subgraph SOURCING_SUITE ["Advanced Sourcing Intelligence Suite"]
+        E1["Engine 1: Inven Semantic Lookalikes\n(Vectorized private peer cloning & M&A routing)"]
+        E2["Engine 2: Trepp Commercial Debt Wall\n(SOFR rate shock, DSCR compression & cliff scores)"]
+        E3["Engine 3: PropertyRadar Title Curative\n(26 U.S.C. § 7425 IRS 120d clock & holdbacks)"]
+        E4["Engine 4: Cherre Permits & FAR Envelope\n(FAR expansion potential & unpermitted alteration risk)"]
+    end
+    
+    SOURCING_SUITE --> DOSSIER["Universal Asset Dossier\nSourcing & Debt Radar Tab"]
+    SOURCING_SUITE --> MCP["Model Context Protocol (MCP)\n25 AI Agent Tools"]
+```
+
+1. **Inven-Grade Semantic Lookalike Sourcing Engine (`packages/sourcing_intelligence/semantic_lookalikes.py`)**:
+   - Vectorized token similarity with NAICS prefix weighting and geographic distance decay.
+   - Identifies unlisted, off-market private peers matching high-performing acquisition targets or natural language operational theses.
+   - Automatically pairs each clone with a fiduciary outreach routing path (`SUBSTITUTE_TRUSTEE`, `COMMERCIAL_BROKER`, `MANAGING_PARTNER`).
+2. **Reonomy/Trepp-Grade Commercial Debt Maturity Wall Radar (`packages/sourcing_intelligence/debt_maturity_radar.py`)**:
+   - Identifies commercial mortgages facing impending maturity cliff shocks within <= 24 months.
+   - Simulates refinancing under current SOFR spread environments (e.g. 4.25% fixed -> 8.25%), computes resulting annual debt service escalations and post-refi DSCR, and ranks loans by Refinance Cliff Score (0–100).
+   - Generates off-market acquisition theses where monetary default forces bilateral owner-buyer workouts prior to auction.
+3. **PropertyRadar-Grade Title Curative Screener & IRS 120-Day Clock (`packages/sourcing_intelligence/title_curative_engine.py`)**:
+   - Audits recorded land encumbrances (deeds of trust, tax liens, mechanics' liens under Va. Code § 43-4).
+   - Enforces the statutory 120-day right of redemption under 26 U.S.C. § 7425 retained by the IRS following non-judicial trustee foreclosure sales.
+   - Calculates recommended escrow indemnity holdbacks in USD to ensure insurable and marketable title.
+4. **Cherre/Bowery-Grade Municipal Building Permit & FAR Zoning Scanner (`packages/sourcing_intelligence/permit_zoning_scanner.py`)**:
+   - Audits municipal building permit ledgers, matching permits against recorded alterations to detect unpermitted modification risks.
+   - Quantifies Floor Area Ratio (FAR) utilization against maximum municipal limits, identifying surplus expansion envelopes in square feet.
+
+

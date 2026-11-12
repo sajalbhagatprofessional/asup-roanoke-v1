@@ -52,6 +52,10 @@ import {
   UpstreamVerifyAirgapResult,
   AssetHealthResponse,
   CompositeAssetHealthScore,
+  SemanticLookalikeReport,
+  DebtMaturityRadarReport,
+  TitleCurativeAuditReport,
+  ZoningEnvelopeReport,
 } from "./types";
 
 const getApiBase = () => {
@@ -1143,6 +1147,73 @@ export async function fuseGaiaSpatialTwin(params: {
   if (!res.ok) throw new Error(`Failed to execute Gaia spatial fusion: ${res.statusText}`);
   return res.json();
 }
+
+// Sourcing Intelligence & Debt Radar (Inven / Reonomy / PropertyRadar / Cherre)
+export async function fetchSemanticLookalikes(params: {
+  query: string;
+  exemplary_entity_id?: string;
+  min_similarity?: number;
+  naics_prefix?: string;
+  max_distance_miles?: number;
+}): Promise<{ status: string; lookalike_report: SemanticLookalikeReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/sourcing/semantic-lookalikes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch semantic lookalikes: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchDebtMaturityRadar(params: {
+  target_market?: string;
+  max_months_to_maturity?: number;
+  projected_refinance_rate?: number;
+} = {}): Promise<{ status: string; maturity_radar: DebtMaturityRadarReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/sourcing/debt-maturity-radar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch debt maturity radar: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchTitleCurativeAudit(params: {
+  parcel_id: string;
+  deal_id?: string;
+  foreclosure_sale_date_iso?: string;
+  custom_liens?: any[];
+}): Promise<{ status: string; title_curative_audit: TitleCurativeAuditReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/sourcing/title-curative-audit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to execute title curative audit: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchPermitZoningScan(params: {
+  parcel_id: string;
+  parcel_area_acres?: number;
+  building_footprint_sqft?: number;
+  zoning_code?: string;
+  custom_permits?: any[];
+}): Promise<{ status: string; zoning_envelope: ZoningEnvelopeReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/sourcing/permit-zoning-scan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to execute permit & zoning scan: ${res.statusText}`);
+  return res.json();
+}
+
 
 
 

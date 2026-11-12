@@ -32,6 +32,7 @@ import tests.integration.test_mcp_agent_gateway as i15
 import tests.integration.test_upstream_dependency_manager as i16
 import tests.integration.test_augury_asset_health_engines as i17
 import tests.integration.test_palantir_ontology_engines as i18
+import tests.integration.test_advanced_sourcing_intelligence as i19
 
 
 def main() -> int:
@@ -237,6 +238,20 @@ def main() -> int:
 
     print(f"All {palantir_passed}/{palantir_passed} Palantir Operational Ontology Suite Tests PASSED!")
 
+    # Milestone 19-22: Advanced Sourcing Intelligence & Underwriting Radar
+    sourcing_passed = 0
+    tc19 = i19.TestAdvancedSourcingIntelligence()
+    tc19.setUp()
+    for attr in sorted(dir(tc19)):
+        if attr.startswith("test_"):
+            fn = getattr(tc19, attr)
+            if callable(fn):
+                fn()
+                sourcing_passed += 1
+                print(f"[PASS] {i19.__name__}.{attr}")
+
+    print(f"All {sourcing_passed}/{sourcing_passed} Advanced Sourcing Intelligence Suite Tests PASSED!")
+
     total_passed = (
         core_passed
         + api_passed
@@ -254,6 +269,7 @@ def main() -> int:
         + dep_passed
         + augury_passed
         + palantir_passed
+        + sourcing_passed
     )
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 
