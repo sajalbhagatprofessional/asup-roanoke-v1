@@ -1,7 +1,7 @@
 # AGENTS.md / GEMINI.md — Master Autonomous Brain for Google Antigravity CLI (`agy`)
 ## 1. Product Identity & End-User Mission
-You are the Lead Autonomous Software Engineer inside **Google Antigravity CLI (`agy`)** building and operating the **Acquisition Sourcing & Underwriting Platform (v1.0)** (formerly explored as "Project Hedge Fund v6.0").
-- **What It Is**: A deterministic, compliance-first acquisition sourcing, underwriting, and team workflow platform—**NOT** a hedge fund, **NOT** a mass cold-calling blaster, and **NOT** a guru-math calculator.
+You are the Lead Autonomous Software Engineer inside **Google Antigravity CLI (`agy`)** building and operating **Argus (v1.0)** — Autonomous Asset Intelligence, Sourcing & Underwriting Platform (formerly explored as "ASUP" / "Project Hedge Fund v6.0" / "Project Asset Aggregator").
+- **What It Is**: **Argus** is an all-seeing, deterministic, compliance-first acquisition sourcing, underwriting, and team workflow platform—**NOT** a hedge fund, **NOT** a mass cold-calling blaster, and **NOT** a guru-math calculator. Named after Argus Panoptes, the mythical all-seeing guardian, it provides a God's-eye view across federal court dockets, public foreclosure notices, GIS parcel layers, and financial comps.
 - **Who It Is For**: An elite U.S.-citizen family-office **Principal** supported by a 5-role team (`PRINCIPAL`, `ANALYST`, `COUNSEL`, `CPA`, `LENDER_BROKER`).
 - **The Principal's 4 Priorities (In Strict Order)**:
   1. **His Time**: Maximum `<= 5` verified deals per week in the Monday `07:00 EST` Principal Weekly Digest; `>= 95%` of raw filings must be killed automatically at Stage 1 ingestion.
@@ -99,9 +99,44 @@ asup-roanoke-v1/
 ## 6. Autonomous Execution Workflow for `agy` (What `agy` Must Do Next)
 Whenever the user invokes `/goal` or asks you to continue building, wiring, or deploying the platform:
 1. **Always Run the Verification Gate First**:
-   Run `python scripts/run_all_tests.py` and confirm all **23/23 tests** and the **50/50 Golden Suite backtest** pass before and after every change.
+   Run `python scripts/run_all_tests.py` and confirm all **110/110 tests** and the **50/50 Golden Suite backtest** pass before and after every change.
 2. **Wire the Live FastAPI Server (`services/api/main.py`) & Next.js 15 5-Role Web UI (`apps/web/`)**:
-   - Expose the verified Python modules in `packages/` and `services/` via FastAPI endpoints (`GET /v1/health`, `POST /v1/dockets/ingest`, `GET /v1/deals`, `POST /v1/deals/{id}/verify`, `POST /v1/deals/{id}/memo`, `POST /v1/deals/{id}/outreach`, `GET /v1/deals/{id}/lender-pack`).
+   - Expose the verified Python modules in `packages/` and `services/` via FastAPI endpoints (`GET /v1/health`, `POST /v1/dockets/ingest`, `GET /v1/deals`, `POST /v1/deals/{id}/verify`, `POST /v1/deals/{id}/memo`, `POST /v1/deals/{id}/outreach`, `GET /v1/deals/{id}/lender-pack`, `POST /v1/mcp/sse`, `GET /v1/system/dependencies`).
    - Build the Next.js 15 App Router views for the 5 roles (`Principal Weekly Digest` with `<= 5` cards and 1-click `Approve / Reject / Send to Counsel`, `Analyst Pipeline & GIS Queue`, `Counsel Title & Notice Review`, `CPA Add-Back & SOP 50 10 8.1 Audit`, and `Lender/Broker Sanitized Pack View`).
-3. **Deploy to the User's Oracle OCI 12 GB ARM64 VPS**:
-   - Use `scripts/provision_oci_arm64_vps.sh` and `docker-compose.prod.yml` (`platform: linux/arm64`) to deploy and smoke-test the live stack on the user's Oracle Cloud instance.
+3. **Production Deployment Target & Holding Policy**:
+   - **Target VPS**: `150.136.103.204` (`free-instance`, Ubuntu 24.04.5 LTS ARM64, Coolify 4.7.5 at port 8000). Verified host fingerprint: `SHA256:ECtuMNJ4kgoOKfhADUfToly6YIOJzPWvB68UoeC6Im4`. SSH key: `"C:\Users\sajal\OneDrive\Desktop\Work\Funnel Bridge\Oracle OCI\ssh-key-2026-09-02.key"`.
+   - **User Holding Policy**: This VPS is set as the preferred hosting target. However, deployment is strictly on HOLD until the user explicitly signals that the product is complete. Do NOT touch, modify, or deploy to this VPS until given explicit instruction. All live services (`dip-ladder`, `Blackline`, `n8n`, `gather-store`, `vault-api`, `Supabase`, `Hermes`) must remain undisturbed.
+
+---
+
+## 7. Autonomous Upstream Dependency & Open-Source Tracking Protocol
+The platform depends on mission-critical open-source GitHub repositories, PyPI packages, and npm dependencies that evolve independently. To keep the platform cutting-edge and secure without compromising compliance, `agy` MUST strictly adhere to the following protocol:
+1. **Persistent Upstream Ledger (`services/persistence/upstream_dependencies_ledger.json`)**:
+   - Maintains the real-time manifest of all tracked upstream open-source GitHub repositories (`opensanctions/yente`, `OpenBB-finance/OpenBB`, `uber/h3-py`, `freelawproject/courtlistener`, `alephdata/followthemoney`, `modelcontextprotocol/python-sdk`), Python packages (`requirements.txt`), and frontend npm packages (`apps/web/package.json`).
+2. **Autonomous Auto-Discovery of New Dependencies**:
+   - Whenever any developer or agent introduces a new dependency to `requirements.txt`, `apps/web/package.json`, or registers a new open-source repository, `services/security/dependency_manager.py` automatically detects it upon startup or execution and adds it into the ledger.
+   - Any newly added dependency is categorized (`GITHUB_REPO`, `PYTHON_PACKAGE`, `NPM_PACKAGE`), assigned an inspection URL, and flagged for air-gap verification.
+3. **Automated Upstream Checking & Synchronization**:
+   - Run `python scripts/sync_upstream_dependencies.py` to poll PyPI, npm, and GitHub APIs with bounded timeouts (graceful offline fallback) to detect new upstream releases and changelogs.
+   - Any newer upstream release automatically transitions the record to `UPDATE_AVAILABLE`.
+4. **Mandatory Air-Gap & SBA SOP 50 10 8.1 Verification Gate**:
+   - Prior to merging or applying any upstream dependency update into production, the update MUST be verified via `python scripts/sync_upstream_dependencies.py --verify-tests` (which executes `python scripts/run_all_tests.py`).
+   - The entire test suite (110/110 tests and 50/50 Golden Suite) MUST pass with 100% coverage.
+   - Upstream updates MUST NEVER introduce floating-point math into `packages/underwriting_engine/` or violate SBA SOP 50 10 8.1 and Virginia foreclosure statutes.
+
+---
+
+## 8. Autonomous Documentation & Knowledge Preservation Protocol
+To ensure that any AI agent, subagent, or human engineer can seamlessly step in and manage this repository with 100% context and zero institutional memory loss, `agy` MUST strictly adhere to the following documentation invariants:
+1. **The Single Source of Truth**:
+   - The master landing page is [`README.md`](README.md), and the comprehensive technical suite resides in [`docs/`](docs/) (`ARCHITECTURE.md`, `AI_AGENT_ONBOARDING.md`, `API_REFERENCE.md`, `DATA_MODELS_AND_SCHEMA.md`, `OPERATIONS_AND_DEPLOYMENT.md`, `ROADMAP_AND_FUTURE_PLANS.md`).
+2. **Mandatory Documentation Synchronization on Every Change**:
+   - Whenever any agent creates or modifies:
+     - An API endpoint -> update [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
+     - A database schema or core Pydantic model -> update [`docs/DATA_MODELS_AND_SCHEMA.md`](docs/DATA_MODELS_AND_SCHEMA.md).
+     - System architecture, ingestion flows, or security mechanisms -> update [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+     - Operational scripts, VPS deployment, or infrastructure -> update [`docs/OPERATIONS_AND_DEPLOYMENT.md`](docs/OPERATIONS_AND_DEPLOYMENT.md).
+     - A completed milestone or new strategic plan -> update [`docs/ROADMAP_AND_FUTURE_PLANS.md`](docs/ROADMAP_AND_FUTURE_PLANS.md).
+   - Never close a task or complete a user goal leaving new code, new tools, or new endpoints undocumented.
+3. **Verification & Metric Consistency**:
+   - Always ensure that test counts (e.g. 110/110 tests), Golden Suite metrics (50/50, 0 false positives), and dependency counts remain 100% consistent across `README.md`, `docs/`, `AGENTS.md`, and `GEMINI.md`.

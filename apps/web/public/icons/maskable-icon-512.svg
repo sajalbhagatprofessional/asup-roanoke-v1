@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="gradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <!-- Full bleed for maskable icon -->
+  <rect width="512" height="512" fill="url(#bgMask)"/>
+  <!-- Central emblem in safe zone (80% box = 410x410) -->
+  <g transform="translate(156, 120)">
+    <path d="M100 0 L180 40 C180 140 100 195 100 205 C100 195 20 140 20 40 Z" fill="none" stroke="url(#gradMask)" stroke-width="14" stroke-linejoin="round"/>
+    <path d="M65 75 L65 145 M100 55 L100 160 M135 75 L135 145" stroke="#38bdf8" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <text x="256" y="375" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="32" font-weight="900" fill="#f8fafc" text-anchor="middle" letter-spacing="3">ASUP</text>
+  <text x="256" y="410" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="700" fill="#10b981" text-anchor="middle" letter-spacing="2">ALADDIN ENGINE</text>
+</svg>

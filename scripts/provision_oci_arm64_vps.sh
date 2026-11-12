@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-Time Provisioning Script for Oracle Cloud (OCI) Ampere A1 ARM64 (12 GB RAM / 100 GB Storage)
+# One-Time Provisioning Script for Oracle Cloud (OCI) Ampere A1 ARM64 (12 GB RAM / 100 GB Storage) — Argus Platform
 # Ubuntu 24.04 LTS (aarch64)
 set -euo pipefail
 
@@ -30,23 +30,23 @@ sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw --force enable
 
-echo "[4/5] Creating /opt/asup directory and locked .env.prod template..."
-sudo mkdir -p /opt/asup/backups
-sudo chown -R "$USER":"$USER" /opt/asup
-if [[ ! -f /opt/asup/.env.prod ]]; then
-  install -m 0600 /dev/null /opt/asup/.env.prod
-  cat << 'EOF' > /opt/asup/.env.prod
-ASUP_DOMAIN=deals.example.com
-POSTGRES_USER=asup_admin
+echo "[4/5] Creating /opt/argus directory and locked .env.prod template..."
+sudo mkdir -p /opt/argus/backups
+sudo chown -R "$USER":"$USER" /opt/argus
+if [[ ! -f /opt/argus/.env.prod ]]; then
+  install -m 0600 /dev/null /opt/argus/.env.prod
+  cat << 'EOF' > /opt/argus/.env.prod
+ARGUS_DOMAIN=deals.example.com
+POSTGRES_USER=argus_admin
 POSTGRES_PASSWORD=CHANGE_ME_STRONG_32_CHAR_SECRET
-POSTGRES_DB=asup_roanoke
+POSTGRES_DB=argus_roanoke
 REDIS_PASSWORD=CHANGE_ME_STRONG_32_CHAR_REDIS_SECRET
 PII_AES_GCM_KEY_B64=CHANGE_ME_32_BYTE_BASE64_KEY
 PACER_DAILY_CAP_USD=3.00
 KILL_SWITCH_MEMO_DRAFTER=false
 OUTREACH_GLOBAL_FREEZE=0
 EOF
-  echo "Created /opt/asup/.env.prod (chmod 600). Populate secrets before first deploy."
+  echo "Created /opt/argus/.env.prod (chmod 600). Populate secrets before first deploy."
 fi
 
-echo "[5/5] Oracle OCI ARM64 VPS provisioning complete!"
+echo "[5/5] Oracle OCI ARM64 VPS provisioning complete for Argus!"

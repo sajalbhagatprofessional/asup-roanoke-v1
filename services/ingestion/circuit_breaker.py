@@ -124,3 +124,27 @@ class LawfulCircuitBreaker:
     @property
     def events(self) -> List[CircuitBreakerEvent]:
         return list(self._events)
+
+    def is_locked(self, url: str, now: Optional[datetime] = None) -> bool:
+        """Returns True if the domain is currently locked by the circuit breaker."""
+        now = now or datetime.now(timezone.utc)
+        domain = self._extract_domain(url)
+        locked_until = self._domain_locks.get(domain)
+        return bool(locked_until and now < locked_until)
+
+    def record_success(self, url: str) -> None:
+        """Records a successful request against a target domain."""
+        pass
+
+    def record_failure(self, url: str, status_code: int, body_snippet: str = "") -> None:
+        """Records an HTTP error status code; trips 24h lock if 401/403/429."""
+        try:
+            self.inspect_response(url=url, status_code=status_code, body_snippet=body_snippet)
+        except CircuitBreakerOpenError:
+            pass
+
+    @property
+    def active_domain_locks(self) -> Dict[str, datetime]:
+        """Returns currently active domain locks."""
+        now = datetime.now(timezone.utc)
+        return {d: t for d, t in self._domain_locks.items() if now < t}

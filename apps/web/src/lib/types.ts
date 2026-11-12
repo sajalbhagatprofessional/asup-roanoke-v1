@@ -378,3 +378,647 @@ export interface ShadowDistressOpportunity {
   operator_action_strategy: string;
 }
 
+export interface SensitivityMatrixCell {
+  revenue_shock_pct: string;
+  rate_shock_bps: string;
+  effective_rate_pct: string;
+  net_cash_flow_usd: string;
+  annual_debt_service_usd: string;
+  dscr: string;
+  cash_on_cash_pct: string;
+  risk_tier: "SAFE_IN_BOX" | "WATCH_STRESSED" | "MARGINAL_COVERAGE" | "BREACH_INSOLVENT";
+  is_mandate_compliant: boolean;
+}
+
+export interface SensitivityMatrixResponse {
+  deal_id?: string;
+  base_adjusted_ebitda_usd: string;
+  sba_loan_usd: string;
+  base_rate_pct: string;
+  buyer_equity_usd: string;
+  revenue_steps: string[];
+  rate_shock_bps_steps: number[];
+  matrix: SensitivityMatrixCell[][];
+}
+
+export interface MerkleAuditVerification {
+  chain_integrity_valid: boolean;
+  total_events: number;
+  tip_hash: string;
+}
+
+// ============================================================================
+// PROJECT ASSET AGGREGATOR V2.0 MULTI-ASSET TYPES
+// ============================================================================
+
+export type AssetClass =
+  | "BUSINESS_ACQUISITION"
+  | "REAL_ESTATE"
+  | "TAX_LIEN_MUNICIPAL"
+  | "EQUIPMENT_FLEET";
+
+export type PipelineStage =
+  | "SAVED"
+  | "OUTREACH_PENDING"
+  | "IN_COMMUNICATION"
+  | "UNDER_DILIGENCE"
+  | "LOI_ISSUED"
+  | "CLOSED"
+  | "PASSED";
+
+export type OperatorStyle = "PASSIVE_YIELD" | "ACTIVE_OPERATOR";
+
+export interface UserPreferenceProfile {
+  profile_id: string;
+  investor_name: string;
+  target_locations: string[];
+  min_check_usd: string;
+  max_budget_usd: string;
+  target_asset_classes: AssetClass[];
+  operator_style: OperatorStyle;
+  max_acceptable_crime_index: number;
+  min_years_operating: number;
+  baby_boomer_succession_only: boolean;
+  section_8_only: boolean;
+  updated_at?: string;
+}
+
+export interface OwnerOSINTReport {
+  founder_name: string;
+  owner_age_bracket: string;
+  tenure_years: number;
+  is_confirmed_baby_boomer: boolean;
+  professional_licenses: Array<{ board: string; license_no: string; status: string }>;
+  litigation_screening: Record<string, any>;
+  criminal_background_clearance: boolean;
+  regulatory_enforcement_status: string;
+  public_reputation_summary: string;
+  direct_contacts: Record<string, string>;
+  beneficial_ownership?: any;
+  corporate_network?: any;
+  verified_at?: string;
+}
+
+export interface UniversalAsset {
+  asset_id: string;
+  title: string;
+  asset_class: AssetClass;
+  city: string;
+  state: string;
+  zip_code: string;
+  county: string;
+  metro_area: string;
+  asking_or_estimated_value_usd: string;
+  downside_liquidation_floor_usd: string;
+  pipeline_stage: PipelineStage;
+
+  // Macro Metrics (Tier 1 Bulk Indexed)
+  crime_index: number;
+  median_household_income_usd: string;
+  population_growth_10yr_pct: string;
+  property_tax_rate_pct: string;
+
+  // Business Specifics
+  operating_years?: number;
+  founded_year?: number;
+  is_potential_baby_boomer?: boolean;
+  employee_count_band?: string;
+  estimated_annual_revenue_usd?: string;
+  estimated_sde_or_ebitda_usd?: string;
+  corporate_registry_status?: string;
+  naics_code?: string;
+  industry_category?: string;
+
+  // Real Estate Specifics
+  property_type?: string;
+  units_count?: number;
+  building_sqft?: number;
+  cap_rate_pct?: string;
+  cash_on_cash_pct?: string;
+  average_monthly_rent_usd?: string;
+  section_8_eligible?: boolean;
+
+  // Tax Lien Specifics
+  lien_face_value_usd?: string;
+  redemption_penalty_rate_pct?: string;
+  redemption_period_months?: number;
+  parcel_assessed_value_usd?: string;
+
+  // Equipment Specifics
+  machinery_type?: string;
+  hours_or_mileage?: string;
+
+  // On-Demand Deep Intelligence
+  ai_deal_thesis?: string;
+  ai_risk_assessment?: string;
+  owner_osint?: OwnerOSINTReport;
+}
+
+export interface OutreachPlaybook {
+  asset_id: string;
+  playbook_type: "SUCCESSION_BUYOUT" | "AI_MODERNIZATION";
+  target_owner: string;
+  subject_line: string;
+  body_markdown: string;
+  suggested_channels: string[];
+  generated_at: string;
+}
+
+// ==========================================
+// USER AUTHENTICATION & MANAGEMENT TYPES
+// ==========================================
+export interface AuthUser {
+  user_id: string;
+  username: string;
+  email: string;
+  role: TeamRole;
+  is_verified: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+  preferences_id?: string;
+}
+
+export interface AuthResponse {
+  status: string;
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+}
+
+export interface SignUpPayload {
+  username: string;
+  email: string;
+  password: string;
+  confirm_password: string;
+  role?: TeamRole;
+}
+
+export interface SignInPayload {
+  username_or_email: string;
+  password: string;
+}
+
+export interface VerifyEmailPayload {
+  token: string;
+}
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  new_password: string;
+  confirm_password: string;
+}
+
+export interface OAuthProviderInfo {
+  enabled: boolean;
+  client_id: string | null;
+  provider_name: string;
+  is_mock_available: boolean;
+}
+
+export interface OAuthProvidersResponse {
+  google: OAuthProviderInfo;
+  microsoft: OAuthProviderInfo;
+}
+
+export interface NationwideScraperStatus {
+  status: string;
+  federal_bankruptcy_courts_indexed: number;
+  statewide_public_notice_portals_indexed: number;
+  centralized_auction_platforms_indexed: number;
+  universal_arcgis_parcel_crawler_active: boolean;
+  circuit_breaker_domain_locks_active: number;
+  crawling_policy: string;
+}
+
+export interface NationwideScanMetrics {
+  status: string;
+  target_states: string[];
+  target_fips_count: number;
+  federal_dockets_harvested: number;
+  public_notices_harvested: number;
+  government_auctions_harvested: number;
+  gis_parcels_harvested: number;
+  total_raw_harvested: number;
+  in_box_ingested_count: number;
+  rejected_count: number;
+  scanned_at: string;
+}
+
+export interface NationwideScanResponse {
+  status: string;
+  message: string;
+  metrics: NationwideScanMetrics;
+}
+
+export interface ParcelSpatialTwin {
+  parcel_id: string;
+  fips_code: string;
+  center_lat: number;
+  center_lng: number;
+  ground_elevation_ft: number;
+  polygon_vertices: [number, number][];
+  acreage: number;
+  building_footprint_sqft: number;
+  clear_ceiling_height_ft: number;
+  rooftop_hvac_units: number;
+  rooftop_condition_score: string;
+  loading_dock_bays: number;
+  drive_in_doors: number;
+  truck_apron_depth_ft: number;
+  nearest_interstate_miles: number;
+  active_rail_spur: boolean;
+  fema_bfe_elevation_ft: number;
+  flood_clearance_delta_ft: number;
+}
+
+export interface SpatialTwinResponse {
+  status: string;
+  asset_id: string;
+  title: string;
+  asset_class: string;
+  address: string;
+  spatial_twin: ParcelSpatialTwin;
+  camera_preset: {
+    heading_deg: number;
+    pitch_deg: number;
+    altitude_meters: number;
+  };
+}
+
+// =========================================================================
+// FIVE INSTITUTIONAL ALADDIN ENGINES TYPES
+// =========================================================================
+
+// Engine 1: Uber H3 Spatial Clustering
+export interface H3SpatialIndex {
+  h3_index_res8: string;
+  h3_index_res7: string;
+  h3_index_res9: string;
+  center_lat: number;
+  center_lng: number;
+  hex_boundary_res8: [number, number][];
+}
+
+export interface H3RollUpCluster {
+  cluster_id: string;
+  cluster_name: string;
+  anchor_h3_res7: string;
+  covered_h3_cells_res8: string[];
+  naics_code: string;
+  industry_title: string;
+  asset_ids: string[];
+  asset_titles: string[];
+  member_count: number;
+  combined_asking_value_usd: string;
+  combined_revenue_usd: string;
+  combined_ebitda_usd: string;
+  standalone_avg_multiple: string;
+  institutional_exit_multiple: string;
+  arbitrage_spread_multiple: string;
+  projected_post_synergy_value_usd: string;
+  multiple_expansion_arbitrage_gain_usd: string;
+  center_lat: number;
+  center_lng: number;
+}
+
+// Engine 2: SEC EDGAR XBRL Comps & Form D Distress
+export interface PublicSectorCompsBenchmark {
+  naics_code: string;
+  sector_name: string;
+  peer_tickers: string[];
+  median_ev_ebitda: string;
+  p25_ev_ebitda: string;
+  p75_ev_ebitda: string;
+  median_pe_multiple: string;
+  median_debt_to_equity: string;
+  median_fcf_yield_pct: string;
+  source_domain: string;
+}
+
+export interface MultipleArbitrageResult {
+  naics_code: string;
+  sector_name: string;
+  private_purchase_ev_usd: string;
+  private_normalized_ebitda_usd: string;
+  private_entry_multiple: string;
+  public_median_multiple: string;
+  multiple_expansion_spread: string;
+  immediate_arbitrage_gain_usd: string;
+  projected_institutional_exit_val_usd: string;
+  is_arbitrage_accretive: boolean;
+  arbitrage_tier: "TIER_1_SUPER_ACCRETIVE" | "TIER_2_ACCRETIVE" | "TIER_3_FAIR" | "TIER_4_DILUTIVE";
+}
+
+export interface FormDDistressEvaluation {
+  cik: string;
+  issuer_name: string;
+  offering_amount_usd: string;
+  amount_sold_usd: string;
+  remaining_unsold_usd: string;
+  percent_subscribed: string;
+  security_type: string;
+  days_open: number;
+  distress_score: number;
+  distress_severity: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+  identified_distress_flags: string[];
+  acquisition_opportunity_summary: string;
+}
+
+// Engine 3: OpenSanctions & Yente AML/KYC Screening
+export interface SanctionMatchHit {
+  dataset: string;
+  matched_name: string;
+  target_query: string;
+  similarity_score: string;
+  program_or_category: string;
+  sanctions_url: string;
+  is_exact_match: boolean;
+}
+
+export interface YenteComplianceCertificate {
+  certificate_id: string;
+  screened_at: string;
+  screener_role: string;
+  target_entity_name: string;
+  target_tin_or_ein?: string;
+  target_jurisdiction: string;
+  screened_beneficial_owners: string[];
+  total_datasets_queried: number;
+  matched_hits: SanctionMatchHit[];
+  clearance_disposition: "CLEARED_FOR_TRANSACTION" | "RESTRICTED_REQUIRES_ENHANCED_DILIGENCE" | "PROHIBITED_SANCTIONED_ENTITY";
+  is_fully_cleared: boolean;
+  risk_score_basis_points: number;
+  sha256_fingerprint: string;
+  legal_disclaimer: string;
+}
+
+// Engine 4: Unstructured Tax Return Parser
+export interface ExtractedTaxLineItem {
+  line_number: string;
+  description: string;
+  amount_usd: string;
+  is_lifestyle_addback_candidate: boolean;
+  rationale: string;
+}
+
+export interface ParsedTaxDocumentReport {
+  document_type: string;
+  tax_year: number;
+  taxpayer_name: string;
+  gross_receipts_usd: string;
+  cost_of_goods_sold_usd: string;
+  gross_profit_usd: string;
+  depreciation_amortization_usd: string;
+  interest_expense_usd: string;
+  officer_or_owner_comp_usd: string;
+  net_taxable_income_usd: string;
+  line_items: ExtractedTaxLineItem[];
+  detected_lifestyle_addbacks: Array<{
+    category: string;
+    amount_usd: string;
+    has_cpa_or_tax_return_proof: boolean;
+    is_guru_synergy_claim: boolean;
+  }>;
+  qoe_audit_result: {
+    reported_sde_usd: string;
+    verified_addbacks_usd: string;
+    disallowed_unproven_addbacks_usd: string;
+    replacement_gm_deduction_usd: string;
+    adjusted_ebitda_post_gm_usd: string;
+    working_capital_peg_12m_avg_usd: string;
+    audit_flags: string[];
+  };
+}
+
+// Engine 5: OpenBB Macro SOFR Yield Curve
+export interface BenchmarkYieldCurve {
+  as_of_date: string;
+  sofr_1m_rate: string;
+  sofr_3m_rate: string;
+  treasury_10y_rate: string;
+  wsj_prime_rate: string;
+  sba_max_rate_prime_plus_275: string;
+  senior_bank_spread_bps: number;
+  openbb_source: string;
+}
+
+export interface MacroRateShockResult {
+  scenario_id: string;
+  scenario_name: string;
+  rate_shock_bps: number;
+  resulting_interest_rate: string;
+  stressed_annual_debt_service_usd: string;
+  annual_debt_service_increase_usd: string;
+  stressed_ebitda_usd: string;
+  stressed_dscr: string;
+  debt_yield_ratio: string;
+  meets_sba_floor_1_25x: boolean;
+  meets_principal_hurdle_1_15x: boolean;
+  covenant_headroom_usd: string;
+  risk_assessment: string;
+}
+
+export interface MacroStressMatrixReport {
+  asset_id_or_title: string;
+  loan_principal_usd: string;
+  amortization_years: number;
+  baseline_interest_rate: string;
+  baseline_annual_ebitda_usd: string;
+  benchmark_yield_curve: BenchmarkYieldCurve;
+  scenarios: MacroRateShockResult[];
+  max_rate_shock_tolerated_bps: number;
+  overall_fragility_tier: "RESILIENT" | "MODERATE_SENSITIVITY" | "VULNERABLE" | "HIGH_RISK_FRAGILE";
+}
+
+// MCP & Developer API Key Gateway Types
+export interface DeveloperApiKey {
+  key_id: string;
+  name: string;
+  key_prefix: string;
+  role: "ADMIN" | "ANALYST" | "READ_ONLY";
+  created_at: string;
+  last_used_at?: string | null;
+  is_active: boolean;
+  rate_limit_rpm: number;
+}
+
+export interface CreateApiKeyResponse {
+  status: string;
+  key_id: string;
+  name: string;
+  raw_api_key: string;
+  role: string;
+  created_at: string;
+  message: string;
+}
+
+export interface ClaudeDesktopConfigResponse {
+  status: string;
+  config: {
+    mcpServers: {
+      "asup-platform": {
+        command: string;
+        args: string[];
+        env: Record<string, string>;
+      };
+    };
+  };
+}
+
+export interface UpstreamDependencyRecord {
+  id: string;
+  name: string;
+  category: "GITHUB_REPO" | "PYTHON_PACKAGE" | "NPM_PACKAGE" | "SOVEREIGN_SOURCE";
+  current_version: string;
+  upstream_version?: string | null;
+  upstream_repo_url: string;
+  update_status: "UP_TO_DATE" | "UPDATE_AVAILABLE" | "SYNCED_VERIFIED" | "CHECK_FAILED";
+  last_checked_at: string;
+  auto_discovered: boolean;
+  critical_for_airgap: boolean;
+  purpose: string;
+  changelog_snippet?: string | null;
+}
+
+export interface UpstreamDependenciesResponse {
+  summary: {
+    total_tracked: number;
+    updates_available_count: number;
+    auto_discovered_count: number;
+    breakdown: {
+      github_repositories: number;
+      python_pip_packages: number;
+      npm_frontend_packages: number;
+    };
+    airgap_policy: string;
+  };
+  dependencies: UpstreamDependencyRecord[];
+}
+
+export interface UpstreamCheckResult {
+  status: string;
+  new_dependencies_discovered: number;
+  check_results: {
+    total_dependencies_tracked: number;
+    checked_count: number;
+    updates_found: number;
+    timestamp: string;
+  };
+  summary: UpstreamDependenciesResponse["summary"];
+}
+
+export interface UpstreamVerifyAirgapResult {
+  status: string;
+  is_airgap_passed: boolean;
+  exit_code: number;
+  test_summary: string;
+  output_snippet: string;
+}
+
+// =========================================================================
+// AUGURY-INSPIRED ASSETHEALTH™ PHYSICAL INTELLIGENCE TYPES
+// =========================================================================
+
+export type PhysicalConditionTier = "EXCELLENT" | "GOOD" | "FAIR" | "POOR" | "CRITICAL";
+
+export type PhysicalRiskGrade = "GRADE_A" | "GRADE_B" | "GRADE_C" | "GRADE_D" | "GRADE_F";
+
+export interface EquipmentItemRecord {
+  item_id: string;
+  description: string;
+  serial_number: string;
+  make_model: string;
+  year_manufactured: number;
+  operating_hours: string;
+  rated_life_hours: string;
+  original_cost_usd: string;
+  estimated_replacement_cost_usd: string;
+  condition_tier: PhysicalConditionTier;
+  remaining_useful_life_pct: string;
+  failure_risk_score: string;
+  inspection_notes?: string;
+}
+
+export interface AerialFacilityHealthReport {
+  parcel_id: string;
+  roof_condition_score: string;
+  roof_surface_area_sqft: string;
+  estimated_roof_replacement_cost_usd: string;
+  yard_truck_occupancy_pct: string;
+  outdoor_scrap_anomaly_detected: boolean;
+  imagery_timestamp_iso: string;
+  imagery_source: string;
+  confidence_score: string;
+}
+
+export interface PredictiveCapexResult {
+  total_equipment_value_usd: string;
+  year1_mandatory_capex_usd: string;
+  year2_mandatory_capex_usd: string;
+  year3_mandatory_capex_usd: string;
+  total_3year_capex_reserve_usd: string;
+  baseline_annual_dscr: string;
+  capex_adjusted_dscr: string;
+  is_dscr_breached_by_capex: boolean;
+  recommended_seller_escrow_holdback_usd: string;
+}
+
+export interface OperationalDriftResult {
+  drift_detected: boolean;
+  drift_p_value: string;
+  metric_name: string;
+  target_value: string;
+  naics_benchmark_value: string;
+  deviation_pct: string;
+  disguised_distress_signal: boolean;
+  diagnosis: string;
+}
+
+export interface MaintenanceLedgerAuditResult {
+  total_invoices_audited: number;
+  suspicious_invoices_count: number;
+  disallowed_unproven_maintenance_usd: string;
+  phantom_tooling_detected: boolean;
+  adjusted_ebitda_deduction_usd: string;
+  audit_confidence: string;
+  flagged_invoices: Array<{
+    invoice_id: string;
+    vendor: string;
+    description: string;
+    amount_usd: string;
+    flag_reason: string;
+  }>;
+}
+
+export interface CompositeAssetHealthScore {
+  overall_health_score: number;
+  physical_risk_grade: PhysicalRiskGrade;
+  equipment_items_count: number;
+  critical_failure_items_count: number;
+  total_deferred_capex_usd: string;
+  recommended_escrow_holdback_usd: string;
+  aerial_report: AerialFacilityHealthReport;
+  predictive_capex: PredictiveCapexResult;
+  operational_drift: OperationalDriftResult;
+  maintenance_audit: MaintenanceLedgerAuditResult;
+  executive_summary: string;
+}
+
+export interface AssetHealthResponse {
+  status: string;
+  asset_id: string;
+  health: CompositeAssetHealthScore;
+}
+
+
+
+
+
+
+
+

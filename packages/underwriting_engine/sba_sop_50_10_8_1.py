@@ -198,12 +198,18 @@ def evaluate_sba_sop_50_10_8_1(inp: SBACapitalStructureInput) -> SBAUnderwriting
     ).quantize(CENT, rounding=ROUND_HALF_EVEN)
 
     if total_debt_service <= Decimal("0.00"):
-        raise ValueError("total_debt_service must be > 0 for leveraged SBA underwriting")
-
-    base_dscr = (net_cash_flow / total_debt_service).quantize(FOUR_DEC, rounding=ROUND_HALF_EVEN)
-    stress_dscr = (stressed_net_cash_flow / stressed_total_debt_service).quantize(
-        FOUR_DEC, rounding=ROUND_HALF_EVEN
-    )
+        violations.append("SBA_TOTAL_DEBT_SERVICE_ZERO_OR_NEGATIVE")
+        base_dscr = Decimal("0.0000")
+        stress_dscr = Decimal("0.0000")
+    else:
+        base_dscr = (net_cash_flow / total_debt_service).quantize(FOUR_DEC, rounding=ROUND_HALF_EVEN)
+        stress_dscr = (
+            (stressed_net_cash_flow / stressed_total_debt_service).quantize(
+                FOUR_DEC, rounding=ROUND_HALF_EVEN
+            )
+            if stressed_total_debt_service > Decimal("0.00")
+            else Decimal("0.0000")
+        )
 
     if base_dscr < SBA_MIN_HISTORICAL_DSCR:
         violations.append(f"SBA_DSCR_BELOW_1_25X:{base_dscr}")

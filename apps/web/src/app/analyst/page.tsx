@@ -15,7 +15,6 @@ import {
 import DealCard from "../../components/DealCard";
 import DealFilterBar from "../../components/DealFilterBar";
 import ManualDocketModal from "../../components/ManualDocketModal";
-import ResourceAccessModal from "../../components/ResourceAccessModal";
 import SourceTrackerModal from "../../components/SourceTrackerModal";
 import AssetIntelligenceModal from "../../components/AssetIntelligenceModal";
 import { fetchDeals, fetchExternalListings, verifyAndPromoteDeal } from "../../lib/api";
@@ -25,7 +24,6 @@ export default function AnalystPipelinePage() {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [isSourceTrackerOpen, setIsSourceTrackerOpen] = useState(false);
   const [isFetchingExternal, setIsFetchingExternal] = useState(false);
   const [selectedOsintDeal, setSelectedOsintDeal] = useState<Deal | null>(null);
@@ -127,38 +125,33 @@ export default function AnalystPipelinePage() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setIsSourceTrackerOpen(true)}
-            className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-blue-950/70 hover:bg-blue-900/80 text-blue-300 border border-blue-800/80 transition"
-            title="Track all data sources, connections, and access barriers for this location"
+            className="apple-press inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-zinc-900 hover:bg-zinc-800 text-blue-300 border border-zinc-800 transition cursor-pointer"
+            title="Track all data sources, connections, and sovereign scrapers"
           >
             <Radio className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
-            <span>Location Sources</span>
-          </button>
-          <button
-            onClick={() => setIsAccessModalOpen(true)}
-            className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-900/60 transition"
-          >
-            <span>Account Access Guide</span>
+            <span>Sources &amp; Scrapers</span>
           </button>
           <button
             onClick={handleScanRegionalListings}
             disabled={isFetchingExternal}
-            className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition disabled:opacity-50"
+            className="apple-press inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-950/70 hover:bg-indigo-900/80 text-indigo-300 border border-indigo-800/80 transition cursor-pointer disabled:opacity-50"
           >
-            <span>{isFetchingExternal ? "Scanning Region..." : "API-Anything Regional Scan"}</span>
+            <span>{isFetchingExternal ? "Scanning Region..." : "Regional Scan"}</span>
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition"
+            className="apple-press inline-flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition cursor-pointer"
           >
-            <Upload className="w-4 h-4" />
-            <span>Drop Ingest Filing</span>
+            <Upload className="w-3.5 h-3.5" />
+            <span>Ingest Filing</span>
           </button>
           <button
             onClick={() => loadPipeline()}
             disabled={loading}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+            className="p-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 transition cursor-pointer"
+            title="Refresh pipeline"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
       </div>
@@ -251,11 +244,6 @@ export default function AnalystPipelinePage() {
         }}
       />
 
-      {/* Resource Access & Account Requirements Modal */}
-      <ResourceAccessModal
-        isOpen={isAccessModalOpen}
-        onClose={() => setIsAccessModalOpen(false)}
-      />
 
       {/* Verify & Promote Modal (Apple Bottom Sheet on Mobile, Dialog on Desktop) */}
       {verifyModalDeal && (

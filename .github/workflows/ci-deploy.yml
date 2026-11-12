@@ -1,4 +1,4 @@
-name: ASUP Roanoke v1.0 — 5-Stage CI Gate & OCI ARM64 Deploy
+name: Argus v1.0 — 5-Stage CI Gate & OCI ARM64 Deploy
 
 on:
   push:

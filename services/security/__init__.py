@@ -1,3 +1,11 @@
+from .auth_service import (
+    UserRecord,
+    UserAuthStore,
+    auth_store,
+    create_access_token,
+    decode_access_token,
+    get_oauth_providers_status,
+)
 from .pii_vault_and_rbac import (
     TeamRole,
     DealStage,
@@ -13,6 +21,12 @@ from .pii_vault_and_rbac import (
 )
 
 __all__ = [
+    "UserRecord",
+    "UserAuthStore",
+    "auth_store",
+    "create_access_token",
+    "decode_access_token",
+    "get_oauth_providers_status",
     "TeamRole",
     "DealStage",
     "PermissionDeniedError",

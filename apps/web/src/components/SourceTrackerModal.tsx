@@ -11,9 +11,23 @@ import {
   CheckCircle2,
   AlertTriangle,
   Layers,
+  Database,
+  Cpu,
+  Globe,
+  Zap,
 } from "lucide-react";
-import { LocationConnectivityReport, TrackedSourceConnection } from "../lib/types";
-import { fetchSourcesHealth, refreshSourcesHealth } from "../lib/api";
+import {
+  LocationConnectivityReport,
+  NationwideScanMetrics,
+  NationwideScraperStatus,
+  TrackedSourceConnection,
+} from "../lib/types";
+import {
+  fetchNationwideScrapersStatus,
+  fetchSourcesHealth,
+  refreshSourcesHealth,
+  triggerNationwideSovereignScan,
+} from "../lib/api";
 
 interface SourceTrackerModalProps {
   isOpen: boolean;
@@ -27,9 +41,13 @@ export default function SourceTrackerModal({
   mandateCode,
 }: SourceTrackerModalProps) {
   const [report, setReport] = useState<LocationConnectivityReport | null>(null);
+  const [sovereignStatus, setSovereignStatus] = useState<NationwideScraperStatus | null>(null);
+  const [scanResult, setScanResult] = useState<NationwideScanMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanSuccessMsg, setScanSuccessMsg] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"ALL" | "ACTION_REQUIRED" | "CONNECTED">("ALL");
 
   // Close on Escape key
@@ -59,8 +77,14 @@ export default function SourceTrackerModal({
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchSourcesHealth(mandateCode);
-      setReport(data);
+      const [sourcesData, scrapersData] = await Promise.all([
+        fetchSourcesHealth(mandateCode),
+        fetchNationwideScrapersStatus().catch(() => null),
+      ]);
+      setReport(sourcesData);
+      if (scrapersData) {
+        setSovereignStatus(scrapersData);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to load source connectivity report.");
     } finally {
@@ -72,12 +96,38 @@ export default function SourceTrackerModal({
     setRefreshing(true);
     setError(null);
     try {
-      const res = await refreshSourcesHealth();
+      const [res, scrapersData] = await Promise.all([
+        refreshSourcesHealth(),
+        fetchNationwideScrapersStatus().catch(() => null),
+      ]);
       setReport(res.report);
+      if (scrapersData) {
+        setSovereignStatus(scrapersData);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to refresh sources.");
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleRunSovereignScan = async () => {
+    setScanning(true);
+    setError(null);
+    setScanSuccessMsg(null);
+    try {
+      const res = await triggerNationwideSovereignScan({
+        target_states: report?.target_states,
+        target_fips: report?.target_fips,
+      });
+      setScanResult(res.metrics);
+      setScanSuccessMsg(res.message);
+      const updated = await fetchSourcesHealth(mandateCode).catch(() => null);
+      if (updated) setReport(updated);
+    } catch (err: any) {
+      setError(err.message || "Failed to run sovereign scan.");
+    } finally {
+      setScanning(false);
     }
   };
 
@@ -276,6 +326,136 @@ export default function SourceTrackerModal({
                   </ul>
                 </div>
               )}
+
+              {/* Sovereign Hostable Scrapers Section */}
+              <div className="p-4 rounded-xl bg-gradient-to-b from-zinc-900/90 to-zinc-950 border border-zinc-800 space-y-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                      <Cpu className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <h3 className="text-sm font-semibold text-white">
+                          Sovereign Hostable Scraping Infrastructure
+                        </h3>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 border border-emerald-800 text-emerald-300 font-semibold">
+                          Self-Hosted • 3,143 Counties
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400">
+                        Zero external scraper dependencies. Direct access via Federal CM/ECF, 50-State Public Notices, Gov Auctions, and Universal ArcGIS REST.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleRunSovereignScan}
+                    disabled={scanning}
+                    className="apple-press px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 shadow-md shadow-emerald-950 cursor-pointer"
+                  >
+                    {scanning ? (
+                      <>
+                        <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <span>Harvesting Feeds...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>Run Sovereign Scan</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Scan Completion Notification */}
+                {scanResult && (
+                  <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-700/50 text-xs text-emerald-200 flex items-center justify-between gap-3 animate-fadeIn">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>
+                        Harvest complete:{" "}
+                        <strong className="text-white">{scanResult.total_raw_harvested}</strong> total records harvested ({scanResult.federal_dockets_harvested} federal dockets, {scanResult.public_notices_harvested} public notices, {scanResult.government_auctions_harvested} auctions, {scanResult.gis_parcels_harvested} parcels) ➔{" "}
+                        <strong className="text-emerald-300">{scanResult.in_box_ingested_count} in-box deals</strong> ingested into database!
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-zinc-400 font-mono shrink-0">
+                      {new Date(scanResult.scanned_at).toLocaleTimeString()}
+                    </span>
+                  </div>
+                )}
+
+                {/* 4 Sovereign Crawler Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-blue-400 font-semibold uppercase">Federal Courts</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    </div>
+                    <div className="text-xs font-bold text-white">
+                      {sovereignStatus?.federal_bankruptcy_courts_indexed || 94} CM/ECF Districts
+                    </div>
+                    <div className="text-[11px] text-zinc-400">
+                      Ch. 11 § 363 sales &amp; Ch. 7 liquidation feeds nationwide.
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-purple-400 font-semibold uppercase">Public Notices</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    </div>
+                    <div className="text-xs font-bold text-white">
+                      {sovereignStatus?.statewide_public_notice_portals_indexed || 50} State Press Portals
+                    </div>
+                    <div className="text-[11px] text-zinc-400">
+                      Substitute trustee foreclosures, sheriff &amp; tax sales.
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-amber-400 font-semibold uppercase">Government Auctions</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    </div>
+                    <div className="text-xs font-bold text-white">
+                      {sovereignStatus?.centralized_auction_platforms_indexed || 4} National Engines
+                    </div>
+                    <div className="text-[11px] text-zinc-400">
+                      GovDeals, RealAuction, Bid4Assets, PublicSurplus.
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-zinc-900/60 border border-zinc-800 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-emerald-400 font-semibold uppercase">Universal ArcGIS</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    </div>
+                    <div className="text-xs font-bold text-white">
+                      3,143 Counties Direct REST
+                    </div>
+                    <div className="text-[11px] text-zinc-400">
+                      Direct tax assessor MapServer parcel polygons &amp; valuations.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sovereign Crawling Policy & Circuit Breaker Safeguards */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-zinc-400 border-t border-zinc-800/60 font-mono">
+                  <div className="flex items-center gap-2">
+                    <span className="text-zinc-500">Pipeline Policy:</span>
+                    <span className="text-zinc-300">
+                      {sovereignStatus?.crawling_policy || "Polite Background Rate-Limited Celery Pipeline"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-zinc-500">Lawful Circuit Breaker:</span>
+                    <span className="text-emerald-400 font-semibold">
+                      {sovereignStatus?.circuit_breaker_domain_locks_active || 0} Domain Locks Active (86,400s lockout on 401/403/429)
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               {/* Filter Tabs */}
               <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">

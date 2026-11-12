@@ -20,6 +20,7 @@ interface DealFilterBarProps {
   filters: DealFilterParams;
   onFilterChange: (newFilters: DealFilterParams) => void;
   totalResults: number;
+  activeCounties?: Array<{ fips: string; name: string }>;
 }
 
 const REGIONAL_COUNTIES = [
@@ -48,6 +49,7 @@ export default function DealFilterBar({
   filters,
   onFilterChange,
   totalResults,
+  activeCounties,
 }: DealFilterBarProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [searchInput, setSearchInput] = useState(filters.q || "");
@@ -281,14 +283,25 @@ export default function DealFilterBar({
                 }
                 className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
               >
-                <option value="">All Regional Counties</option>
-                <option value="51770,51161,51775">Preset: Core Roanoke Valley</option>
-                <option value="51023,51067,51019,51121">Preset: Neighboring Industrial</option>
-                {REGIONAL_COUNTIES.map((c) => (
-                  <option key={c.fips} value={c.fips}>
-                    {c.fips} — {c.name}
-                  </option>
-                ))}
+                <option value="">All Counties / Targets</option>
+                {activeCounties && activeCounties.length > 0 && (
+                  <optgroup label="Active Mandate Counties">
+                    {activeCounties.map((c) => (
+                      <option key={c.fips} value={c.fips}>
+                        {c.fips} — {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label="Regional Presets & Directories">
+                  <option value="51770,51161,51775">Preset: Core Roanoke Valley</option>
+                  <option value="51023,51067,51019,51121">Preset: Neighboring Industrial</option>
+                  {REGIONAL_COUNTIES.map((c) => (
+                    <option key={c.fips} value={c.fips}>
+                      {c.fips} — {c.name}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
 

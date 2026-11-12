@@ -25,6 +25,7 @@ import {
   runInstitutionalWaterfall,
   runLiquidationFloor,
 } from "../lib/api";
+import AladdinSensitivityHeatmap from "./AladdinSensitivityHeatmap";
 
 interface InstitutionalAladdinModalProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export default function InstitutionalAladdinModal({
   dealId,
 }: InstitutionalAladdinModalProps) {
   const [activeTab, setActiveTab] = useState<
-    "WATERFALL" | "LIQUIDATION" | "ROLLUP" | "SHADOW"
+    "WATERFALL" | "HEATMAP" | "LIQUIDATION" | "ROLLUP" | "SHADOW"
   >("WATERFALL");
 
   // Waterfall State
@@ -221,6 +222,17 @@ export default function InstitutionalAladdinModal({
           >
             <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
             <span>Waterfall &amp; SOFR Stress</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("HEATMAP")}
+            className={`px-3 sm:px-3.5 py-2 text-xs font-semibold rounded-t-lg transition border-b-2 whitespace-nowrap flex items-center space-x-1.5 ${
+              activeTab === "HEATMAP"
+                ? "border-emerald-500 text-white bg-zinc-900/80"
+                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5 text-emerald-400" />
+            <span>2D Sensitivity Heatmap</span>
           </button>
           <button
             onClick={() => setActiveTab("LIQUIDATION")}
@@ -476,6 +488,17 @@ export default function InstitutionalAladdinModal({
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {/* TAB: 2D ALADDIN SENSITIVITY HEATMAP */}
+          {activeTab === "HEATMAP" && (
+            <div className="space-y-4">
+              <AladdinSensitivityHeatmap
+                dealId={dealId}
+                defaultEbitda={ebitda}
+                defaultLoan={purchasePrice}
+              />
             </div>
           )}
 

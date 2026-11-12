@@ -23,6 +23,14 @@ import tests.integration.test_deals_filtering as i6
 import tests.integration.test_nationwide_mandate_wizard as i7
 import tests.integration.test_source_connectivity_tracker as i8
 import tests.integration.test_institutional_endpoints as i9
+import tests.integration.test_universal_asset_aggregator as i10
+import tests.integration.test_user_auth_and_management as i11
+import tests.integration.test_nationwide_sovereign_scrapers as i12
+import tests.integration.test_advanced_institutional_features as i13
+import tests.integration.test_five_aladdin_engines as i14
+import tests.integration.test_mcp_agent_gateway as i15
+import tests.integration.test_upstream_dependency_manager as i16
+import tests.integration.test_augury_asset_health_engines as i17
 
 
 def main() -> int:
@@ -112,7 +120,125 @@ def main() -> int:
 
     print(f"All {institutional_passed}/{institutional_passed} Institutional Aladdin Suite Tests PASSED!")
 
-    total_passed = core_passed + api_passed + regional_passed + filtering_passed + wizard_passed + tracker_passed + institutional_passed
+    # Milestone 10: Universal Multi-Asset Aggregator & OSINT Suite
+    aggregator_passed = 0
+    tc = i10.TestUniversalAssetAggregator()
+    for attr in sorted(dir(tc)):
+        if attr.startswith("test_"):
+            fn = getattr(tc, attr)
+            if callable(fn):
+                tc.setUp()
+                fn()
+                aggregator_passed += 1
+                print(f"[PASS] {i10.__name__}.{attr}")
+
+    print(f"All {aggregator_passed}/{aggregator_passed} Universal Asset Aggregator Tests PASSED!")
+
+    # Milestone 11: Autonomous User Authentication, Email Verification & Identity Management
+    auth_passed = 0
+    for attr in sorted(dir(i11)):
+        if attr.startswith("test_"):
+            fn = getattr(i11, attr)
+            if callable(fn):
+                fn()
+                auth_passed += 1
+                print(f"[PASS] {i11.__name__}.{attr}")
+
+    print(f"All {auth_passed}/{auth_passed} User Authentication & Management Tests PASSED!")
+
+    # Milestone 12: Nationwide Sovereign Scrapers & Crawlers
+    scrapers_passed = 0
+    for attr in sorted(dir(i12)):
+        if attr.startswith("test_"):
+            fn = getattr(i12, attr)
+            if callable(fn):
+                fn()
+                scrapers_passed += 1
+                print(f"[PASS] {i12.__name__}.{attr}")
+
+    print(f"All {scrapers_passed}/{scrapers_passed} Nationwide Sovereign Scrapers Tests PASSED!")
+
+    # Milestone 13: Advanced Institutional Features (CourtListener/RECAP, FollowTheMoney, 3D Spatial Twin)
+    advanced_passed = 0
+    test_case = i13.TestAdvancedInstitutionalFeatures()
+    test_case.setUp()
+    for attr in sorted(dir(test_case)):
+        if attr.startswith("test_"):
+            fn = getattr(test_case, attr)
+            if callable(fn):
+                fn()
+                advanced_passed += 1
+                print(f"[PASS] {i13.__name__}.{attr}")
+
+    print(f"All {advanced_passed}/{advanced_passed} Advanced Institutional Suite Tests PASSED!")
+
+    # Milestone 14: Five Aladdin Engines Suite (H3, SEC EDGAR, Yente, Tax Parser, Macro SOFR)
+    engines_passed = 0
+    for attr in sorted(dir(i14)):
+        if attr.startswith("test_"):
+            fn = getattr(i14, attr)
+            if callable(fn):
+                fn()
+                engines_passed += 1
+                print(f"[PASS] {i14.__name__}.{attr}")
+
+    print(f"All {engines_passed}/{engines_passed} Five Aladdin Engines Suite Tests PASSED!")
+
+    # Milestone 15: Model Context Protocol (MCP) & Developer Agent Gateway Suite
+    mcp_passed = 0
+    for attr in sorted(dir(i15)):
+        if attr.startswith("test_"):
+            fn = getattr(i15, attr)
+            if callable(fn):
+                fn()
+                mcp_passed += 1
+                print(f"[PASS] {i15.__name__}.{attr}")
+
+    print(f"All {mcp_passed}/{mcp_passed} MCP & Developer Agent Gateway Tests PASSED!")
+
+    # Milestone 16: Autonomous Upstream Dependency & Open-Source Tracker Suite
+    dep_passed = 0
+    tc16 = i16.TestUpstreamDependencyManager()
+    tc16.setUp()
+    for attr in sorted(dir(tc16)):
+        if attr.startswith("test_"):
+            fn = getattr(tc16, attr)
+            if callable(fn):
+                fn()
+                dep_passed += 1
+                print(f"[PASS] {i16.__name__}.{attr}")
+
+    print(f"All {dep_passed}/{dep_passed} Autonomous Upstream Dependency & Open-Source Tracker Tests PASSED!")
+
+    # Milestone 17: Augury-Inspired Industrial AssetHealth™ Engines Suite
+    augury_passed = 0
+    for attr in sorted(dir(i17)):
+        if attr.startswith("test_"):
+            fn = getattr(i17, attr)
+            if callable(fn):
+                fn()
+                augury_passed += 1
+                print(f"[PASS] {i17.__name__}.{attr}")
+
+    print(f"All {augury_passed}/{augury_passed} Augury Industrial AssetHealth™ Engines Suite Tests PASSED!")
+
+    total_passed = (
+        core_passed
+        + api_passed
+        + regional_passed
+        + filtering_passed
+        + wizard_passed
+        + tracker_passed
+        + institutional_passed
+        + aggregator_passed
+        + auth_passed
+        + scrapers_passed
+        + advanced_passed
+        + engines_passed
+        + mcp_passed
+        + dep_passed
+        + augury_passed
+    )
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 
     env = os.environ.copy()

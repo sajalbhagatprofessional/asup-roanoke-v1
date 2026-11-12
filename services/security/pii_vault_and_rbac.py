@@ -53,12 +53,15 @@ class AuditEvent:
     deal_id: Optional[str]
     payload_json: str
     created_at: datetime
+    prev_hash: str = "0" * 64
+    merkle_hash: str = ""
 
 
 class ImmutableAuditLedger:
     """
     Append-only audit ledger mirroring the PostgreSQL `trg_audit_events_immutable` trigger.
     Any attempt to mutate or delete an existing event raises AuditLogTamperError.
+    Enforces cryptographic SHA-256 Merkle hash-chaining across all events from genesis to tip.
     """
     def __init__(self) -> None:
         self._events: List[AuditEvent] = []
@@ -74,17 +77,56 @@ class ImmutableAuditLedger:
     ) -> AuditEvent:
         now = now or datetime.now(timezone.utc)
         evt_id = f"AUD-{len(self._events) + 1:06d}"
+        payload_json = json.dumps(payload, sort_keys=True)
+        prev_hash = self._events[-1].merkle_hash if self._events else ("0" * 64)
+
+        hasher = hashlib.sha256()
+        hasher.update(prev_hash.encode("utf-8"))
+        hasher.update(evt_id.encode("utf-8"))
+        hasher.update(actor_role.value.encode("utf-8"))
+        hasher.update(actor_id.encode("utf-8"))
+        hasher.update(action_type.encode("utf-8"))
+        hasher.update((deal_id or "").encode("utf-8"))
+        hasher.update(payload_json.encode("utf-8"))
+        hasher.update(now.isoformat().encode("utf-8"))
+        merkle_hash = hasher.hexdigest()
+
         evt = AuditEvent(
             event_id=evt_id,
             actor_role=actor_role,
             actor_id=actor_id,
             action_type=action_type,
             deal_id=deal_id,
-            payload_json=json.dumps(payload, sort_keys=True),
+            payload_json=payload_json,
             created_at=now,
+            prev_hash=prev_hash,
+            merkle_hash=merkle_hash,
         )
         self._events.append(evt)
         return evt
+
+    def verify_chain_integrity(self) -> bool:
+        """
+        Cryptographically verifies that the SHA-256 Merkle chain is unbroken from genesis.
+        Returns True if all hash links match, False otherwise.
+        """
+        expected_prev = "0" * 64
+        for evt in self._events:
+            if evt.prev_hash != expected_prev:
+                return False
+            hasher = hashlib.sha256()
+            hasher.update(evt.prev_hash.encode("utf-8"))
+            hasher.update(evt.event_id.encode("utf-8"))
+            hasher.update(evt.actor_role.value.encode("utf-8"))
+            hasher.update(evt.actor_id.encode("utf-8"))
+            hasher.update(evt.action_type.encode("utf-8"))
+            hasher.update((evt.deal_id or "").encode("utf-8"))
+            hasher.update(evt.payload_json.encode("utf-8"))
+            hasher.update(evt.created_at.isoformat().encode("utf-8"))
+            if hasher.hexdigest() != evt.merkle_hash:
+                return False
+            expected_prev = evt.merkle_hash
+        return True
 
     def update_event(self, event_id: str, new_payload: Dict[str, Any]) -> None:
         raise AuditLogTamperError(
@@ -264,11 +306,20 @@ class RBACPipelineStore:
         )
         return deal
 
-    def query_deals_for_role(self, actor_role: TeamRole, now: datetime) -> List[Dict[str, Any]]:
+    def query_deals_for_role(
+        self,
+        actor_role: TeamRole,
+        now: datetime,
+        fips_filter: Optional[List[str]] = None,
+        max_results: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
         self.enforce_freshness_slas(now)
         results: List[Dict[str, Any]] = []
 
         for d in self._deals.values():
+            if fips_filter and d.fips_code not in fips_filter:
+                continue
+
             primary_url = d.independent_source_urls[0] if d.independent_source_urls else None
             sources_copy = list(d.independent_source_urls) if d.independent_source_urls else []
 
@@ -339,7 +390,11 @@ class RBACPipelineStore:
                 })
 
         if actor_role == TeamRole.PRINCIPAL:
-            # Cap Weekly Principal Digest at <= 5 top deals sorted by base_dscr descending
             results.sort(key=lambda x: Decimal(x["base_dscr"]), reverse=True)
-            return results[:5]
+            if max_results is not None:
+                return results[:max_results]
         return results
+
+    def list_all_deals(self) -> List[DealRecord]:
+        """Return all raw DealRecord entities stored in memory/pipeline."""
+        return list(self._deals.values())

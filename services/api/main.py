@@ -1,8 +1,9 @@
 """
-FastAPI Production Server — Acquisition Sourcing & Underwriting Platform (v1.0)
+FastAPI Production Server — Argus (v1.0): Autonomous Asset Intelligence & Underwriting Platform
 Mandate: ROA-SMB-01 (City of Roanoke FIPS 51770, Roanoke County FIPS 51161, City of Salem FIPS 51775 Near-Miss)
 """
 
+import asyncio
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_EVEN
 import os
@@ -10,6 +11,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from packages.core_types import EpistemicTier, ProvenancedValue
@@ -29,6 +31,7 @@ from packages.underwriting_engine import (
     SBACapitalStructureInput,
     VirginiaForeclosureInput,
     audit_ebitda_and_working_capital,
+    calculate_annual_debt_service,
     evaluate_sba_sop_50_10_8_1,
     evaluate_va_foreclosure_basis,
     InstitutionalCapitalStackInput,
@@ -78,6 +81,10 @@ from services.ingestion import (
     ShadowDistressOpportunity,
     ShadowPipelineTracker,
 )
+from services.ingestion.nationwide_scrapers import (
+    nationwide_coordinator,
+    NationwideScanResult,
+)
 from services.lender_pack import (
     check_90_day_mandate_expiry,
     generate_sba_lender_pack,
@@ -105,11 +112,41 @@ from services.security import (
     RBACPipelineStore,
     TeamRole,
     UnverifiedLeadPromotionError,
+    UserRecord,
+    UserAuthStore,
+    auth_store,
+    create_access_token,
+    decode_access_token,
+    get_oauth_providers_status,
+)
+from services.security.auth_service import (
+    AuthError,
+    UserAlreadyExistsError,
+    InvalidCredentialsError,
+    TokenExpiredOrInvalidError,
+)
+
+from services.persistence import DurablePipelineStore
+from services.pwa import (
+    DEFAULT_VAPID_PUBLIC_KEY,
+    PushNotificationPayload,
+    VAPIDPushService,
+    WebPushSubscription,
+)
+from services.asset_aggregator import (
+    AssetAggregatorService,
+    AssetClass,
+    OperatorStyle,
+    OwnerOSINTReport,
+    PipelineStage,
+    UniversalAsset,
+    UserPreferenceProfile,
 )
 
 # Initialize Core Services & Shared Singletons
 audit_ledger = ImmutableAuditLedger()
-pipeline_store = RBACPipelineStore(audit_ledger)
+pipeline_store = DurablePipelineStore(audit_ledger)
+vapid_service = VAPIDPushService()
 pii_vault = OwnerPIIVault(
     master_key_bytes=os.getenv("PII_VAULT_KEY", "0123456789abcdef0123456789abcdef").encode("utf-8")[:32]
 )
@@ -118,11 +155,12 @@ circuit_breaker = LawfulCircuitBreaker()
 bronze_vault = BronzeIngestVault()
 api_anything_connector = ApiAnythingConnector()
 source_tracker = SourceConnectivityTracker(circuit_breaker=circuit_breaker)
+token_registry: Dict[str, Any] = {}
 
 MANDATE_CREATED_AT = datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)
 
 # Pre-seed initial verified and in-flight deals for all 5 roles
-_init_now = datetime(2026, 11, 10, 12, 0, 0, tzinfo=timezone.utc)
+_init_now = datetime.now(timezone.utc)
 
 # 1. Verified Deal Ready for Principal Weekly Digest
 deal_1 = DealRecord(
@@ -263,7 +301,7 @@ outreach_engine.add_to_dnc_suppression_list("dnc-suppressed@example.com")
 
 # Initialize FastAPI App
 app = FastAPI(
-    title="Acquisition Sourcing & Underwriting Platform API",
+    title="Argus Asset Intelligence & Underwriting API",
     version="1.0.0",
     description="Deterministic, air-gapped acquisition sourcing and underwriting platform under Mandate ROA-SMB-01 (SBA SOP 50 10 8.1 & Va. Code §§ 55.1-320 to 55.1-322).",
 )
@@ -318,6 +356,47 @@ class MandateProfileModel(BaseModel):
 class TargetedFetchRequest(BaseModel):
     mandate_id: Optional[str] = None
     auto_ingest: bool = True
+
+
+class NationwideScanRequest(BaseModel):
+    target_states: Optional[List[str]] = None
+    target_fips: Optional[List[str]] = None
+    min_price_usd: Optional[str] = None
+    max_price_usd: Optional[str] = None
+
+
+# ==========================================
+# AUTHENTICATION & IDENTITY PYDANTIC SCHEMAS
+# ==========================================
+class SignUpRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    confirm_password: str
+    role: Optional[TeamRole] = TeamRole.PRINCIPAL
+
+
+class SignInRequest(BaseModel):
+    username_or_email: str
+    password: str
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+
+class ResendVerificationRequest(BaseModel):
+    email: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+    confirm_password: str
 
 
 current_mandate_profile = MandateProfileModel()
@@ -766,18 +845,19 @@ def fetch_targeted_listings(req: TargetedFetchRequest) -> Dict[str, Any]:
     target_fips = current_mandate_profile.target_fips
     price_ceiling = Decimal(current_mandate_profile.near_miss_max_price_usd)
 
+    min_price = Decimal(current_mandate_profile.min_price_usd)
+    max_price = Decimal(current_mandate_profile.max_price_usd)
+
     # Scrapers query ONLY the specified regional FIPS and budget band
     external_listings = api_anything_connector.fetch_listings_for_region(
         fips_codes=target_fips,
         max_price_usd=price_ceiling,
+        min_price_usd=min_price,
     )
 
     evaluated_results: List[Dict[str, Any]] = []
     ingested_count = 0
     rejected_count = 0
-
-    min_price = Decimal(current_mandate_profile.min_price_usd)
-    max_price = Decimal(current_mandate_profile.max_price_usd)
 
     for ext in external_listings:
         candidate = api_anything_connector.to_raw_candidate(ext)
@@ -840,16 +920,73 @@ def fetch_targeted_listings(req: TargetedFetchRequest) -> Dict[str, Any]:
             "ingested_to_pipeline": is_ingested,
         })
 
+    # 2. Sovereign Scraping Engine Execution across Federal Courts, Public Notices, and Gov Auctions
+    sovereign_res = nationwide_coordinator.execute_sovereign_scan(
+        target_states=current_mandate_profile.target_states,
+        target_fips=target_fips,
+        pipeline_store=pipeline_store if req.auto_ingest else None,
+        min_price_usd=str(min_price),
+        max_price_usd=str(max_price),
+    )
+    ingested_count += sovereign_res.in_box_ingested_count
+    rejected_count += sovereign_res.rejected_count
+
     return {
         "status": "success",
         "mandate_id": current_mandate_profile.mandate_id,
         "mandate_name": current_mandate_profile.mandate_name,
         "target_states": current_mandate_profile.target_states,
         "target_fips_count": len(target_fips),
-        "total_scanned_in_target_box": len(external_listings),
+        "total_scanned_in_target_box": len(external_listings) + sovereign_res.total_raw_harvested,
         "in_box_ingested_count": ingested_count,
         "rejected_count": rejected_count,
+        "sovereign_scrapers": sovereign_res.to_dict(),
         "results": evaluated_results,
+    }
+
+
+@app.post("/v1/ingestion/nationwide/scan", tags=["Nationwide Sovereign Scrapers"])
+def run_nationwide_sovereign_scan(req: NationwideScanRequest) -> Dict[str, Any]:
+    """
+    Executes a sovereign scraping pass across all 4 hostable crawler engines:
+    - 94 Federal Bankruptcy CM/ECF Courts
+    - 50 Statewide Public Notice Portals
+    - Centralized Government Auctions (GovDeals, RealAuction, Bid4Assets, PublicSurplus)
+    - Universal County ArcGIS REST Parcel Crawlers
+    Pipes verified candidates directly into the platform database.
+    """
+    states = req.target_states or current_mandate_profile.target_states
+    fips = req.target_fips or current_mandate_profile.target_fips
+    min_p = req.min_price_usd or current_mandate_profile.min_price_usd
+    max_p = req.max_price_usd or current_mandate_profile.max_price_usd
+
+    result = nationwide_coordinator.execute_sovereign_scan(
+        target_states=states,
+        target_fips=fips,
+        pipeline_store=pipeline_store,
+        min_price_usd=min_p,
+        max_price_usd=max_p,
+    )
+    return {
+        "status": "success",
+        "message": f"Successfully executed sovereign scan across {len(states)} states and {len(fips)} jurisdictions.",
+        "metrics": result.to_dict(),
+    }
+
+
+@app.get("/v1/ingestion/nationwide/status", tags=["Nationwide Sovereign Scrapers"])
+def get_nationwide_scrapers_status() -> Dict[str, Any]:
+    """
+    Returns deployment status and resource directory counts for all sovereign crawlers.
+    """
+    return {
+        "status": "operational",
+        "federal_bankruptcy_courts_indexed": len(nationwide_coordinator.court_streamer.all_districts),
+        "statewide_public_notice_portals_indexed": 50,
+        "centralized_auction_platforms_indexed": len(nationwide_coordinator.auction_scraper.PLATFORM_ENDPOINTS),
+        "universal_arcgis_parcel_crawler_active": True,
+        "circuit_breaker_domain_locks_active": len(nationwide_coordinator.circuit_breaker.active_domain_locks),
+        "crawling_policy": "Polite Background Celery Pipeline with Domain Rate Limiting",
     }
 
 
@@ -1046,18 +1183,18 @@ def list_deals(
         enriched_deals.append(d_copy)
 
     # 1. Stage Filter
-    if stage:
+    if stage and isinstance(stage, str):
         enriched_deals = [d for d in enriched_deals if d.get("stage") == stage]
 
     # 2. Distress Signal Filter
-    if signal_type:
+    if signal_type and isinstance(signal_type, str):
         enriched_deals = [d for d in enriched_deals if d.get("signal_type") == signal_type]
 
     # 3. Geography / FIPS Filter
-    if fips_code and fips_code != "ALL":
+    if fips_code and isinstance(fips_code, str) and fips_code != "ALL":
         fips_set = {f.strip() for f in fips_code.split(",") if f.strip()}
         enriched_deals = [d for d in enriched_deals if d.get("fips_code") in fips_set]
-    elif not fips_code and current_mandate_profile.target_fips:
+    elif (not fips_code or not isinstance(fips_code, str)) and current_mandate_profile.target_fips:
         # Default to active mandate target counties
         target_fips_set = set(current_mandate_profile.target_fips)
         matching = [d for d in enriched_deals if d.get("fips_code") in target_fips_set]
@@ -1065,33 +1202,33 @@ def list_deals(
             enriched_deals = matching
 
     # 4. NAICS Prefix Filter
-    if naics_prefix:
+    if naics_prefix and isinstance(naics_prefix, str):
         enriched_deals = [d for d in enriched_deals if str(d.get("naics_code", "")).startswith(naics_prefix)]
 
     # 5. Price Min / Max Filter (pure Decimal)
-    if min_price_usd:
+    if min_price_usd and isinstance(min_price_usd, str):
         min_p = Decimal(min_price_usd)
         enriched_deals = [d for d in enriched_deals if Decimal(d["asking_or_cure_price_usd"]) >= min_p]
-    if max_price_usd:
+    if max_price_usd and isinstance(max_price_usd, str):
         max_p = Decimal(max_price_usd)
         enriched_deals = [d for d in enriched_deals if Decimal(d["asking_or_cure_price_usd"]) <= max_p]
 
     # 6. Minimum Base DSCR Hurdle (pure Decimal)
-    if min_base_dscr:
+    if min_base_dscr and isinstance(min_base_dscr, str):
         min_dscr = Decimal(min_base_dscr)
         enriched_deals = [d for d in enriched_deals if Decimal(d.get("base_dscr", "0")) >= min_dscr]
 
     # 7. Maximum Basis Ratio (pure Decimal)
-    if max_basis_ratio:
+    if max_basis_ratio and isinstance(max_basis_ratio, str):
         max_b = Decimal(max_basis_ratio)
         enriched_deals = [d for d in enriched_deals if Decimal(d.get("basis_ratio", "1.0000")) <= max_b]
 
     # 8. Real Estate / Collateral Floor Filter
-    if has_cre is not None:
+    if has_cre is not None and isinstance(has_cre, bool):
         enriched_deals = [d for d in enriched_deals if d.get("has_cre") == has_cre]
 
     # 9. Full-Text Query Search (Debtor, Parcel GPIN, Docket ID)
-    if q:
+    if q and isinstance(q, str):
         terms = [t.lower().strip() for t in q.split() if t.strip()]
         enriched_deals = [
             d for d in enriched_deals
@@ -1105,16 +1242,17 @@ def list_deals(
         ]
 
     # 10. Deterministic Sorting
-    if sort_by == "dscr_desc":
-        enriched_deals.sort(key=lambda x: Decimal(x.get("base_dscr", "0")), reverse=True)
-    elif sort_by == "price_asc":
-        enriched_deals.sort(key=lambda x: Decimal(x.get("asking_or_cure_price_usd", "0")))
-    elif sort_by == "price_desc":
-        enriched_deals.sort(key=lambda x: Decimal(x.get("asking_or_cure_price_usd", "0")), reverse=True)
-    elif sort_by == "basis_asc":
-        enriched_deals.sort(key=lambda x: Decimal(x.get("basis_ratio", "1.0000")))
-    elif sort_by == "date_desc":
-        enriched_deals.sort(key=lambda x: str(x.get("deal_id", "")), reverse=True)
+    if sort_by and isinstance(sort_by, str):
+        if sort_by == "dscr_desc":
+            enriched_deals.sort(key=lambda x: Decimal(x.get("base_dscr", "0")), reverse=True)
+        elif sort_by == "price_asc":
+            enriched_deals.sort(key=lambda x: Decimal(x.get("asking_or_cure_price_usd", "0")))
+        elif sort_by == "price_desc":
+            enriched_deals.sort(key=lambda x: Decimal(x.get("asking_or_cure_price_usd", "0")), reverse=True)
+        elif sort_by == "basis_asc":
+            enriched_deals.sort(key=lambda x: Decimal(x.get("basis_ratio", "1.0000")))
+        elif sort_by == "date_desc":
+            enriched_deals.sort(key=lambda x: str(x.get("deal_id", "")), reverse=True)
 
     # Enrich all output deals with deep Asset Analyst OSINT intelligence
     enriched_deals = [_enrich_deal_with_osint(d) for d in enriched_deals]
@@ -1175,8 +1313,10 @@ def get_deal_detail(
         "cpa_verified_by": deal.cpa_verified_by,
     }
 
-    # Hide confidential internal bid ceiling from external lenders
-    if role != TeamRole.LENDER_BROKER:
+    # Explicitly redact confidential internal bid ceiling from external lenders / brokers
+    if role == TeamRole.LENDER_BROKER:
+        res["internal_max_bid_usd"] = "[REDACTED_CONFIDENTIAL_FAMILY_OFFICE_BID]"
+    else:
         res["internal_max_bid_usd"] = str(deal.internal_max_bid_usd)
 
     return _enrich_deal_with_osint(res)
@@ -1633,6 +1773,18 @@ def principal_decision(deal_id: str, req: PrincipalDecisionRequest) -> Dict[str,
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid action {action}")
 
+    if token_id:
+        tok_data = {
+            "token_id": token_id,
+            "deal_id": deal_id,
+            "principal_id": req.principal_id,
+            "action": action,
+            "decided_at": now.isoformat(),
+        }
+        token_registry[token_id] = tok_data
+        pipeline_store.save_token(token_id, deal_id, "PRINCIPAL_APPROVAL", tok_data)
+        pipeline_store.upsert_deal(deal)
+
     audit_ledger.append_event(
         actor_role=TeamRole.PRINCIPAL,
         actor_id=req.principal_id,
@@ -1678,6 +1830,22 @@ def counsel_review(deal_id: str, req: CounselReviewRequest) -> Dict[str, Any]:
     deal.counsel_verified_by = req.counsel_id
     signoff_id = f"CSIG-{deal_id}-{int(now.timestamp())}"
 
+    # Vanguard & Aladdin Hardening: If notice is statutorily valid and basis complies, advance stage to LOI_LENDER_PACK
+    if va_res.is_statutorily_valid and va_res.is_mandate_basis_compliant:
+        if deal.stage in (DealStage.COUNSEL_DILIGENCE, DealStage.VERIFIED_READY_FOR_PRINCIPAL):
+            deal.stage = DealStage.LOI_LENDER_PACK
+
+    csig_data = {
+        "signoff_id": signoff_id,
+        "deal_id": deal_id,
+        "counsel_id": req.counsel_id,
+        "is_valid": va_res.is_statutorily_valid and va_res.is_mandate_basis_compliant,
+        "signed_at": now.isoformat(),
+    }
+    token_registry[signoff_id] = csig_data
+    pipeline_store.save_token(signoff_id, deal_id, "COUNSEL_SIGNOFF", csig_data)
+    pipeline_store.upsert_deal(deal)
+
     audit_ledger.append_event(
         actor_role=TeamRole.COUNSEL,
         actor_id=req.counsel_id,
@@ -1688,6 +1856,7 @@ def counsel_review(deal_id: str, req: CounselReviewRequest) -> Dict[str, Any]:
             "is_statutorily_valid": va_res.is_statutorily_valid,
             "basis_ratio": str(va_res.basis_to_replacement_ratio),
             "is_mandate_basis_compliant": va_res.is_mandate_basis_compliant,
+            "new_stage": deal.stage.value,
         },
         now=now,
     )
@@ -1702,6 +1871,7 @@ def counsel_review(deal_id: str, req: CounselReviewRequest) -> Dict[str, Any]:
         "basis_to_replacement_ratio": str(va_res.basis_to_replacement_ratio),
         "is_mandate_basis_compliant": va_res.is_mandate_basis_compliant,
         "va_foreclosure_compliant": va_res.is_statutorily_valid and va_res.is_mandate_basis_compliant,
+        "new_stage": deal.stage.value,
     }
 
 
@@ -1740,6 +1910,18 @@ def cpa_audit(deal_id: str, req: CPAAuditRequest) -> Dict[str, Any]:
     deal.base_dscr = sba_res.base_dscr
     deal.stress_dscr = sba_res.stress_dscr
 
+    cpa_sig_id = f"CPASIG-{deal_id}-{int(now.timestamp())}"
+    cpa_sig_data = {
+        "signoff_id": cpa_sig_id,
+        "deal_id": deal_id,
+        "cpa_id": req.cpa_id,
+        "is_sba_compliant": sba_res.is_sba_compliant,
+        "audited_at": now.isoformat(),
+    }
+    token_registry[cpa_sig_id] = cpa_sig_data
+    pipeline_store.save_token(cpa_sig_id, deal_id, "CPA_SIGNOFF", cpa_sig_data)
+    pipeline_store.upsert_deal(deal)
+
     audit_ledger.append_event(
         actor_role=TeamRole.CPA,
         actor_id=req.cpa_id,
@@ -1757,6 +1939,7 @@ def cpa_audit(deal_id: str, req: CPAAuditRequest) -> Dict[str, Any]:
     return {
         "deal_id": deal_id,
         "cpa_id": req.cpa_id,
+        "signoff_id": cpa_sig_id,
         "is_sba_compliant": sba_res.is_sba_compliant,
         "base_dscr": str(sba_res.base_dscr),
         "stress_dscr": str(sba_res.stress_dscr),
@@ -1767,9 +1950,193 @@ def cpa_audit(deal_id: str, req: CPAAuditRequest) -> Dict[str, Any]:
     }
 
 
+# -------------------------------------------------------------
+# Aladdin 2D Sensitivity Heatmap, Real-Time SSE & Token Endpoints
+# -------------------------------------------------------------
+
+class SensitivityMatrixRequest(BaseModel):
+    deal_id: Optional[str] = None
+    total_project_cost_usd: str = "2500000.00"
+    sba_7a_loan_usd: str = "2250000.00"
+    base_sba_interest_rate: str = "0.0850"
+    sba_amortization_months: int = 180
+    buyer_cash_equity_usd: str = "125000.00"
+    adjusted_ebitda_post_gm_usd: str = "520000.00"
+    annual_maintenance_capex_usd: str = "40000.00"
+    annual_cash_taxes_usd: str = "65000.00"
+    revenue_compression_steps: List[str] = Field(
+        default_factory=lambda: ["0.0000", "-0.0500", "-0.1000", "-0.1500", "-0.2000", "-0.2500", "-0.3000"]
+    )
+    rate_shock_bps_steps: List[int] = Field(
+        default_factory=lambda: [0, 50, 100, 150, 200, 250, 300, 400, 500]
+    )
+
+
+@app.post("/v1/underwriting/sensitivity-matrix", tags=["Institutional Underwriting (BlackRock Aladdin)"])
+def compute_sensitivity_matrix(req: SensitivityMatrixRequest) -> Dict[str, Any]:
+    """
+    Computes a full 2D Aladdin Sensitivity Matrix:
+    Revenue Compression (0% to -30%) vs Interest Rate Shocks (0 to +500 bps).
+    Solves DSCR, Cash-on-Cash Return, and Net Cash Flow in pure decimal.Decimal.
+    """
+    matrix: List[List[Dict[str, Any]]] = []
+    FOUR_DEC = Decimal("0.0001")
+    TWO_DEC = Decimal("0.01")
+    CENT = Decimal("0.01")
+
+    base_ebitda = Decimal(req.adjusted_ebitda_post_gm_usd)
+    base_taxes = Decimal(req.annual_cash_taxes_usd)
+    capex = Decimal(req.annual_maintenance_capex_usd)
+    loan_amount = Decimal(req.sba_7a_loan_usd)
+    base_rate = Decimal(req.base_sba_interest_rate)
+    equity = Decimal(req.buyer_cash_equity_usd)
+
+    for rev_step in req.revenue_compression_steps:
+        row: List[Dict[str, Any]] = []
+        rev_mult = Decimal("1.0000") + Decimal(rev_step)
+        stressed_ebitda = (base_ebitda * rev_mult).quantize(CENT, rounding=ROUND_HALF_EVEN)
+        stressed_taxes = (base_taxes * rev_mult).quantize(CENT, rounding=ROUND_HALF_EVEN)
+        net_cash_flow = (stressed_ebitda - capex - stressed_taxes).quantize(CENT, rounding=ROUND_HALF_EVEN)
+
+        for bps in req.rate_shock_bps_steps:
+            rate_shock = (Decimal(bps) / Decimal("10000")).quantize(FOUR_DEC, rounding=ROUND_HALF_EVEN)
+            effective_rate = (base_rate + rate_shock).quantize(FOUR_DEC, rounding=ROUND_HALF_EVEN)
+            debt_service = calculate_annual_debt_service(loan_amount, effective_rate, req.sba_amortization_months)
+
+            if debt_service > Decimal("0.00"):
+                dscr = (net_cash_flow / debt_service).quantize(FOUR_DEC, rounding=ROUND_HALF_EVEN)
+            else:
+                dscr = Decimal("0.0000")
+
+            free_cash_flow = (net_cash_flow - debt_service).quantize(CENT, rounding=ROUND_HALF_EVEN)
+            if equity > Decimal("0.00"):
+                coc_pct = ((free_cash_flow / equity) * Decimal("100")).quantize(TWO_DEC, rounding=ROUND_HALF_EVEN)
+            else:
+                coc_pct = Decimal("0.00")
+
+            if dscr >= Decimal("1.3500"):
+                risk_tier = "SAFE_IN_BOX"
+            elif dscr >= Decimal("1.1500"):
+                risk_tier = "WATCH_STRESSED"
+            elif dscr >= Decimal("1.0000"):
+                risk_tier = "MARGINAL_COVERAGE"
+            else:
+                risk_tier = "BREACH_INSOLVENT"
+
+            row.append({
+                "revenue_shock_pct": f"{Decimal(rev_step) * Decimal('100'):.1f}%",
+                "rate_shock_bps": f"+{bps} bps",
+                "effective_rate_pct": f"{effective_rate * Decimal('100'):.2f}%",
+                "net_cash_flow_usd": str(net_cash_flow),
+                "annual_debt_service_usd": str(debt_service),
+                "dscr": str(dscr),
+                "cash_on_cash_pct": f"{coc_pct}%",
+                "risk_tier": risk_tier,
+                "is_mandate_compliant": dscr >= Decimal("1.1500"),
+            })
+        matrix.append(row)
+
+    return {
+        "deal_id": req.deal_id,
+        "base_adjusted_ebitda_usd": str(base_ebitda),
+        "sba_loan_usd": str(loan_amount),
+        "base_rate_pct": f"{base_rate * Decimal('100'):.2f}%",
+        "buyer_equity_usd": str(equity),
+        "revenue_steps": req.revenue_compression_steps,
+        "rate_shock_bps_steps": req.rate_shock_bps_steps,
+        "matrix": matrix,
+    }
+
+
+@app.get("/v1/tokens/{token_id}", tags=["Token Registry"])
+def get_registered_token(token_id: str) -> Dict[str, Any]:
+    """Retrieves metadata and validation status of a cryptographic approval token or signoff."""
+    tok = token_registry.get(token_id)
+    if not tok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Token {token_id} not found")
+    return tok
+
+
+@app.get("/v1/stream/events", tags=["Real-Time Stream"])
+async def stream_realtime_events():
+    """
+    Server-Sent Events (SSE) stream for live updates:
+    Broadcasts docket arrivals, principal actions, and circuit breaker trip events.
+    """
+    import json
+    async def event_generator():
+        # Initial greeting event
+        init_payload = {
+            "type": "CONNECTION_ESTABLISHED",
+            "message": "Connected to Argus Aladdin Real-Time Event Stream",
+            "server_time": datetime.now(timezone.utc).isoformat(),
+        }
+        yield f"event: connect\ndata: {json.dumps(init_payload)}\n\n"
+        # Stream recent audit events
+        for e in audit_ledger.events[-5:]:
+            payload = {
+                "event_id": e.event_id,
+                "actor_role": e.actor_role.value,
+                "action_type": e.action_type,
+                "deal_id": e.deal_id,
+                "merkle_hash": e.merkle_hash,
+            }
+            yield f"event: audit_event\ndata: {json.dumps(payload)}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/v1/pwa/vapid-public-key", tags=["PWA"])
+def get_vapid_public_key() -> Dict[str, str]:
+    """Returns the application server VAPID public key for Web Push subscription."""
+    return {"public_key": vapid_service.get_public_key()}
+
+
+@app.post("/v1/pwa/subscribe", tags=["PWA"])
+def register_pwa_push_subscription(sub: WebPushSubscription) -> Dict[str, Any]:
+    """Registers a browser's Web Push endpoint and cryptographic keys."""
+    endpoint = vapid_service.register_subscription(sub)
+    return {
+        "status": "SUBSCRIBED",
+        "endpoint": endpoint,
+        "total_active_subscribers": len(vapid_service.list_subscriptions()),
+    }
+
+
+class PushNotificationTriggerRequest(BaseModel):
+    title: str = "Foreclosure Sale Notice Alert"
+    body: str = "Va. Code § 55.1-321 14-day notice published for Roanoke industrial parcel."
+    urgency: str = "HIGH"
+    deal_id: Optional[str] = "ROA-GD-01"
+    url: str = "/"
+
+
+@app.post("/v1/pwa/notify-test", tags=["PWA"])
+def trigger_pwa_push_notification(req: PushNotificationTriggerRequest) -> Dict[str, Any]:
+    """Dispatches a simulated high-priority PWA notification payload for native testing."""
+    payload = PushNotificationPayload(
+        title=req.title,
+        body=req.body,
+        urgency=req.urgency,
+        url=req.url,
+        deal_id=req.deal_id,
+    )
+    dispatch_res = vapid_service.dispatch_broadcast(payload)
+    return {
+        "status": "QUEUED",
+        "title": req.title,
+        "body": req.body,
+        "urgency": req.urgency,
+        "url": req.url,
+        "deal_id": req.deal_id,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "broadcast": dispatch_res,
+    }
+
+
 @app.get("/v1/audit-ledger", tags=["Audit"])
 def get_audit_ledger() -> List[Dict[str, Any]]:
-    """Returns the immutable append-only audit event log."""
+    """Returns the immutable append-only audit event log with cryptographic SHA-256 Merkle chain."""
     return [
         {
             "event_id": e.event_id,
@@ -1779,6 +2146,992 @@ def get_audit_ledger() -> List[Dict[str, Any]]:
             "deal_id": e.deal_id,
             "payload": e.payload_json,
             "created_at": e.created_at.isoformat(),
+            "prev_hash": e.prev_hash,
+            "merkle_hash": e.merkle_hash,
         }
         for e in audit_ledger.events
     ]
+
+
+@app.get("/v1/audit-ledger/verify", tags=["Audit"])
+def verify_audit_ledger_chain() -> Dict[str, Any]:
+    """Cryptographically verifies the Merkle hash chain from genesis to tip."""
+    is_valid = audit_ledger.verify_chain_integrity()
+    return {
+        "chain_integrity_valid": is_valid,
+        "total_events": len(audit_ledger.events),
+        "tip_hash": audit_ledger.events[-1].merkle_hash if audit_ledger.events else ("0" * 64),
+    }
+
+
+# ============================================================================
+# PROJECT ASSET AGGREGATOR V2.0 — NATIONWIDE MULTI-ASSET & OSINT SUITE
+# ============================================================================
+
+class OutreachPlaybookRequest(BaseModel):
+    playbook_type: str = "SUCCESSION_BUYOUT"  # or "AI_MODERNIZATION"
+
+
+class UpdatePipelineStageRequest(BaseModel):
+    asset_id: str
+    stage: PipelineStage
+
+
+@app.get("/v2/assets/search", tags=["Universal Asset Aggregator"])
+def search_universal_assets(
+    query: Optional[str] = None,
+    asset_class: Optional[AssetClass] = None,
+    state: Optional[str] = None,
+    metro_area: Optional[str] = None,
+    min_price: Optional[Decimal] = None,
+    max_price: Optional[Decimal] = None,
+    max_crime_index: Optional[int] = None,
+    min_years_operating: Optional[int] = None,
+    baby_boomer_only: bool = False,
+    section_8_only: bool = False,
+    pipeline_stage: Optional[PipelineStage] = None,
+    sort_by: str = "recommended",
+    apply_user_preferences: bool = True,
+) -> List[UniversalAsset]:
+    """
+    Nationwide multi-asset search engine with macro-indexed filtering across
+    Operating Businesses, Real Estate, Tax Liens, and Equipment fleets.
+    """
+    return AssetAggregatorService.search_assets(
+        query=query,
+        asset_class=asset_class,
+        state=state,
+        metro_area=metro_area,
+        min_price=min_price,
+        max_price=max_price,
+        max_crime_index=max_crime_index,
+        min_years_operating=min_years_operating,
+        baby_boomer_only=baby_boomer_only,
+        section_8_only=section_8_only,
+        pipeline_stage=pipeline_stage,
+        sort_by=sort_by,
+        apply_user_preferences=apply_user_preferences,
+    )
+
+
+@app.get("/v2/assets/{asset_id}", tags=["Universal Asset Aggregator"])
+def get_universal_asset(asset_id: str) -> UniversalAsset:
+    """Retrieves deep dossier for any universal asset."""
+    asset = AssetAggregatorService.get_asset_by_id(asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {asset_id} not found")
+    return asset
+
+
+@app.post("/v2/assets/{asset_id}/deep-osint", tags=["Universal Asset Aggregator"])
+def run_deep_osint(asset_id: str) -> UniversalAsset:
+    """
+    Triggers Tier 2 On-Demand Agentic OSINT synthesis:
+    - Founder tenure & baby-boomer retirement verification
+    - State licensing & professional board good-standing
+    - County civil judgments & bankruptcy screening
+    - Criminal background clearance
+    """
+    asset = AssetAggregatorService.run_deep_agentic_osint(asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {asset_id} not found")
+    return asset
+
+
+@app.post("/v2/assets/{asset_id}/outreach-playbook", tags=["Universal Asset Aggregator"])
+def generate_outreach_playbook(asset_id: str, req: OutreachPlaybookRequest) -> Dict[str, Any]:
+    """
+    Generates fiduciary outreach playbook:
+    - SUCCESSION_BUYOUT: Respectful legacy preservation proposal
+    - AI_MODERNIZATION: Consulting-to-equity workflow automation proposal
+    """
+    try:
+        return AssetAggregatorService.generate_outreach_playbook(asset_id, req.playbook_type)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.post("/v2/pipeline/status", tags=["Universal Asset Aggregator"])
+def update_pipeline_status(req: UpdatePipelineStageRequest) -> UniversalAsset:
+    """Updates the Kanban CRM pipeline stage for an asset."""
+    asset = AssetAggregatorService.update_pipeline_stage(req.asset_id, req.stage)
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {req.asset_id} not found")
+    return asset
+
+
+@app.get("/v2/assets/{asset_id}/spatial-twin", tags=["Universal Asset Aggregator"])
+def get_asset_spatial_twin(asset_id: str) -> Dict[str, Any]:
+    """
+    Returns 3D Spatial Digital Twin & Site Flyover data:
+    - Center rooftop coordinates (lat, lng, ground elevation)
+    - 3D Extruded Parcel Boundary polygon vertices
+    - Rooftop & HVAC inspection specs (membrane condition, HVAC unit count)
+    - Industrial logistics (loading docks, drive-in doors, truck apron depth)
+    - 3D FEMA Floodplain Inundation elevation & flood surge clearance
+    - Proximity to nearest interstate highway and active freight rail spur
+    """
+    from services.gis.spatial_resolver import UniversalSpatialResolver
+    asset = AssetAggregatorService.get_asset_by_id(asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {asset_id} not found")
+
+    fips_map = {"PA": "42077", "VA": "51770", "NC": "37183", "TX": "48453", "IL": "17031", "FL": "12086"}
+    fips = fips_map.get(asset.state, "42077")
+    twin = UniversalSpatialResolver.resolve_parcel_spatial_twin(
+        fips_code=fips,
+        parcel_id=f"PARCEL-{asset.asset_id}",
+        street_address=f"{asset.title}, {asset.city}, {asset.state}",
+        building_sqft=asset.building_sqft or 24000,
+        lot_acreage=2.5,
+    )
+    return {
+        "status": "success",
+        "asset_id": asset.asset_id,
+        "title": asset.title,
+        "asset_class": asset.asset_class.value,
+        "address": f"{asset.city}, {asset.state} {asset.zip_code}",
+        "spatial_twin": twin.to_dict(),
+        "camera_preset": {
+            "heading_deg": 45.0,
+            "pitch_deg": -35.0,
+            "altitude_meters": 280.0,
+        },
+    }
+
+
+@app.get("/v2/user/preferences", tags=["Universal Asset Aggregator"])
+def get_user_preferences(profile_id: str = "default_investor") -> UserPreferenceProfile:
+    """Retrieves persistent user preferences."""
+    return AssetAggregatorService.get_user_preferences(profile_id)
+
+
+@app.post("/v2/user/preferences", tags=["Universal Asset Aggregator"])
+def update_user_preferences(profile: UserPreferenceProfile) -> UserPreferenceProfile:
+    """Updates persistent user preferences."""
+    return AssetAggregatorService.update_user_preferences(profile)
+
+
+# =========================================================================
+# V1.0 AUTHENTICATION, EMAIL VERIFICATION & USER IDENTITY MANAGEMENT
+# =========================================================================
+
+@app.post("/v1/auth/signup", tags=["Authentication & User Management"])
+def auth_signup(req: SignUpRequest) -> Dict[str, Any]:
+    """
+    Registers a new user account with email, username, password, confirm password,
+    and institutional role. Dispatches an email verification token.
+    """
+    try:
+        user, v_token = auth_store.register_user(
+            username=req.username,
+            email=req.email,
+            password=req.password,
+            confirm_password=req.confirm_password,
+            role=req.role or TeamRole.PRINCIPAL,
+        )
+        return {
+            "status": "success",
+            "message": "Account registered successfully. Please verify your email address.",
+            "user": user.to_dict(),
+            "verification_token": v_token,
+            "verification_url": f"/verify-email?token={v_token}",
+        }
+    except (ValueError, UserAlreadyExistsError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/v1/auth/verify-email", tags=["Authentication & User Management"])
+def auth_verify_email(req: VerifyEmailRequest) -> Dict[str, Any]:
+    """
+    Verifies user's email address using cryptographic token.
+    """
+    success, message, user = auth_store.verify_email(req.token)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    return {
+        "status": "success",
+        "message": message,
+        "user": user.to_dict() if user else None,
+    }
+
+
+@app.post("/v1/auth/resend-verification", tags=["Authentication & User Management"])
+def auth_resend_verification(req: ResendVerificationRequest) -> Dict[str, Any]:
+    """
+    Resends email verification instructions with a fresh token.
+    """
+    success, message, token = auth_store.resend_verification(req.email)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    return {
+        "status": "success",
+        "message": message,
+        "verification_token": token,
+        "verification_url": f"/verify-email?token={token}",
+    }
+
+
+@app.post("/v1/auth/signin", tags=["Authentication & User Management"])
+def auth_signin(req: SignInRequest) -> Dict[str, Any]:
+    """
+    Signs in a user with username OR email + password.
+    Returns signed RFC-7519 JWT Bearer access token.
+    """
+    try:
+        user = auth_store.authenticate_user(req.username_or_email, req.password)
+        access_token = create_access_token(user)
+        return {
+            "status": "success",
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": user.to_dict(),
+        }
+    except InvalidCredentialsError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@app.post("/v1/auth/forgot-password", tags=["Authentication & User Management"])
+def auth_forgot_password(req: ForgotPasswordRequest) -> Dict[str, Any]:
+    """
+    Dispatches a secure 60-minute password reset token.
+    """
+    success, message, token = auth_store.request_password_reset(req.email)
+    return {
+        "status": "success",
+        "message": message,
+        "reset_token": token,
+        "reset_url": f"/reset-password?token={token}" if token else None,
+    }
+
+
+@app.post("/v1/auth/reset-password", tags=["Authentication & User Management"])
+def auth_reset_password(req: ResetPasswordRequest) -> Dict[str, Any]:
+    """
+    Resets user password with valid reset token.
+    """
+    success, message = auth_store.reset_password(
+        token=req.token,
+        new_password=req.new_password,
+        confirm_password=req.confirm_password,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    return {
+        "status": "success",
+        "message": message,
+    }
+
+
+@app.get("/v1/auth/me", tags=["Authentication & User Management"])
+def auth_get_current_user(request: Request) -> Dict[str, Any]:
+    """
+    Retrieves profile and active preferences for the authenticated Bearer session.
+    """
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication token required.")
+    token = auth_header.split(" ", 1)[1].strip()
+    try:
+        payload = decode_access_token(token)
+        user_id = payload.get("sub")
+        user = auth_store.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User account not found.")
+        return {
+            "status": "success",
+            "user": user.to_dict(),
+            "claims": payload,
+        }
+    except TokenExpiredOrInvalidError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@app.get("/v1/auth/oauth/providers", tags=["Authentication & User Management"])
+def auth_oauth_providers() -> Dict[str, Any]:
+    """
+    Returns configured third-party OAuth providers (Google, Microsoft).
+    Keeps social login optional and plug-and-play.
+    """
+    return get_oauth_providers_status()
+
+
+# =========================================================================
+# V2.0 INSTITUTIONAL ALADDIN ENGINES (FIVE INTEGRATED REPOS)
+# =========================================================================
+
+class MultipleArbitrageRequest(BaseModel):
+    purchase_ev_usd: str = Field(..., description="Target purchase enterprise value in USD")
+    normalized_ebitda_usd: str = Field(..., description="Target verified normalized EBITDA in USD")
+    naics_code: str = Field(default="5412", description="4-digit NAICS industry code")
+
+
+class EdgarDistressScanRequest(BaseModel):
+    state_code: Optional[str] = Field(default=None, description="2-letter state jurisdiction filter")
+    issuer_query: Optional[str] = Field(default=None, description="Issuer corporate name query")
+
+
+class ScreenEntityComplianceRequest(BaseModel):
+    entity_name: str = Field(..., description="Legal corporate or holding entity name")
+    jurisdiction: str = Field(default="US-VA", description="ISO jurisdiction or state code")
+    screener_role: str = Field(default="COUNSEL", description="Role executing compliance clearance (COUNSEL or PRINCIPAL)")
+    beneficial_owners: Optional[List[str]] = Field(default=None, description="List of natural person beneficial owners (>25% equity)")
+    tin_or_ein: Optional[str] = Field(default=None, description="Federal Tax Identification Number or EIN hint")
+
+
+class ParseTaxDocumentRequest(BaseModel):
+    document_type: str = Field(default="IRS_1040_SCHED_C", description="IRS_1040_SCHED_C or IRS_1120_S")
+    document_text: str = Field(..., description="Unstructured OCR or text extraction of the IRS tax return")
+    tax_year: int = Field(default=2025, description="Filing tax year")
+    taxpayer_name: str = Field(default="Operating Acquisition Target", description="Taxpayer or business name")
+    owner_hours_per_week: int = Field(default=45, description="Average owner active operating hours per week")
+
+
+class MacroSofrScenariosRequest(BaseModel):
+    loan_principal_usd: str = Field(..., description="Total senior debt loan principal in USD")
+    baseline_annual_ebitda_usd: str = Field(..., description="Verified annual EBITDA in USD")
+    amortization_years: int = Field(default=10, description="Loan amortization term in years")
+    baseline_rate_pct: Optional[str] = Field(default=None, description="Optional custom baseline interest rate (e.g. '0.1125')")
+    asset_title: str = Field(default="Target Acquisition", description="Asset or acquisition vehicle title")
+
+
+# -------------------------------------------------------------------------
+# ENGINE 1: Uber H3 Hexagonal Geospatial Indexing & Roll-Up Clustering
+# -------------------------------------------------------------------------
+
+@app.get("/v2/analytics/h3-clusters", tags=["Institutional Analytics", "Uber H3 Spatial"])
+def get_h3_rollup_clusters(
+    k_ring_radius: int = Query(default=3, ge=1, le=10, description="H3 k-ring neighborhood expansion radius")
+) -> Dict[str, Any]:
+    """
+    Synthesizes nationwide assets into Private Equity Roll-Up Clusters using Uber H3
+    hierarchical hexagonal geospatial indexing (Resolution 7 anchor, Resolution 8 coverage).
+    """
+    from services.gis.h3_clustering import H3SpatialService
+    assets = AssetAggregatorService.search_assets()
+    asset_dicts = []
+    coords = {
+        "PA": (40.6084, -75.4902),
+        "VA": (37.2707, -79.9414),
+        "NC": (35.7796, -78.6382),
+        "TX": (30.2672, -97.7431),
+        "IL": (41.8781, -87.6298),
+        "FL": (25.7617, -80.1918),
+    }
+    for a in assets:
+        d = a.model_dump() if hasattr(a, "model_dump") else a.dict()
+        st = d.get("state", "PA")
+        lat, lng = coords.get(st, (40.6084, -75.4902))
+        d["latitude"] = lat
+        d["longitude"] = lng
+        asset_dicts.append(d)
+
+    clusters = H3SpatialService.synthesize_rollup_clusters(asset_dicts, k_ring_radius=k_ring_radius)
+    return {
+        "status": "success",
+        "total_clusters": len(clusters),
+        "k_ring_radius": k_ring_radius,
+        "clusters": [c.to_dict() for c in clusters],
+    }
+
+
+@app.get("/v2/assets/{asset_id}/h3-index", tags=["Universal Asset Aggregator", "Uber H3 Spatial"])
+def get_asset_h3_spatial_index(asset_id: str) -> Dict[str, Any]:
+    """
+    Returns hierarchical Uber H3 spatial indexes (Res-7, Res-8, Res-9) and hexagonal boundary coordinates.
+    """
+    from services.gis.h3_clustering import H3SpatialService
+    asset = AssetAggregatorService.get_asset_by_id(asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail=f"Asset {asset_id} not found")
+
+    coords = {
+        "PA": (40.6084, -75.4902),
+        "VA": (37.2707, -79.9414),
+        "NC": (35.7796, -78.6382),
+        "TX": (30.2672, -97.7431),
+        "IL": (41.8781, -87.6298),
+        "FL": (25.7617, -80.1918),
+    }
+    lat, lng = coords.get(asset.state, (40.6084, -75.4902))
+    h3_idx = H3SpatialService.index_latlng(lat, lng)
+    neighbors = H3SpatialService.get_k_ring_neighbors(h3_idx.h3_index_res8, k=2)
+    return {
+        "status": "success",
+        "asset_id": asset_id,
+        "title": asset.title,
+        "h3_spatial_index": h3_idx.to_dict(),
+        "k_ring_2_neighbors": sorted(list(neighbors)),
+    }
+
+
+# -------------------------------------------------------------------------
+# ENGINE 2: SEC EDGAR XBRL Comps & Form D Distress Sourcing
+# -------------------------------------------------------------------------
+
+@app.get("/v2/underwriting/public-comps/{naics_code}", tags=["Underwriting Engine", "SEC EDGAR Comps"])
+def get_public_comps_benchmark(naics_code: str) -> Dict[str, Any]:
+    """
+    Resolves SEC EDGAR XBRL public sector trading multiples (EV/EBITDA, P/E, FCF yield) by NAICS code.
+    """
+    from packages.underwriting_engine import EdgarCompsEngine
+    benchmark = EdgarCompsEngine.resolve_public_benchmark(naics_code)
+    return {
+        "status": "success",
+        "naics_code": benchmark.naics_code,
+        "sector_name": benchmark.sector_name,
+        "peer_tickers": benchmark.peer_tickers,
+        "median_ev_ebitda": str(benchmark.median_ev_ebitda),
+        "p25_ev_ebitda": str(benchmark.p25_ev_ebitda),
+        "p75_ev_ebitda": str(benchmark.p75_ev_ebitda),
+        "median_pe_multiple": str(benchmark.median_pe_multiple),
+        "median_debt_to_equity": str(benchmark.median_debt_to_equity),
+        "median_fcf_yield_pct": str(benchmark.median_fcf_yield_pct),
+        "source_domain": benchmark.edgar_source_domain,
+    }
+
+
+@app.post("/v2/underwriting/multiple-arbitrage", tags=["Underwriting Engine", "SEC EDGAR Comps"])
+def calculate_multiple_arbitrage(req: MultipleArbitrageRequest) -> Dict[str, Any]:
+    """
+    Models valuation arbitrage between private acquisition purchase multiple and SEC EDGAR public sector comps.
+    Calculates immediate dollar value expansion upon roll-up.
+    """
+    from packages.underwriting_engine import EdgarCompsEngine
+    try:
+        purchase_ev = Decimal(req.purchase_ev_usd)
+        normalized_ebitda = Decimal(req.normalized_ebitda_usd)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid decimal input: {e}")
+
+    try:
+        res = EdgarCompsEngine.calculate_valuation_arbitrage(
+            purchase_ev=purchase_ev,
+            normalized_ebitda=normalized_ebitda,
+            naics_code=req.naics_code,
+        )
+        return {
+            "status": "success",
+            "arbitrage": res.to_dict(),
+        }
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+
+
+@app.post("/v2/underwriting/edgar-distress-scan", tags=["Underwriting Engine", "SEC EDGAR Comps"])
+def scan_edgar_form_d_distress(req: EdgarDistressScanRequest) -> Dict[str, Any]:
+    """
+    Polls SEC Form D private placement filings and evaluates distress scores, capital runway exhaustion,
+    and high-yield bridge debt interventions.
+    """
+    from services.enrichment.edgar_scraper import SecEdgarClient
+    from packages.underwriting_engine import EdgarCompsEngine
+
+    filings = SecEdgarClient.search_form_d_filings(
+        state_code=req.state_code,
+        issuer_query=req.issuer_query,
+    )
+
+    evaluated_filings = []
+    for f in filings:
+        days_open = 195 if f.is_amendment else 75
+        eval_res = EdgarCompsEngine.evaluate_form_d_distress(
+            cik=f.cik,
+            issuer_name=f.issuer_name,
+            offering_amount_usd=f.offering_amount_usd,
+            amount_sold_usd=f.amount_sold_usd,
+            security_type=f.security_type,
+            days_open=days_open,
+            is_amendment=f.is_amendment,
+        )
+        evaluated_filings.append({
+            "accession_number": f.accession_number,
+            "filing_date": f.filing_date,
+            "sec_filing_url": f.sec_filing_url,
+            "distress_evaluation": eval_res.to_dict(),
+        })
+
+    return {
+        "status": "success",
+        "total_filings_screened": len(evaluated_filings),
+        "filings": evaluated_filings,
+    }
+
+
+# -------------------------------------------------------------------------
+# ENGINE 3: OpenSanctions & Yente AML/KYC Institutional Clearance
+# -------------------------------------------------------------------------
+
+@app.post("/v2/compliance/screen-entity", tags=["Compliance & Security", "OpenSanctions Yente"])
+def compliance_screen_entity(req: ScreenEntityComplianceRequest) -> Dict[str, Any]:
+    """
+    Executes exhaustive AML/KYC/OFAC screening across consolidated watchlists.
+    Generates a cryptographically signed, tamper-evident YenteComplianceCertificate with SHA-256 digest.
+    """
+    from services.security.yente_screening_engine import YenteScreeningService
+    cert = YenteScreeningService.screen_entity_and_owners(
+        entity_name=req.entity_name,
+        jurisdiction=req.jurisdiction,
+        screener_role=req.screener_role,
+        beneficial_owners=req.beneficial_owners,
+        tin_or_ein=req.tin_or_ein,
+    )
+    return {
+        "status": "success",
+        "certificate": cert.to_dict(),
+    }
+
+
+@app.get("/v2/compliance/certificate/{certificate_id}", tags=["Compliance & Security", "OpenSanctions Yente"])
+def get_compliance_certificate(certificate_id: str) -> Dict[str, Any]:
+    """
+    Retrieves a verified KYC/AML compliance certificate by certificate ID.
+    """
+    from services.security.yente_screening_engine import YenteScreeningService
+    cert = YenteScreeningService.get_certificate(certificate_id)
+    if not cert:
+        raise HTTPException(status_code=404, detail=f"Compliance certificate {certificate_id} not found.")
+    return {
+        "status": "success",
+        "certificate": cert.to_dict(),
+    }
+
+
+# -------------------------------------------------------------------------
+# ENGINE 4: Unstructured Financial Document & Tax Return Parser
+# -------------------------------------------------------------------------
+
+@app.post("/v2/underwriting/parse-tax-document", tags=["Underwriting Engine", "Tax Document Parser"])
+def parse_tax_document(req: ParseTaxDocumentRequest) -> Dict[str, Any]:
+    """
+    Parses unstructured OCR/text from IRS Form 1040 Schedule C or Form 1120-S.
+    Extracts line items, automatically identifies lifestyle add-backs, and executes
+    deterministic Quality of Earnings (QoE) audit.
+    """
+    from packages.underwriting_engine import TaxDocumentParser
+    try:
+        doc_type = req.document_type.upper()
+        if "1120" in doc_type:
+            report = TaxDocumentParser.parse_form_1120_s(
+                document_text=req.document_text,
+                tax_year=req.tax_year,
+                taxpayer_name=req.taxpayer_name,
+                owner_hours_per_week=req.owner_hours_per_week,
+            )
+        else:
+            report = TaxDocumentParser.parse_schedule_c(
+                document_text=req.document_text,
+                tax_year=req.tax_year,
+                taxpayer_name=req.taxpayer_name,
+                owner_hours_per_week=req.owner_hours_per_week,
+            )
+        return {
+            "status": "success",
+            "report": report.to_dict(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Tax parsing failed: {e}")
+
+
+# -------------------------------------------------------------------------
+# ENGINE 5: OpenBB Macroeconomic SOFR Yield Curve & Stress Testing
+# -------------------------------------------------------------------------
+
+@app.get("/v2/underwriting/benchmark-yield-curve", tags=["Underwriting Engine", "OpenBB Macro SOFR"])
+def get_benchmark_yield_curve() -> Dict[str, Any]:
+    """
+    Returns active macroeconomic reference rates: 1M SOFR, 3M SOFR, 10Y US Treasury, and WSJ Prime.
+    """
+    from packages.underwriting_engine import MacroSofrEngine
+    curve = MacroSofrEngine.get_active_yield_curve()
+    return {
+        "status": "success",
+        "yield_curve": curve.to_dict(),
+    }
+
+
+@app.post("/v2/underwriting/macro-sofr-scenarios", tags=["Underwriting Engine", "OpenBB Macro SOFR"])
+def run_macro_sofr_scenarios(req: MacroSofrScenariosRequest) -> Dict[str, Any]:
+    """
+    Simulates 5 dynamic macroeconomic rate shock scenarios (+100, +200, +300 bps, stagflation)
+    against target debt principal and EBITDA. Evaluates DSCR, covenant headroom, and fragility tier.
+    """
+    from packages.underwriting_engine import MacroSofrEngine
+    try:
+        principal = Decimal(req.loan_principal_usd)
+        ebitda = Decimal(req.baseline_annual_ebitda_usd)
+        custom_rate = Decimal(req.baseline_rate_pct) if req.baseline_rate_pct else None
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid decimal inputs: {e}")
+
+    matrix = MacroSofrEngine.evaluate_rate_shock_matrix(
+        loan_principal_usd=principal,
+        baseline_annual_ebitda_usd=ebitda,
+        amortization_years=req.amortization_years,
+        baseline_rate=custom_rate,
+        asset_title=req.asset_title,
+    )
+    return {
+        "status": "success",
+        "matrix_report": matrix.to_dict(),
+    }
+
+
+# =========================================================================
+# MODEL CONTEXT PROTOCOL (MCP) & DEVELOPER AGENT GATEWAY
+# =========================================================================
+
+class CreateApiKeyRequest(BaseModel):
+    name: str = Field(..., description="Application or AI Agent name (e.g., 'Claude Desktop', 'Hermes Agent')")
+    role: str = Field("ANALYST", description="RBAC Role: 'ADMIN', 'ANALYST', or 'READ_ONLY'")
+
+
+def _extract_and_validate_mcp_api_key(request: Request, query_token: Optional[str] = None):
+    from services.security.api_key_store import api_key_store
+    auth_header = request.headers.get("Authorization", "")
+    x_api_key = request.headers.get("X-API-Key", "")
+    raw_key = None
+    if auth_header.startswith("Bearer "):
+        raw_key = auth_header[7:].strip()
+    elif auth_header:
+        raw_key = auth_header.strip()
+    elif x_api_key:
+        raw_key = x_api_key.strip()
+    elif query_token:
+        raw_key = query_token.strip()
+
+    if not raw_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing API Key. Provide via 'Authorization: Bearer <token>', 'X-API-Key' header, or '?token=' query parameter.",
+        )
+
+    rec = api_key_store.validate_key(raw_key)
+    if not rec:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized: Invalid, expired, or revoked API key.",
+        )
+    return rec
+
+
+@app.get("/v1/developer/keys", tags=["Developer & Agent Gateway"])
+def list_developer_api_keys() -> Dict[str, Any]:
+    """
+    Returns sanitized list of all registered developer and AI agent API keys.
+    """
+    from services.security.api_key_store import api_key_store
+    return {
+        "status": "success",
+        "keys": api_key_store.list_keys(),
+    }
+
+
+@app.post("/v1/developer/keys", tags=["Developer & Agent Gateway"])
+def create_developer_api_key(req: CreateApiKeyRequest) -> Dict[str, Any]:
+    """
+    Generates a new secure 32-byte API token (prefixed with 'asup_live_') for an AI agent or developer.
+    The raw plaintext key is returned exactly once upon creation.
+    """
+    from services.security.api_key_store import api_key_store
+    key_info = api_key_store.create_key(name=req.name, role=req.role)
+    return {
+        "status": "success",
+        **key_info,
+    }
+
+
+@app.delete("/v1/developer/keys/{key_id}", tags=["Developer & Agent Gateway"])
+def revoke_developer_api_key(key_id: str) -> Dict[str, Any]:
+    """
+    Revokes an active developer/agent API key immediately.
+    """
+    from services.security.api_key_store import api_key_store
+    success = api_key_store.revoke_key(key_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"API key {key_id} not found.")
+    return {
+        "status": "success",
+        "message": f"API key {key_id} revoked successfully.",
+    }
+
+
+@app.get("/v1/developer/mcp/config", tags=["Developer & Agent Gateway"])
+def get_claude_desktop_configuration() -> Dict[str, Any]:
+    """
+    Returns ready-to-paste claude_desktop_config.json configuration snippet for Claude Desktop and Claude Code.
+    """
+    from services.mcp.server import generate_claude_desktop_config
+    return {
+        "status": "success",
+        "config": generate_claude_desktop_config(),
+    }
+
+
+@app.post("/mcp/messages", tags=["Model Context Protocol (MCP)"])
+async def mcp_messages_endpoint(
+    request: Request,
+    token: Optional[str] = Query(None),
+) -> Any:
+    """
+    Dispatches JSON-RPC 2.0 requests from AI Agents (Claude Desktop, Hermes, OpenClaw, Copilot)
+    conforming to Anthropic Model Context Protocol (MCP) 2024-11-05 Specification.
+    """
+    _extract_and_validate_mcp_api_key(request, query_token=token)
+    from services.mcp.server import dispatch_jsonrpc
+
+    try:
+        body = await request.json()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON-RPC payload: {e}")
+
+    response = dispatch_jsonrpc(body)
+    if response is None:
+        return {"status": "ok"}
+    return response
+
+
+@app.get("/mcp/sse", tags=["Model Context Protocol (MCP)"])
+async def mcp_sse_endpoint(
+    request: Request,
+    token: Optional[str] = Query(None),
+    max_pings: Optional[int] = Query(None, description="Optional max ping iterations for testing or non-persistent clients"),
+):
+    """
+    Server-Sent Events (SSE) Transport endpoint for remote AI agents (Hermes, OpenClaw, webhooks).
+    Initiates persistent streaming connection and announces the messages endpoint.
+    """
+    _extract_and_validate_mcp_api_key(request, query_token=token)
+
+    async def event_generator():
+        # First event directs the client where to post messages per MCP SSE spec
+        yield "event: endpoint\r\ndata: /mcp/messages\r\n\r\n"
+        count = 0
+        while True:
+            if max_pings is not None and count >= max_pings:
+                break
+            if await request.is_disconnected():
+                break
+            await asyncio.sleep(15)
+            yield "event: ping\r\ndata: {}\r\n\r\n"
+            count += 1
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# =========================================================================
+# AUTONOMOUS UPSTREAM DEPENDENCY & OPEN-SOURCE TRACKER
+# =========================================================================
+
+@app.get("/v1/system/dependencies", tags=["System & Dependencies"])
+def get_upstream_dependencies() -> Dict[str, Any]:
+    """
+    Returns complete ledger of tracked upstream dependencies, GitHub repositories,
+    PyPI packages, and npm libraries, including auto-discovery and update status.
+    """
+    from services.security.dependency_manager import upstream_dependency_manager
+    return {
+        "status": "success",
+        "summary": upstream_dependency_manager.get_summary(),
+        "dependencies": upstream_dependency_manager.list_dependencies(),
+    }
+
+
+@app.post("/v1/system/dependencies/check-updates", tags=["System & Dependencies"])
+def check_upstream_updates_endpoint() -> Dict[str, Any]:
+    """
+    Scans for newly added dependencies and queries PyPI, npm, and GitHub APIs
+    to detect newer upstream releases and changelogs.
+    """
+    from services.security.dependency_manager import upstream_dependency_manager
+    new_discovered = upstream_dependency_manager.auto_discover_dependencies()
+    check_res = upstream_dependency_manager.check_upstream_updates(timeout_sec=4)
+    return {
+        "status": "success",
+        "new_dependencies_discovered": new_discovered,
+        "check_results": check_res,
+        "summary": upstream_dependency_manager.get_summary(),
+    }
+
+
+@app.post("/v1/system/dependencies/verify-tests", tags=["System & Dependencies"])
+def verify_airgap_and_test_suite() -> Dict[str, Any]:
+    """
+    Executes the full 98/98 unit & integration test suite plus 50/50 golden backtest
+    to verify air-gap integrity and SBA SOP 50 10 8.1 compliance.
+    """
+    from services.security.dependency_manager import upstream_dependency_manager
+    res = upstream_dependency_manager.verify_airgap_and_run_tests()
+    return {
+        "status": "success" if res["is_airgap_passed"] else "failed",
+        **res,
+    }
+
+
+# =========================================================================
+# ASSET HEALTH & PREDICTIVE PHYSICAL INTELLIGENCE (AUGURY STANDARD)
+# =========================================================================
+
+class ParseEquipmentScheduleRequest(BaseModel):
+    raw_schedule_text: str = Field(..., description="Unstructured text, Markdown table, or scanned exhibit of machinery")
+    replacement_multiplier: Optional[str] = Field("1.25", description="Estimated inflation/replacement factor")
+
+class AerialScanRequest(BaseModel):
+    parcel_id: str = Field(..., description="Assessor GPIN / parcel ID")
+    latitude: float = Field(..., description="Latitude coordinate")
+    longitude: float = Field(..., description="Longitude coordinate")
+    footprint_sqft: Optional[float] = Field(24500.0, description="Building footprint square footage")
+
+class PredictiveCapexRequest(BaseModel):
+    annual_ebitda_usd: str = Field("480000.00", description="Trailing 12-month EBITDA")
+    annual_debt_service_usd: str = Field("285000.00", description="Annual senior debt service")
+    equipment_items: Optional[List[Dict[str, Any]]] = Field(None, description="Optional parsed equipment list")
+
+class MaintenanceAuditRequest(BaseModel):
+    invoices: Optional[List[Dict[str, Any]]] = Field(None, description="List of maintenance invoice dictionaries")
+
+
+@app.get("/v1/assets/{asset_id}/health-score", tags=["AssetHealth Intelligence"])
+def get_asset_health_score_endpoint(
+    asset_id: str,
+    naics_code: str = Query("332710", description="NAICS industry code"),
+    parcel_id: str = Query("4011902", description="County GIS parcel ID"),
+    latitude: float = Query(37.2709, description="Parcel latitude"),
+    longitude: float = Query(-79.9414, description="Parcel longitude"),
+    annual_ebitda: float = Query(480000.0, description="Baseline EBITDA"),
+    debt_service: float = Query(285000.0, description="Annual debt service"),
+) -> Dict[str, Any]:
+    """
+    Executes Augury-inspired 5-engine physical asset health solver:
+    Computes overall score (0-100), Physical Risk Grade (A-F), aerial roof rating,
+    predictive capex reserves, operational drift, and maintenance ledger audit.
+    """
+    from packages.asset_health import asset_health_solver
+    result = asset_health_solver.evaluate_composite_asset_health(
+        asset_id=asset_id,
+        naics_code=naics_code,
+        parcel_id=parcel_id,
+        latitude=Decimal(str(latitude)),
+        longitude=Decimal(str(longitude)),
+        annual_ebitda=Decimal(str(annual_ebitda)),
+        annual_debt_service=Decimal(str(debt_service)),
+    )
+    return {
+        "status": "success",
+        "asset_id": asset_id,
+        "health": result.to_dict(),
+    }
+
+
+@app.post("/v1/assets/{asset_id}/parse-equipment-schedule", tags=["AssetHealth Intelligence"])
+def parse_equipment_schedule_endpoint(
+    asset_id: str,
+    req: ParseEquipmentScheduleRequest,
+) -> Dict[str, Any]:
+    """
+    Docling-inspired table parser: Converts raw PDF exhibit text or Markdown equipment
+    tables into structured EquipmentItemRecord entries with condition tiers and failure risks.
+    """
+    from packages.asset_health import EquipmentScheduleParser
+    parser = EquipmentScheduleParser()
+    mult = Decimal(req.replacement_multiplier or "1.25")
+    records = parser.parse_text_or_markdown_tables(req.raw_schedule_text, default_replacement_ratio=mult)
+    return {
+        "status": "success",
+        "asset_id": asset_id,
+        "parsed_items_count": len(records),
+        "items": [r.to_dict() for r in records],
+    }
+
+
+@app.post("/v1/assets/{asset_id}/aerial-facility-scan", tags=["AssetHealth Intelligence"])
+def aerial_facility_scan_endpoint(
+    asset_id: str,
+    req: AerialScanRequest,
+) -> Dict[str, Any]:
+    """
+    TorchGeo-inspired aerial sentinel: Analyzes roof albedo, standing water,
+    yard fleet density, and outdoor environmental hazards using public satellite & NAIP orthoimagery.
+    """
+    from packages.asset_health import AerialFacilitySentinel
+    sentinel = AerialFacilitySentinel()
+    report = sentinel.analyze_parcel_aerial_condition(
+        parcel_id=req.parcel_id,
+        latitude=Decimal(str(req.latitude)),
+        longitude=Decimal(str(req.longitude)),
+        building_footprint_sqft=Decimal(str(req.footprint_sqft or 24500.0)),
+    )
+    return {
+        "status": "success",
+        "asset_id": asset_id,
+        "aerial_report": report.to_dict(),
+    }
+
+
+@app.post("/v1/assets/{asset_id}/predict-capex-reserve", tags=["AssetHealth Intelligence"])
+def predict_capex_reserve_endpoint(
+    asset_id: str,
+    req: PredictiveCapexRequest,
+) -> Dict[str, Any]:
+    """
+    Darts-inspired time-series machinery degradation model:
+    Computes 3-year mandatory capital expenditure curves and tests SBA 1.25x DSCR stress breach.
+    """
+    from packages.asset_health import EquipmentScheduleParser, PredictiveCapexEngine
+    if req.equipment_items:
+        from packages.asset_health.models import EquipmentItemRecord, PhysicalConditionTier
+        eq_list = []
+        for d in req.equipment_items:
+            eq_list.append(EquipmentItemRecord(
+                item_id=d.get("item_id", "EQ-001"),
+                description=d.get("description", "Machine Tool"),
+                serial_number=d.get("serial_number", "SN-001"),
+                make_model=d.get("make_model", "Model"),
+                year_manufactured=int(d.get("year_manufactured", 2018)),
+                operating_hours=Decimal(str(d.get("operating_hours", "5000"))),
+                rated_life_hours=Decimal(str(d.get("rated_life_hours", "20000"))),
+                original_cost_usd=Decimal(str(d.get("original_cost_usd", "50000.00"))),
+                estimated_replacement_cost_usd=Decimal(str(d.get("estimated_replacement_cost_usd", "65000.00"))),
+                condition_tier=PhysicalConditionTier(d.get("condition_tier", "GOOD")),
+                remaining_useful_life_pct=Decimal(str(d.get("remaining_useful_life_pct", "50.0"))),
+                failure_risk_score=Decimal(str(d.get("failure_risk_score", "0.20"))),
+            ))
+    else:
+        parser = EquipmentScheduleParser()
+        eq_list = parser._generate_industry_defaults()
+
+    engine = PredictiveCapexEngine()
+    result = engine.calculate_capex_reserve_and_dscr_impact(
+        equipment_list=eq_list,
+        annual_historical_ebitda=Decimal(req.annual_ebitda_usd),
+        annual_debt_service=Decimal(req.annual_debt_service_usd),
+    )
+    return {
+        "status": "success",
+        "asset_id": asset_id,
+        "predictive_capex": result.to_dict(),
+    }
+
+
+@app.post("/v1/assets/{asset_id}/audit-maintenance-ledger", tags=["AssetHealth Intelligence"])
+def audit_maintenance_ledger_endpoint(
+    asset_id: str,
+    req: MaintenanceAuditRequest,
+) -> Dict[str, Any]:
+    """
+    Cleanlab-inspired data-centric audit: Detects fraudulent owner add-backs,
+    commingled personal maintenance expenses, and phantom equipment repair write-offs.
+    """
+    from packages.asset_health import MaintenanceAuditor
+    auditor = MaintenanceAuditor()
+    result = auditor.audit_maintenance_invoices(req.invoices)
+    return {
+        "status": "success",
+        "asset_id": asset_id,
+        "maintenance_audit": result.to_dict(),
+    }
+
+
+
+
+

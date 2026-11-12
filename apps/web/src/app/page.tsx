@@ -4,31 +4,130 @@ import React, { useEffect, useState } from "react";
 import {
   Briefcase,
   CheckCircle2,
-  AlertCircle,
   Clock,
-  ShieldCheck,
-  TrendingUp,
+  Search,
   RefreshCw,
 } from "lucide-react";
 import DealCard from "../components/DealCard";
 import DealFilterBar from "../components/DealFilterBar";
 import AssetIntelligenceModal from "../components/AssetIntelligenceModal";
-import { fetchActiveMandate, fetchDeals, principalDecision } from "../lib/api";
-import { Deal, DealFilterParams, MandateProfile } from "../lib/types";
+import UniversalAssetSearchBar from "../components/UniversalAssetSearchBar";
+import UniversalAssetCard from "../components/UniversalAssetCard";
+import UniversalAssetDossierModal from "../components/UniversalAssetDossierModal";
+import UserPreferencesModal from "../components/UserPreferencesModal";
+import DealPipelineKanbanModal from "../components/DealPipelineKanbanModal";
+import {
+  fetchActiveMandate,
+  fetchDeals,
+  fetchUserPreferences,
+  principalDecision,
+  searchUniversalAssets,
+  updatePipelineStage,
+} from "../lib/api";
+import {
+  AssetClass,
+  Deal,
+  DealFilterParams,
+  MandateProfile,
+  PipelineStage,
+  UniversalAsset,
+  UserPreferenceProfile,
+} from "../lib/types";
 
-export default function PrincipalDigestPage() {
+const DEFAULT_PREFERENCES: UserPreferenceProfile = {
+  profile_id: "default_investor",
+  investor_name: "Principal Family Office",
+  target_locations: ["Allentown, PA", "Nationwide"],
+  min_check_usd: "100000.00",
+  max_budget_usd: "5000000.00",
+  target_asset_classes: [
+    "BUSINESS_ACQUISITION",
+    "REAL_ESTATE",
+    "TAX_LIEN_MUNICIPAL",
+    "EQUIPMENT_FLEET",
+  ],
+  operator_style: "ACTIVE_OPERATOR",
+  max_acceptable_crime_index: 45,
+  min_years_operating: 15,
+  baby_boomer_succession_only: false,
+  section_8_only: false,
+};
+
+export default function UnifiedSourcingDashboard() {
+  // Top-Level Mode: "AGGREGATOR" (All Opportunities) vs "DIGEST" (Principal Top 5 Digest)
+  const [activeView, setActiveView] = useState<"AGGREGATOR" | "DIGEST">("AGGREGATOR");
+
+  // Universal Asset Aggregator State
+  const [universalAssets, setUniversalAssets] = useState<UniversalAsset[]>([]);
+  const [loadingAssets, setLoadingAssets] = useState(true);
+  const [userPreferences, setUserPreferences] = useState<UserPreferenceProfile>(DEFAULT_PREFERENCES);
+
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedClass, setSelectedClass] = useState<AssetClass | "ALL">("ALL");
+  const [selectedMetro, setSelectedMetro] = useState("");
+  const [babyBoomerOnly, setBabyBoomerOnly] = useState(false);
+  const [section8Only, setSection8Only] = useState(false);
+  const [maxCrimeIndex, setMaxCrimeIndex] = useState<number | undefined>(undefined);
+  const [sortBy, setSortBy] = useState("recommended");
+
+  // Modals
+  const [selectedDossierAsset, setSelectedDossierAsset] = useState<UniversalAsset | null>(null);
+  const [dossierInitialTab, setDossierInitialTab] = useState<
+    "OVERVIEW" | "OSINT" | "OUTREACH" | "PIPELINE"
+  >("OVERVIEW");
+  const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
+  const [isKanbanModalOpen, setIsKanbanModalOpen] = useState(false);
+
+  // Principal Digest State
   const [deals, setDeals] = useState<Deal[]>([]);
   const [activeMandate, setActiveMandate] = useState<MandateProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingDigest, setLoadingDigest] = useState(false);
   const [selectedOsintDeal, setSelectedOsintDeal] = useState<Deal | null>(null);
-  const [filters, setFilters] = useState<DealFilterParams>({
+  const [digestFilters, setDigestFilters] = useState<DealFilterParams>({
     role: "PRINCIPAL",
     sort_by: "dscr_desc",
   });
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
-  const loadDigest = async (activeFilters = filters) => {
-    setLoading(true);
+  // Load User Preferences on Mount
+  useEffect(() => {
+    fetchUserPreferences()
+      .then((prefs) => {
+        setUserPreferences(prefs);
+      })
+      .catch((err) => console.error("Could not fetch user preferences:", err));
+  }, []);
+
+  // Query Universal Assets when filters change
+  const loadUniversalAssets = async () => {
+    setLoadingAssets(true);
+    try {
+      const results = await searchUniversalAssets({
+        query: searchQuery || undefined,
+        asset_class: selectedClass === "ALL" ? undefined : selectedClass,
+        metro_area: selectedMetro || undefined,
+        baby_boomer_only: babyBoomerOnly,
+        section_8_only: section8Only,
+        max_crime_index: maxCrimeIndex,
+        sort_by: sortBy,
+        apply_user_preferences: !searchQuery && selectedClass === "ALL" && !selectedMetro,
+      });
+      setUniversalAssets(results);
+    } catch (err) {
+      console.error("Error loading universal assets:", err);
+    } finally {
+      setLoadingAssets(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUniversalAssets();
+  }, [searchQuery, selectedClass, selectedMetro, babyBoomerOnly, section8Only, maxCrimeIndex, sortBy]);
+
+  // Load Legacy Digest
+  const loadDigest = async (activeFilters = digestFilters) => {
+    setLoadingDigest(true);
     try {
       const [dealsData, mandateData] = await Promise.all([
         fetchDeals("PRINCIPAL", activeFilters),
@@ -39,22 +138,57 @@ export default function PrincipalDigestPage() {
     } catch (err: any) {
       console.error("Error loading digest:", err);
     } finally {
-      setLoading(false);
+      setLoadingDigest(false);
     }
   };
 
-  const handleFilterChange = (newFilters: DealFilterParams) => {
-    setFilters(newFilters);
-    loadDigest(newFilters);
+  useEffect(() => {
+    if (activeView === "DIGEST") {
+      loadDigest();
+    }
+  }, [activeView]);
+
+  // Handle Asset Actions
+  const handleInspectAsset = (asset: UniversalAsset) => {
+    setSelectedDossierAsset(asset);
+    setDossierInitialTab("OVERVIEW");
   };
 
-  useEffect(() => {
-    loadDigest();
-  }, []);
+  const handleDraftOutreach = (asset: UniversalAsset) => {
+    setSelectedDossierAsset(asset);
+    setDossierInitialTab("OUTREACH");
+  };
 
+  const handleUpdateAssetStage = async (assetId: string, stage: PipelineStage) => {
+    try {
+      const updated = await updatePipelineStage(assetId, stage);
+      setUniversalAssets((prev) =>
+        prev.map((a) => (a.asset_id === assetId ? updated : a))
+      );
+      if (selectedDossierAsset?.asset_id === assetId) {
+        setSelectedDossierAsset(updated);
+      }
+      setActionMessage(`Asset ${assetId} moved to ${stage.replace("_", " ")}`);
+    } catch (err: any) {
+      console.error("Error updating stage:", err);
+    }
+  };
+
+  const handlePreferencesSaved = (updated: UserPreferenceProfile) => {
+    setUserPreferences(updated);
+    loadUniversalAssets();
+    setActionMessage("Investment mandate preferences updated and auto-applied!");
+  };
+
+  // Principal Digest Actions
   const handleApprove = async (dealId: string) => {
     try {
-      const res = await principalDecision(dealId, "APPROVE", "principal_1", "Approved for LOI / Lender Pack");
+      const res = await principalDecision(
+        dealId,
+        "APPROVE",
+        "principal_1",
+        "Approved for LOI / Lender Pack"
+      );
       setActionMessage(`Deal ${dealId} approved! Token: ${res.approval_token_id}`);
       loadDigest();
     } catch (err: any) {
@@ -74,8 +208,13 @@ export default function PrincipalDigestPage() {
 
   const handleSendToCounsel = async (dealId: string) => {
     try {
-      await principalDecision(dealId, "SEND_TO_COUNSEL", "principal_1", "Proceeding to 14-day title & notice check");
-      setActionMessage(`Deal ${dealId} routed to Counsel for Va. Code § 55.1-321 diligence.`);
+      await principalDecision(
+        dealId,
+        "SEND_TO_COUNSEL",
+        "principal_1",
+        "Proceeding to 14-day title & notice check"
+      );
+      setActionMessage(`Deal ${dealId} routed to Counsel for statutory notice diligence.`);
       loadDigest();
     } catch (err: any) {
       setActionMessage(`Error routing deal: ${err.message}`);
@@ -83,152 +222,249 @@ export default function PrincipalDigestPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Digest Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 border-b border-slate-800/80 pb-4 sm:pb-5">
-        <div>
-          <div className="flex items-center space-x-2 text-emerald-400 font-mono text-xs uppercase tracking-wider">
-            <Clock className="w-3.5 h-3.5" />
-            <span>Monday 07:00 EST Weekly Executive Briefing</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-1 flex flex-wrap items-center gap-2 sm:gap-3">
-            <span>Principal Weekly Deal Digest</span>
-            <span className="text-xs font-mono font-normal px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-              Max &lt;= 5 Verified Deals
-            </span>
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Active Mandate: <span className="text-white font-semibold">{activeMandate?.mandate_name || "Target Regional Box"}</span> ({activeMandate?.target_states.join(", ") || "VA"} • {activeMandate?.target_fips.length || 7} Jurisdictions)
-          </p>
-        </div>
-
-        <button
-          onClick={() => loadDigest()}
-          disabled={loading}
-          className="apple-press self-start sm:self-auto inline-flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition min-h-[38px] sm:min-h-0"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          <span>Refresh Digest</span>
-        </button>
-      </div>
-
-      {/* Action Notification Banner */}
+    <div className="space-y-4">
+      {/* Action Notification Toast */}
       {actionMessage && (
-        <div className="p-4 rounded-xl bg-emerald-950/80 border border-emerald-700 text-emerald-200 text-xs flex items-center justify-between">
+        <div className="p-3 rounded-2xl bg-zinc-900 border border-blue-500/40 text-blue-200 text-xs flex items-center justify-between shadow-xl animate-fadeIn">
           <div className="flex items-center space-x-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
             <span>{actionMessage}</span>
           </div>
           <button
             onClick={() => setActionMessage(null)}
-            className="text-emerald-400 hover:text-white font-mono"
+            className="text-zinc-400 hover:text-white font-mono text-xs px-2 py-0.5"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Principal Guardrail Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-400 font-medium">
-            Time &amp; Noise Guardrail
-          </p>
-          <div className="flex items-baseline space-x-2 mt-1">
-            <span className="text-2xl font-bold text-white font-mono">
-              {deals.length} / 5
+      {/* Primary Executive Title & Segmented Feed Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-zinc-850">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center space-x-2">
+            <span>Acquisitions &amp; Deal Flow</span>
+            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800">
+              {activeView === "AGGREGATOR" ? "All Nationwide" : "Principal Digest"}
             </span>
-            <span className="text-xs text-emerald-400 font-mono">
-              (96.0% Noise Filtered)
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            Zero unverified filings ever reach the Principal.
+          </h1>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            {activeView === "AGGREGATOR"
+              ? "Deterministic multi-asset catalog across 50 states, corporate registries & distressed dockets."
+              : "Strictly vetted deals (≤ 5) meeting SBA SOP 50 10 8.1 and Virginia foreclosure hurdles for Monday decision."}
           </p>
         </div>
 
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-400 font-medium">
-            Underwriting Hurdles
-          </p>
-          <div className="flex items-baseline space-x-2 mt-1">
-            <span className="text-2xl font-bold text-emerald-400 font-mono">
-              &gt;= 1.35x
+        {/* Apple Segmented Feed Capsule */}
+        <div className="flex items-center p-1 rounded-xl bg-zinc-900/90 border border-zinc-800 self-start sm:self-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveView("AGGREGATOR")}
+            className={`apple-press flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+              activeView === "AGGREGATOR"
+                ? "bg-zinc-800 text-white shadow-sm border border-zinc-700/80 font-bold"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-850"
+            }`}
+          >
+            <Search className="w-3.5 h-3.5 text-blue-400" />
+            <span>All Opportunities</span>
+            <span className="ml-1 text-[10px] font-mono px-1.5 py-0.2 rounded bg-zinc-950 text-zinc-300">
+              {universalAssets.length}
             </span>
-            <span className="text-xs text-slate-300 font-mono">
-              Base DSCR (1.15x Stress)
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            SBA SOP 50 10 8.1 compliant + $85k GM deduction.
-          </p>
-        </div>
+          </button>
 
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-400 font-medium">
-            Provenance Requirement
-          </p>
-          <div className="flex items-baseline space-x-2 mt-1">
-            <span className="text-2xl font-bold text-indigo-400 font-mono">
-              &gt;= 2 Domains
+          <button
+            type="button"
+            onClick={() => setActiveView("DIGEST")}
+            className={`apple-press flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+              activeView === "DIGEST"
+                ? "bg-zinc-800 text-white shadow-sm border border-zinc-700/80 font-bold"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-850"
+            }`}
+          >
+            <Briefcase className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Principal Digest</span>
+            <span className="ml-1 text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-bold">
+              &le; 5
             </span>
-            <span className="text-xs text-slate-300 font-mono">
-              Public Record
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1">
-            Active docket SLA &lt;= 48h, GIS SLA &lt;= 14 days.
-          </p>
+          </button>
         </div>
       </div>
 
-      {/* Principal Deal Filter & Search Bar */}
-      <DealFilterBar
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        totalResults={deals.length}
-      />
-
-      {/* Deals Digest Cards */}
-      {loading ? (
-        <div className="p-12 text-center text-slate-400 font-mono text-sm">
-          Loading Principal Weekly Digest...
-        </div>
-      ) : deals.length === 0 ? (
-        <div className="bg-slate-900/40 border border-dashed border-slate-800 rounded-2xl p-12 text-center">
-          <Briefcase className="w-10 h-10 text-slate-600 mx-auto" />
-          <h3 className="text-base font-semibold text-white mt-3">
-            No Verified Deals Pending Decision
-          </h3>
-          <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
-            All ingested filings either did not meet Mandate ROA-SMB-01 hurdles or are still undergoing Analyst lead verification.
-          </p>
-        </div>
-      ) : (
+      {/* ========================================================================= */}
+      {/* VIEW 1: UNIVERSAL ASSET AGGREGATOR                                        */}
+      {/* ========================================================================= */}
+      {activeView === "AGGREGATOR" && (
         <div className="space-y-4">
-          {deals.map((deal) => (
-            <DealCard
-              key={deal.deal_id}
-              deal={deal}
-              currentRole="PRINCIPAL"
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onSendToCounsel={handleSendToCounsel}
-              onViewOsint={(d) => setSelectedOsintDeal(d)}
-            />
-          ))}
+          <UniversalAssetSearchBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedClass={selectedClass}
+            onClassChange={setSelectedClass}
+            selectedMetro={selectedMetro}
+            onMetroChange={setSelectedMetro}
+            babyBoomerOnly={babyBoomerOnly}
+            onBabyBoomerChange={setBabyBoomerOnly}
+            section8Only={section8Only}
+            onSection8Change={setSection8Only}
+            maxCrimeIndex={maxCrimeIndex}
+            onMaxCrimeIndexChange={setMaxCrimeIndex}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            onOpenPreferences={() => setIsPreferencesModalOpen(true)}
+            onOpenKanban={() => setIsKanbanModalOpen(true)}
+            totalAssetsFound={universalAssets.length}
+          />
+
+          {loadingAssets ? (
+            <div className="p-16 text-center text-zinc-400 font-mono text-sm">
+              Querying nationwide asset databases and corporate registries...
+            </div>
+          ) : universalAssets.length === 0 ? (
+            <div className="bg-zinc-900/40 border border-dashed border-zinc-800 rounded-2xl p-12 text-center space-y-3">
+              <Search className="w-8 h-8 text-zinc-600 mx-auto" />
+              <h3 className="text-sm font-semibold text-white">
+                No Assets Matched Your Current Filters
+              </h3>
+              <p className="text-xs text-zinc-400 max-w-md mx-auto">
+                Try widening your budget, resetting the crime threshold, or searching across all asset classes.
+              </p>
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedClass("ALL");
+                  setSelectedMetro("");
+                  setBabyBoomerOnly(false);
+                  setSection8Only(false);
+                  setMaxCrimeIndex(undefined);
+                }}
+                className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition cursor-pointer"
+              >
+                Reset All Filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {universalAssets.map((asset) => (
+                <UniversalAssetCard
+                  key={asset.asset_id}
+                  asset={asset}
+                  onInspect={handleInspectAsset}
+                  onDraftOutreach={handleDraftOutreach}
+                  onUpdateStage={handleUpdateAssetStage}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Asset Analyst OSINT Intelligence Dossier Modal */}
-      <AssetIntelligenceModal
-        deal={selectedOsintDeal}
-        isOpen={!!selectedOsintDeal}
-        onClose={() => setSelectedOsintDeal(null)}
-        currentRole="PRINCIPAL"
-        onApprove={handleApprove}
-        onReject={handleReject}
-        onSendToCounsel={handleSendToCounsel}
+      {/* ========================================================================= */}
+      {/* VIEW 2: PRINCIPAL WEEKLY DIGEST                                           */}
+      {/* ========================================================================= */}
+      {activeView === "DIGEST" && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-2xl bg-zinc-900/70 border border-zinc-800 text-xs">
+            <div className="flex items-center space-x-2 text-zinc-300">
+              <Clock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>
+                <strong>Monday 07:00 EST Executive Briefing</strong>: Max &le; 5 verified deals reaching the Principal. 96.0% raw filings killed at Stage 1.
+              </span>
+            </div>
+            <button
+              onClick={() => loadDigest()}
+              disabled={loadingDigest}
+              className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-750 text-zinc-200 border border-zinc-700 transition shrink-0 cursor-pointer"
+            >
+              <RefreshCw className={`w-3 h-3 ${loadingDigest ? "animate-spin" : ""}`} />
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          <DealFilterBar
+            filters={digestFilters}
+            onFilterChange={(newF) => {
+              setDigestFilters(newF);
+              loadDigest(newF);
+            }}
+            totalResults={deals.length}
+          />
+
+          {loadingDigest ? (
+            <div className="p-16 text-center text-zinc-400 font-mono text-sm">
+              Loading verified Principal Weekly Digest...
+            </div>
+          ) : deals.length === 0 ? (
+            <div className="bg-zinc-900/40 border border-dashed border-zinc-800 rounded-2xl p-12 text-center space-y-2">
+              <Briefcase className="w-8 h-8 text-zinc-600 mx-auto" />
+              <h3 className="text-sm font-semibold text-white">No Verified Deals in Digest Queue</h3>
+              <p className="text-xs text-zinc-400 max-w-md mx-auto">
+                Stage 1 zero-cost mandate engine has filtered all unproven filings. Promote in-box candidates from Analyst queue.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {deals.map((deal) => (
+                <DealCard
+                  key={deal.deal_id}
+                  deal={deal}
+                  currentRole="PRINCIPAL"
+                  onApprove={handleApprove}
+                  onReject={handleReject}
+                  onSendToCounsel={handleSendToCounsel}
+                  onViewOsint={(d) => setSelectedOsintDeal(d)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* UNIFIED WORKSPACES & MODALS                                               */}
+      {/* ========================================================================= */}
+
+      {/* Universal Asset Dossier & 3D Spatial Inspector */}
+      {selectedDossierAsset && (
+        <UniversalAssetDossierModal
+          asset={selectedDossierAsset}
+          isOpen={!!selectedDossierAsset}
+          initialTab={dossierInitialTab}
+          onClose={() => setSelectedDossierAsset(null)}
+          onAssetUpdated={(updated) => {
+            setUniversalAssets((prev) =>
+              prev.map((a) => (a.asset_id === updated.asset_id ? updated : a))
+            );
+            setSelectedDossierAsset(updated);
+          }}
+        />
+      )}
+
+      {/* Legacy Deal OSINT Modal */}
+      {selectedOsintDeal && (
+        <AssetIntelligenceModal
+          deal={selectedOsintDeal}
+          isOpen={!!selectedOsintDeal}
+          onClose={() => setSelectedOsintDeal(null)}
+          currentRole="PRINCIPAL"
+        />
+      )}
+
+      {/* User Investment Mandate Preferences Modal */}
+      <UserPreferencesModal
+        isOpen={isPreferencesModalOpen}
+        onClose={() => setIsPreferencesModalOpen(false)}
+        currentPreferences={userPreferences}
+        onPreferencesSaved={handlePreferencesSaved}
+      />
+
+      {/* CRM Kanban Pipeline Modal */}
+      <DealPipelineKanbanModal
+        isOpen={isKanbanModalOpen}
+        onClose={() => setIsKanbanModalOpen(false)}
+        assets={universalAssets}
+        onAdvanceStage={handleUpdateAssetStage}
+        onSelectAsset={handleInspectAsset}
       />
     </div>
   );

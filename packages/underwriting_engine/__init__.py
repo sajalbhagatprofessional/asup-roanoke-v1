@@ -27,6 +27,23 @@ from .liquidation_floor_solver import (
     LiquidationFloorResult,
     evaluate_liquidation_floor,
 )
+from .edgar_comps_engine import (
+    EdgarCompsEngine,
+    PublicSectorCompsBenchmark,
+    MultipleArbitrageResult,
+    FormDDistressEvaluation,
+)
+from .tax_document_parser import (
+    TaxDocumentParser,
+    ParsedTaxDocumentReport,
+    ExtractedTaxLineItem,
+)
+from .macro_sofr_engine import (
+    MacroSofrEngine,
+    BenchmarkYieldCurve,
+    MacroRateShockResult,
+    MacroStressMatrixReport,
+)
 
 __all__ = [
     "SBACapitalStructureInput",
@@ -48,4 +65,15 @@ __all__ = [
     "LiquidationFloorInput",
     "LiquidationFloorResult",
     "evaluate_liquidation_floor",
+    "EdgarCompsEngine",
+    "PublicSectorCompsBenchmark",
+    "MultipleArbitrageResult",
+    "FormDDistressEvaluation",
+    "TaxDocumentParser",
+    "ParsedTaxDocumentReport",
+    "ExtractedTaxLineItem",
+    "MacroSofrEngine",
+    "BenchmarkYieldCurve",
+    "MacroRateShockResult",
+    "MacroStressMatrixReport",
 ]

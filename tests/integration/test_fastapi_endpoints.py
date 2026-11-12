@@ -245,3 +245,78 @@ def test_fastapi_principal_decision_counsel_review_and_cpa_audit():
     )
     assert res_cpa.status_code == 200
     assert res_cpa.json()["is_sba_compliant"] is True
+
+
+def test_fastapi_merkle_ledger_and_token_registry():
+    # 1. Verify Merkle Chain Integrity Endpoint
+    res_verify = client.get("/v1/audit-ledger/verify")
+    assert res_verify.status_code == 200
+    data_v = res_verify.json()
+    assert data_v["chain_integrity_valid"] is True
+
+    # 2. Verify Audit Ledger events include Merkle hashes
+    res_ledger = client.get("/v1/audit-ledger")
+    assert res_ledger.status_code == 200
+    events = res_ledger.json()
+    assert len(events) >= 1
+    for ev in events:
+        assert "prev_hash" in ev
+        assert "merkle_hash" in ev
+        assert len(ev["merkle_hash"]) == 64
+
+
+def test_fastapi_aladdin_sensitivity_matrix_and_pwa_endpoints():
+    # 1. 2D Sensitivity Matrix
+    res_matrix = client.post(
+        "/v1/underwriting/sensitivity-matrix",
+        json={
+            "adjusted_ebitda_post_gm_usd": "520000.00",
+            "sba_7a_loan_usd": "2250000.00",
+            "buyer_cash_equity_usd": "125000.00",
+            "base_sba_interest_rate": "0.0850",
+            "sba_amortization_months": 180,
+        },
+    )
+    assert res_matrix.status_code == 200
+    m_data = res_matrix.json()
+    assert len(m_data["matrix"]) == 7  # 7 revenue steps
+    assert len(m_data["matrix"][0]) == 9  # 9 rate shock steps
+    # First cell is baseline 0% revenue compression / 0 bps rate shock
+    base_cell = m_data["matrix"][0][0]
+    assert base_cell["risk_tier"] == "SAFE_IN_BOX"
+    assert Decimal(base_cell["dscr"]) >= Decimal("1.3500")
+
+    # 2. PWA Native Notification & VAPID Endpoints
+    res_vapid = client.get("/v1/pwa/vapid-public-key")
+    assert res_vapid.status_code == 200
+    assert "public_key" in res_vapid.json()
+    assert len(res_vapid.json()["public_key"]) > 50
+
+    res_sub = client.post(
+        "/v1/pwa/subscribe",
+        json={
+            "endpoint": "https://fcm.googleapis.com/fcm/send/fake-token-12345",
+            "keys": {
+                "p256dh": "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QT9t0A4If_ZqMmLz50Ut2Un27IgqMoU50O2VOegyq0",
+                "auth": "tBHItJI5svbpez7KI4CCXg",
+            },
+            "role": "PRINCIPAL",
+        },
+    )
+    assert res_sub.status_code == 200
+    assert res_sub.json()["status"] == "SUBSCRIBED"
+
+    res_pwa = client.post(
+        "/v1/pwa/notify-test",
+        json={
+            "title": "[SEV-1 ALERT] Foreclosure Notice",
+            "body": "GPIN 51770-0192 notice lead time >= 14 days confirmed.",
+            "urgency": "HIGH",
+            "deal_id": "ROA-GD-01",
+        },
+    )
+    assert res_pwa.status_code == 200
+    assert res_pwa.json()["status"] == "QUEUED"
+    assert res_pwa.json()["urgency"] == "HIGH"
+    assert "broadcast" in res_pwa.json()
+

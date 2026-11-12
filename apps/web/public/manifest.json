@@ -1,0 +1,63 @@
+{
+  "name": "Argus Platform — Autonomous Asset Intelligence & Underwriting",
+  "short_name": "Argus",
+  "description": "Deterministic family-office acquisition sourcing, underwriting, and fiduciary execution engine under SBA SOP 50 10 8.1 and Va. Code §§ 55.1-320 to 55.1-322.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "categories": ["finance", "business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Principal Weekly Digest",
+      "short_name": "Principal",
+      "description": "Review top ≤5 verified acquisition candidates for Monday 07:00 EST",
+      "url": "/",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Analyst Pipeline & GIS Queue",
+      "short_name": "Analyst",
+      "description": "Examine parcel GPINs, EPA UST, and dual-source verification",
+      "url": "/analyst",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Counsel Title & Notice Review",
+      "short_name": "Counsel",
+      "description": "Audit Va. Code § 55.1-321 14-day notice & 70% basis ceiling",
+      "url": "/counsel",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "CPA SBA SOP 50 10 8.1 Audit",
+      "short_name": "CPA",
+      "description": "Audit $85k GM deduction, 50% limited equity cap & 36m standby lock",
+      "url": "/cpa",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+    }
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"]
+}
