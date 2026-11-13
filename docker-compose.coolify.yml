@@ -69,7 +69,7 @@ services:
     container_name: argus-api
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-argus_admin}:${POSTGRES_PASSWORD:-ArgusSecurePostgres2026!}@postgis:5432/${POSTGRES_DB:-argus_db}
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-argus_admin}:${POSTGRES_PASSWORD:-ArgusSecurePostgres2026!}@postgis:5432/${POSTGRES_DB:-argus_db}
       REDIS_URL: redis://:${REDIS_PASSWORD:-ArgusSecureRedis2026!}@redis:6379/0
       PORT: "8000"
       HOST: "0.0.0.0"
