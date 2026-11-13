@@ -115,7 +115,7 @@ python scripts/run_all_tests.py
    - Nationwide sovereign scrapers (94 federal districts, 50-state press portals).
    - Five Aladdin engines (Uber H3, SEC EDGAR, OpenSanctions, Unstructured tax parser, OpenBB SOFR matrix).
 6. **AI Agent MCP & Upstream Dependency Suites (Milestones 15–16)**:
-   - Model Context Protocol (MCP 2024-11-05) JSON-RPC, SSE, and 25 tools execution.
+   - Model Context Protocol (MCP 2024-11-05) JSON-RPC, SSE, and 30 tools execution.
    - Autonomous upstream dependency auto-discovery, PyPI/npm/GitHub polling, and air-gap verification.
 7. **Augury Industrial Physical AI & Palantir Operational Ontology Suites (Milestones 17–18)**:
    - Equipment schedule parsing (Docling), aerial sentinel (TorchGeo), predictive capex (Darts), maintenance auditor (Cleanlab).
@@ -124,10 +124,20 @@ python scripts/run_all_tests.py
    - Inven-grade semantic M&A lookalikes, Trepp commercial mortgage maturity wall & SOFR rate shock radar.
    - PropertyRadar title curative screener & 26 U.S.C. § 7425 IRS 120-day redemption clock with escrow holdback.
    - Cherre/Bowery municipal building permits & Floor Area Ratio (FAR) zoning expansion scanner.
-9. **The 50-Deal Roanoke Golden Suite**:
+9. **Institutional Titan Systems Suite (Milestones 23–27)**:
+   - Goldman Sachs SecDB / Athena Reactive Underwriting DAG (sub-50μs topological sort & forward-dirty caching).
+   - BlackRock eFront 4-tier distribution waterfall solver (LP/GP returns, 8% hurdle, 20% carry, MOIC) & Citadel concentration limits (NAICS <=25%, FIPS <=40%, Lender <=30%).
+   - Vanguard & CPA Tax Alpha (26 U.S.C. § 1031 45-day ID / 180-day close clocks & MACRS cost segregation with 60% bonus depreciation).
+   - Jane Street Canonical SMR Event Stream & Replay Ledger (SHA-256 hash-chained monotonic ledger with dual human signoff gating).
+   - Bridgewater Associates 4-Quadrant Macro Economic Regime Stress-Tester (Ray Dalio Reflation/Productivity/Stagflation/Deflation matrix, All-Weather Grade AAA).
+10. **Financial & Legal Glossary & Contextual InfoPop Knowledge System (Milestone 28)**:
+   - 46-term knowledge base registry (`apps/web/src/lib/glossary.ts`) across 5 categories with plain-English definitions, formulas, and statutory citations.
+   - Apple-style micro-popover (`InfoPop.tsx`) with mobile tap and desktop hover support, wired across all cards, dossiers, and navigation headers.
+   - Master searchable full-screen glossary modal (`GlossaryModal.tsx`) with real-time query filtering, category tabs, and copyable citations.
+11. **The 50-Deal Roanoke Golden Suite**:
    - Executes `scripts/run_golden_backtest.py` against `tests/golden_suite/roanoke_golden_50.json`.
    - Requires **50/50 Accuracy (100.0%)**, **0 False Positives** reaching the Principal, and **>= 95% Raw Filing Kill Rate**.
-   - Verified across all **123/123 Tests PASSED (100% Coverage)**.
+   - Verified across all **131/131 Tests PASSED (100% Coverage)**.
 
 ---
 
