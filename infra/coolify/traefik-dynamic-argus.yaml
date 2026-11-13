@@ -5,16 +5,25 @@
 
 http:
   routers:
-    argus-web-http:
-      rule: "Host(`argus.150.136.103.204.sslip.io`)"
+    argus-api-path-http:
+      rule: "Host(`argus.150.136.103.204.sslip.io`) && (PathPrefix(`/v1`) || PathPrefix(`/v2`))"
       entryPoints:
         - http
-      service: argus-web-svc
+      priority: 100
+      service: argus-api-svc
+
     argus-api-http:
       rule: "Host(`api.argus.150.136.103.204.sslip.io`)"
       entryPoints:
         - http
       service: argus-api-svc
+
+    argus-web-http:
+      rule: "Host(`argus.150.136.103.204.sslip.io`)"
+      entryPoints:
+        - http
+      priority: 10
+      service: argus-web-svc
 
   services:
     argus-web-svc:
