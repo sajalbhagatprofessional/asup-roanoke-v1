@@ -44,6 +44,8 @@ import tests.unit.test_deal_room_closing as u11
 import tests.integration.test_operational_supremacy_endpoints as i21
 import tests.unit.test_flipper_deal_engine as u12
 import tests.integration.test_flipper_engine_endpoints as i22
+import tests.unit.test_user_settings_and_pwa as u13
+import tests.integration.test_user_settings_endpoints as i23
 
 
 def main() -> int:
@@ -305,6 +307,19 @@ def main() -> int:
 
     print(f"All {flipper_passed}/{flipper_passed} Argus Asset Flip & Capital Velocity Suite Tests PASSED!")
 
+    # Milestone 33: Persistent User Settings & PWA Auto-Update Suite
+    settings_passed = 0
+    for mod in [u13, i23]:
+        for attr in sorted(dir(mod)):
+            if attr.startswith("test_"):
+                fn = getattr(mod, attr)
+                if callable(fn):
+                    fn()
+                    settings_passed += 1
+                    print(f"[PASS] {mod.__name__}.{attr}")
+
+    print(f"All {settings_passed}/{settings_passed} Persistent User Settings & PWA Auto-Update Suite Tests PASSED!")
+
     total_passed = (
         core_passed
         + api_passed
@@ -326,6 +341,7 @@ def main() -> int:
         + titan_passed
         + operational_passed
         + flipper_passed
+        + settings_passed
     )
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 

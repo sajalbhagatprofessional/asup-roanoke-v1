@@ -118,6 +118,7 @@ from services.security import (
     create_access_token,
     decode_access_token,
     get_oauth_providers_status,
+    UserSettings,
 )
 from services.security.auth_service import (
     AuthError,
@@ -2132,6 +2133,90 @@ def trigger_pwa_push_notification(req: PushNotificationTriggerRequest) -> Dict[s
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "broadcast": dispatch_res,
     }
+
+
+@app.get("/v1/pwa/version", tags=["PWA"])
+def get_pwa_version() -> Dict[str, Any]:
+    """
+    Returns current active PWA build version, release timestamp, and cache tag for auto-update checks.
+    """
+    return {
+        "app_name": "Argus Intelligence",
+        "version": "1.1.0",
+        "cache_name": "asup-argus-v1.1.0",
+        "release_timestamp": "2026-11-13T02:30:00Z",
+        "features": [
+            "Auto-Update PWA Service Worker Engine",
+            "Persistent Cross-Device User Settings & Preferences",
+            "5-Theme Engine (Dark, Light, Midnight OLED, Bloomberg Navy)",
+            "Asset Flipper Terminal & Capital Velocity Engine",
+        ],
+        "mandatory_update": False,
+    }
+
+
+@app.get("/v1/user/settings", tags=["User Settings"])
+def get_user_settings_endpoint(
+    user_id: Optional[str] = None,
+    request: Request = None,
+) -> Dict[str, Any]:
+    """
+    Retrieves persistent user settings across devices and sessions.
+    Automatically resolves user identity from Bearer token if provided,
+    falling back to query param or default institutional profile.
+    """
+    resolved_user_id = user_id
+    if request:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            try:
+                token = auth_header.split(" ", 1)[1].strip()
+                payload = decode_access_token(token)
+                if "sub" in payload:
+                    resolved_user_id = payload["sub"]
+            except Exception:
+                pass
+
+    if not resolved_user_id:
+        resolved_user_id = "default_investor"
+
+    stored = pipeline_store.get_user_settings(resolved_user_id)
+    if stored:
+        return stored
+
+    default_settings = UserSettings.create_default(
+        user_id=resolved_user_id,
+        role="PRINCIPAL",
+        email="principal@asup.internal",
+    )
+    persisted = pipeline_store.save_user_settings(resolved_user_id, default_settings.to_dict())
+    return persisted
+
+
+@app.post("/v1/user/settings", tags=["User Settings"])
+def update_user_settings_endpoint(
+    settings: UserSettings,
+    request: Request = None,
+) -> Dict[str, Any]:
+    """
+    Persists user settings with ACID write-through durability across devices and sessions.
+    """
+    resolved_user_id = settings.user_id
+    if request:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            try:
+                token = auth_header.split(" ", 1)[1].strip()
+                payload = decode_access_token(token)
+                if "sub" in payload:
+                    resolved_user_id = payload["sub"]
+                    settings.user_id = resolved_user_id
+            except Exception:
+                pass
+
+    settings.updated_at = datetime.now(timezone.utc).isoformat()
+    persisted = pipeline_store.save_user_settings(resolved_user_id, settings.to_dict())
+    return persisted
 
 
 @app.get("/v1/audit-ledger", tags=["Audit"])

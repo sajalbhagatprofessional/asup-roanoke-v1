@@ -6,7 +6,7 @@
     "key_hash": "e2bef8fd319f032547f5d1d6245a34b8f2c3fe190ab5c511c55a7b81bc816d76",
     "role": "ADMIN",
     "created_at": "2026-05-01T00:00:00Z",
-    "last_used_at": "2026-11-13T07:10:16.869587+00:00",
+    "last_used_at": "2026-11-13T07:55:47.532024+00:00",
     "is_active": true,
     "rate_limit_rpm": 300
   },
@@ -392,6 +392,61 @@
     "role": "ANALYST",
     "created_at": "2026-11-13T07:10:16.691652+00:00",
     "last_used_at": "2026-11-13T07:10:16.704311+00:00",
+    "is_active": false,
+    "rate_limit_rpm": 100
+  },
+  {
+    "key_id": "KEY-D14558A2",
+    "name": "Hermes CI/CD Agent",
+    "key_prefix": "asup_live_p8Eo...",
+    "key_hash": "807934e6f752f0f4d10c2ac263b3c6d1bc5a1c1edbcb58edb25fb074805af4b5",
+    "role": "ANALYST",
+    "created_at": "2026-11-13T07:40:13.652042+00:00",
+    "last_used_at": "2026-11-13T07:40:13.663809+00:00",
+    "is_active": false,
+    "rate_limit_rpm": 100
+  },
+  {
+    "key_id": "KEY-0C83A06F",
+    "name": "Hermes CI/CD Agent",
+    "key_prefix": "asup_live_4DLc...",
+    "key_hash": "79f5244ac7974d39d4792d002498ed922f1589473b704071a1481df324a44a5d",
+    "role": "ANALYST",
+    "created_at": "2026-11-13T07:41:14.324537+00:00",
+    "last_used_at": "2026-11-13T07:41:14.338061+00:00",
+    "is_active": false,
+    "rate_limit_rpm": 100
+  },
+  {
+    "key_id": "KEY-BF95D14B",
+    "name": "Hermes CI/CD Agent",
+    "key_prefix": "asup_live_hK0Z...",
+    "key_hash": "d648c08f4ab1adc19fc8965d19d90e1b62e109cb58351e1721223b6ee98c1b6d",
+    "role": "ANALYST",
+    "created_at": "2026-11-13T07:44:26.618100+00:00",
+    "last_used_at": "2026-11-13T07:44:26.630796+00:00",
+    "is_active": false,
+    "rate_limit_rpm": 100
+  },
+  {
+    "key_id": "KEY-E6DD0202",
+    "name": "Hermes CI/CD Agent",
+    "key_prefix": "asup_live_B-mV...",
+    "key_hash": "d460b4fb664a08d32c2a97b9bdeabe05848ddc4d2222fa41de66cb42b7a7a59f",
+    "role": "ANALYST",
+    "created_at": "2026-11-13T07:46:49.670353+00:00",
+    "last_used_at": "2026-11-13T07:46:49.677614+00:00",
+    "is_active": false,
+    "rate_limit_rpm": 100
+  },
+  {
+    "key_id": "KEY-EA28F6F8",
+    "name": "Hermes CI/CD Agent",
+    "key_prefix": "asup_live_k6_j...",
+    "key_hash": "effb59085dd9f3d51e9b42524bffdaa6df0b6437178c8eb1f6b09a48cbc2c546",
+    "role": "ANALYST",
+    "created_at": "2026-11-13T07:55:47.366251+00:00",
+    "last_used_at": "2026-11-13T07:55:47.377645+00:00",
     "is_active": false,
     "rate_limit_rpm": 100
   }

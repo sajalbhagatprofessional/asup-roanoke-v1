@@ -304,9 +304,9 @@ The platform exposes an Anthropic Model Context Protocol (MCP 2024-11-05) gatewa
 
 ---
 
-## 16. Model Context Protocol (MCP 2024-11-05) Agent Gateway (38 Tools Catalog)
+## 16. Model Context Protocol (MCP 2024-11-05) Agent Gateway (40 Tools Catalog)
 
-Argus exposes 38 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
+Argus exposes 40 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
 1. `filter_deal_by_mandate`: Stage 2 zero-cost mandate evaluation.
 2. `solve_sba_sop_50_10_8_1`: Stage 4 pure decimal SBA underwriting solver.
 3. `solve_va_foreclosure_compliance`: Virginia Code § 55.1-321 14-day notice & basis solver.
@@ -345,6 +345,51 @@ Argus exposes 38 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
 36. `optimize_flip_exit_strategies`: 4-way flip strategy matrix, capital velocity index, and <90-day payback ranker.
 37. `calculate_contract_assignment_fee`: Wholesale contract paper flip, EMD yield, double-closing gate, and assignment clause.
 38. `generate_executive_flip_tearsheet`: 1-click executive flip tear-sheet & IC memo generator.
+39. `get_user_settings`: Retrieve persistent user preferences (theme, density, PWA auto-update mode, notifications, underwriting defaults).
+40. `update_user_settings`: Mutate and persist cross-device user configuration with ACID durability.
+
+---
+
+## 17. User Settings & PWA Auto-Update Engine (Milestone 33)
+
+### `GET /v1/pwa/version`
+Returns the active PWA application release metadata, cache manifest tag, feature release notes, and mandatory update flag.
+- **Request**: No parameters.
+- **Response `200 OK`**:
+```json
+{
+  "app_name": "Argus Intelligence",
+  "version": "1.1.0",
+  "cache_name": "asup-argus-v1.1.0",
+  "release_timestamp": "2026-11-13T02:30:00Z",
+  "features": [
+    "Auto-Update PWA Service Worker Engine",
+    "Persistent Cross-Device User Settings & Preferences",
+    "5-Theme Engine (Dark, Light, Midnight OLED, Bloomberg Navy)",
+    "Asset Flipper Terminal & Capital Velocity Engine"
+  ],
+  "mandatory_update": false
+}
+```
+
+### `GET /v1/user/settings`
+Retrieves durable user configuration across all devices and sessions. Supports Bearer token resolution or optional `user_id` query parameter (defaults to authenticated principal).
+- **Request**: `GET /v1/user/settings?user_id=default_investor`
+- **Response `200 OK`**: Returns full `UserSettings` JSON payload including theme, display density, sound effects, statutory alerts, PWA auto-update preferences, and default underwriting hurdles.
+
+### `POST /v1/user/settings`
+Updates and commits user preferences with write-through ACID durability to PostgreSQL 16 (or local SQLite WAL store).
+- **Request Body**: Partial or full `UserSettings` object.
+- **Response `200 OK`**:
+```json
+{
+  "status": "success",
+  "user_id": "default_investor",
+  "settings": { ... },
+  "updated_at": "2026-11-13T02:40:00Z"
+}
+```
+
 
 
 

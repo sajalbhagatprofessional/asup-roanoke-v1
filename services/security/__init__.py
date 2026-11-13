@@ -6,6 +6,12 @@ from .auth_service import (
     decode_access_token,
     get_oauth_providers_status,
 )
+from .user_settings import (
+    UserSettings,
+    ThemeMode,
+    InterfaceDensity,
+    AutoUpdatePromptMode,
+)
 from .pii_vault_and_rbac import (
     TeamRole,
     DealStage,
@@ -27,6 +33,10 @@ __all__ = [
     "create_access_token",
     "decode_access_token",
     "get_oauth_providers_status",
+    "UserSettings",
+    "ThemeMode",
+    "InterfaceDensity",
+    "AutoUpdatePromptMode",
     "TeamRole",
     "DealStage",
     "PermissionDeniedError",

@@ -4,6 +4,7 @@ Exposes all deterministic underwriting, spatial analysis, compliance screening,
 and sourcing capabilities of ASUP to external AI agents (Claude, Hermes, OpenClaw, Copilot).
 """
 
+from datetime import datetime, timezone
 from decimal import Decimal
 import json
 import logging
@@ -751,6 +752,39 @@ MCP_TOOLS_CATALOG: List[McpTool] = [
             },
         },
     ),
+    McpTool(
+        name="get_user_settings",
+        description=(
+            "Retrieves persistent user settings, theme, notifications, PWA auto-update, and underwriting defaults for a given user."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "user_id": {"type": "string", "default": "default_investor", "description": "User identifier"},
+            },
+        },
+    ),
+    McpTool(
+        name="update_user_settings",
+        description=(
+            "Persists user settings with ACID write-through durability across devices and sessions."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["user_id"],
+            "properties": {
+                "user_id": {"type": "string", "description": "User identifier"},
+                "display_name": {"type": "string"},
+                "theme": {"type": "string", "enum": ["DARK", "LIGHT", "MIDNIGHT_OLED", "BLOOMBERG_NAVY"]},
+                "density": {"type": "string", "enum": ["COMFORTABLE", "COMPACT"]},
+                "auto_update_enabled": {"type": "boolean"},
+                "push_notifications_enabled": {"type": "boolean"},
+                "default_target_cap_rate_pct": {"type": "string"},
+                "default_replacement_gm_salary_usd": {"type": "string"},
+                "default_hurdle_base_dscr": {"type": "string"},
+            },
+        },
+    ),
 ]
 
 
@@ -1306,6 +1340,28 @@ def execute_mcp_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any
             memo_text = generate_executive_tear_sheet(data)
             return {"deal_id": data.deal_id, "tear_sheet_text": memo_text}
 
+        elif tool_name == "get_user_settings":
+            from services.api.main import pipeline_store
+            from services.security import UserSettings
+            user_id = arguments.get("user_id", "default_investor")
+            st = pipeline_store.get_user_settings(user_id)
+            if not st:
+                st = UserSettings.create_default(user_id=user_id).to_dict()
+            return {"user_settings": st}
+
+        elif tool_name == "update_user_settings":
+            from services.api.main import pipeline_store
+            from services.security import UserSettings
+            user_id = arguments.get("user_id", "default_investor")
+            current = pipeline_store.get_user_settings(user_id)
+            if not current:
+                current = UserSettings.create_default(user_id=user_id).to_dict()
+            for k, v in arguments.items():
+                if k != "user_id":
+                    current[k] = v
+            current["updated_at"] = datetime.now(timezone.utc).isoformat()
+            saved = pipeline_store.save_user_settings(user_id, current)
+            return {"user_settings": saved, "status": "SAVED_PERSISTENT"}
 
         else:
             return {"error": f"Unknown tool: {tool_name}"}

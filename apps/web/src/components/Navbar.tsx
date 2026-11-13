@@ -22,6 +22,7 @@ import {
   Layers,
   GitBranch,
   BookOpen,
+  Settings,
 } from "lucide-react";
 import { fetchActiveMandate, fetchHealth } from "../lib/api";
 import { HealthStatus, MandateProfile, TeamRole } from "../lib/types";
@@ -34,6 +35,7 @@ import GlossaryModal from "./GlossaryModal";
 import PWAInstallAndStatus from "./PWAInstallAndStatus";
 import AuthModal from "./AuthModal";
 import { useAuth } from "../context/AuthContext";
+import { useSettings } from "../context/SettingsContext";
 
 interface NavItem {
   name: string;
@@ -53,6 +55,7 @@ const NAV_ITEMS: NavItem[] = [
 export default function Navbar() {
   const pathname = usePathname();
   const { user, signOut, openAuthModal } = useAuth();
+  const { openSettings } = useSettings();
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
   const toolsMenuRef = useRef<HTMLDivElement>(null);
@@ -301,9 +304,38 @@ export default function Navbar() {
                         <div className="text-[10px] text-zinc-400">45+ terms, statutory rules &amp; formulas</div>
                       </div>
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsToolsMenuOpen(false);
+                        openSettings();
+                      }}
+                      className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-left hover:bg-zinc-900 transition group cursor-pointer border-t border-zinc-850 mt-1"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-emerald-950/80 border border-emerald-700/50 flex items-center justify-center shrink-0">
+                        <Settings className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white group-hover:text-emerald-300 transition-colors">
+                          Settings &amp; Preferences
+                        </div>
+                        <div className="text-[10px] text-zinc-400">PWA, auto-update, themes &amp; alerts</div>
+                      </div>
+                    </button>
                   </div>
                 )}
               </div>
+
+              {/* Settings Direct Icon Button */}
+              <button
+                type="button"
+                onClick={() => openSettings()}
+                className="apple-press p-2 rounded-xl bg-zinc-900/90 hover:bg-zinc-850 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 transition cursor-pointer shadow-sm group"
+                title="Settings & Preferences (⌘,)"
+              >
+                <Settings className="w-4 h-4 text-zinc-400 group-hover:rotate-45 group-hover:text-emerald-400 transition-all duration-200" />
+              </button>
 
               {/* User Identity & Auth Button */}
               {user ? (
@@ -358,6 +390,17 @@ export default function Navbar() {
                         className="w-full text-left px-3 py-2 text-zinc-300 hover:bg-zinc-900 rounded-lg transition font-medium mt-1"
                       >
                         Reset / Change Password
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUserDropdownOpen(false);
+                          openSettings("ACCOUNT");
+                        }}
+                        className="w-full text-left px-3 py-2 text-zinc-300 hover:bg-zinc-900 rounded-lg transition font-medium mt-1 flex items-center gap-1.5"
+                      >
+                        <Settings className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>Settings &amp; Preferences</span>
                       </button>
                       <button
                         type="button"

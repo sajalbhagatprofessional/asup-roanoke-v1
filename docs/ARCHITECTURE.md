@@ -388,6 +388,67 @@ flowchart TD
 4. **1-Click Executive Flip Tear-Sheet Generator (`packages/flipper_deal_engine/tear_sheet_generator.py`)**:
    - Assembles all quantitative outputs into a dense, 1-page Investment Committee deal brief.
 
+---
+
+## 16. PWA Auto-Update Engine & Persistent Cross-Device User Settings (Milestone 33)
+
+To ensure field asset finders and desktop principals enjoy an uninterrupted, native-app experience across mobile, tablet, and desktop workstations without crowding the main operational dashboard:
+
+```mermaid
+flowchart TD
+    subgraph Client["Next.js 15 PWA Client (apps/web)"]
+        SW["Service Worker (public/sw.js)\nonupdatefound & registration.update()"]
+        CTX["SettingsContext.tsx\n(Cross-Device Sync + Local Storage + BroadcastChannel)"]
+        MODAL["SettingsModal.tsx (⌘,)\n5 Tabs: Account, Theme, Alerts, PWA, Underwriting"]
+        THEME["CSS Variable Engine (globals.css)\n4 Themes: Dark, Light, Midnight OLED, Bloomberg Navy"]
+    end
+
+    subgraph Backend["Argus Core API (services/api/main.py)"]
+        EP1["GET /v1/pwa/version\n(Version metadata & cache tag)"]
+        EP2["GET /v1/user/settings\n(Hydrates persistent profile)"]
+        EP3["POST /v1/user/settings\n(ACID write-through update)"]
+    end
+
+    subgraph Storage["ACID Persistence Layer"]
+        DB["Durable Pipeline Store (services/persistence/)\nTable: user_settings_durable (PostgreSQL 16 / SQLite WAL)"]
+        MCP["MCP Gateway Tools (services/mcp/tools.py)\nget_user_settings & update_user_settings (40 Tools)"]
+    end
+
+    SW -->|SW Update Detected| CTX
+    CTX --> MODAL
+    MODAL -->|User Customization| CTX
+    CTX -->|data-theme attribute| THEME
+    CTX -->|Synchronize Settings| EP3
+    EP3 --> DB
+    EP2 --> DB
+    EP1 --> SW
+    MCP --> DB
+```
+
+1. **PWA Auto-Update Service Worker Lifecycle (`apps/web/public/sw.js`)**:
+   - Implements automated cache tagging (`asup-argus-v1.1.0`) and version handshakes.
+   - Listens for `onupdatefound` events when a new production build or service worker is deployed.
+   - Provides two user-configurable prompt modes:
+     - `NOTIFY_BEFORE_RELOAD`: Displays a non-intrusive, glowing "Update Ready" badge in the navigation header with a 1-click "Reload & Update" trigger.
+     - `SILENT_AUTO_RELOAD`: Silently activates the new worker via `SKIP_WAITING` and transparently reloads the application during idle moments.
+   - Supports manual update polling via `checkForUpdates()` calling `registration.update()`.
+2. **Dedicated Apple HIG Settings Modal (`apps/web/src/components/SettingsModal.tsx`)**:
+   - Accessible via the persistent gear icon in the navigation bar, user avatar dropdown, tools menu, or the standard `⌘,` (`Ctrl+,`) keyboard shortcut.
+   - Zero dashboard crowding: all user account configuration, notification toggles, display settings, and default underwriting hurdles are cleanly organized in a translucent, blur-backed tabbed modal.
+   - **5 Comprehensive Settings Tabs**:
+     - **Account & Profile**: Name, corporate email, 5-role designation, and institutional affiliation.
+     - **Theme & Display**: Live theme switcher between 4 high-contrast themes (`Dark Standard`, `Light Clean`, `Midnight OLED`, `Bloomberg Terminal Navy`), interface density (`Comfortable` vs `Compact Micro-OLAP`), and high-contrast toggle.
+     - **Notifications & Alerts**: Toggles for Virginia foreclosure 14-day statutory notices, PACER distress dockets, email digests, and subtle interface audio chimes.
+     - **PWA & Auto-Update**: Active cache version tag, auto-update prompt mode, last checked timestamp, and manual "Check for Updates" trigger.
+     - **Underwriting & Mandate Defaults**: User-customizable DSCR floors (default 1.25x), maximum loan amounts, seller standby locks (default 36 months), and max basis ratios (default 70%).
+3. **Multi-Device ACID Persistence (`services/persistence/durable_pipeline_store.py`)**:
+   - Durable SQL table `user_settings_durable` persists all user preferences keyed by `user_id`.
+   - Write-through architecture ensures updates are instantly mirrored in memory and committed to disk.
+   - Settings automatically synchronize across different devices (desktop, iPad, iPhone PWA) upon sign-in or session start.
+4. **Model Context Protocol Expansion (`services/mcp/tools.py`)**:
+   - Expanded MCP catalog to **40 deterministic tools** with the addition of `get_user_settings` and `update_user_settings`.
+
+
 
 
 

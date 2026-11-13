@@ -1620,6 +1620,71 @@ export interface ContractAssignmentReport {
   executive_synthesis: string;
 }
 
+// ============================================================================
+// PERSISTENT USER SETTINGS & PWA AUTO-UPDATE TYPES
+// ============================================================================
+
+export type ThemeMode = "DARK" | "LIGHT" | "MIDNIGHT_OLED" | "BLOOMBERG_NAVY";
+export type InterfaceDensity = "COMFORTABLE" | "COMPACT";
+export type AutoUpdatePromptMode = "SILENT_AUTO_RELOAD" | "NOTIFY_BEFORE_RELOAD";
+
+export interface UserSettings {
+  user_id: string;
+  display_name: string;
+  email: string;
+  phone?: string;
+  role: TeamRole;
+  organization: string;
+
+  // Theme & Appearance
+  theme: ThemeMode;
+  density: InterfaceDensity;
+  high_contrast: boolean;
+  default_landing_view: "AGGREGATOR" | "DIGEST";
+  default_role: TeamRole;
+  currency_format: "USD_STANDARD" | "USD_COMPACT";
+
+  // Notifications
+  push_notifications_enabled: boolean;
+  foreclosure_statutory_alerts: boolean;
+  monday_weekly_digest_push: boolean;
+  instant_distress_alerts: boolean;
+  sound_alerts_enabled: boolean;
+  vibration_enabled: boolean;
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
+
+  // PWA & Auto-Update
+  auto_update_enabled: boolean;
+  auto_update_prompt_mode: AutoUpdatePromptMode;
+  offline_cache_enabled: boolean;
+  background_sync_enabled: boolean;
+  update_check_interval_minutes: number;
+
+  // Underwriting & Sourcing Defaults
+  default_target_cap_rate_pct: string;
+  default_replacement_gm_salary_usd: string;
+  default_hurdle_base_dscr: string;
+  default_hurdle_stressed_dscr: string;
+  default_max_purchase_price_usd: string;
+  default_target_locations: string[];
+
+  // Metadata
+  updated_at?: string;
+  client_device_info?: string;
+}
+
+export interface PwaVersionInfo {
+  app_name: string;
+  version: string;
+  cache_name: string;
+  release_timestamp: string;
+  features: string[];
+  mandatory_update: boolean;
+}
+
+
 
 
 

@@ -1,7 +1,7 @@
-// ASUP Aladdin — Vanguard Production Service Worker (v1.0.0)
-// High-Reliability PWA Engine with Native Push Notifications, Background Sync & Offline Memory
+// Argus (v1.1.0) — High-Reliability PWA Engine with Native Auto-Update, Push Notifications & Offline Memory
 
-const CACHE_NAME = "asup-aladdin-v1.0.0";
+const APP_VERSION = "1.1.0";
+const CACHE_NAME = `asup-argus-v${APP_VERSION}`;
 const PRECACHE_ASSETS = [
   "/",
   "/analyst",
@@ -191,5 +191,22 @@ self.addEventListener("sync", (event) => {
         });
       })
     );
+  }
+});
+
+// 7. Auto-Update Lifecycle & Client Messaging
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    console.log("[ARGUS PWA SW] Received SKIP_WAITING signal. Activating newest worker immediately.");
+    self.skipWaiting();
+  }
+  if (event.data?.type === "CHECK_VERSION") {
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({
+        version: APP_VERSION,
+        cacheName: CACHE_NAME,
+        timestamp: Date.now(),
+      });
+    }
   }
 });

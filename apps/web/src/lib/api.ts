@@ -1569,6 +1569,47 @@ export async function generateCustomTearSheet(params: {
   return res.json();
 }
 
+// ==========================================
+// PERSISTENT USER SETTINGS & PWA AUTO-UPDATE
+// ==========================================
+
+export async function fetchUserSettings(userId?: string): Promise<import("./types").UserSettings> {
+  const base = getApiBase();
+  const token = getStoredAuthToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const query = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
+  const res = await fetch(`${base}/v1/user/settings${query}`, { headers });
+  if (!res.ok) throw new Error(`Failed to fetch user settings: ${res.statusText}`);
+  return res.json();
+}
+
+export async function saveUserSettings(settings: import("./types").UserSettings): Promise<import("./types").UserSettings> {
+  const base = getApiBase();
+  const token = getStoredAuthToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const res = await fetch(`${base}/v1/user/settings`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(settings),
+  });
+  if (!res.ok) throw new Error(`Failed to save settings: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchPwaVersion(): Promise<import("./types").PwaVersionInfo> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/pwa/version`);
+  if (!res.ok) throw new Error(`Failed to fetch PWA version: ${res.statusText}`);
+  return res.json();
+}
+
+
 
 
 

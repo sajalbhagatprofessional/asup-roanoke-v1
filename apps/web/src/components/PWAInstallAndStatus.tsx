@@ -11,7 +11,9 @@ import {
   AlertTriangle,
   Smartphone,
   ShieldAlert,
+  Sparkles,
 } from "lucide-react";
+import { useSettings } from "../context/SettingsContext";
 import {
   flushOfflineQueue,
   getPendingOfflineActions,
@@ -33,6 +35,7 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export default function PWAInstallAndStatus() {
+  const { updateAvailable, applyUpdateNow } = useSettings();
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isStandalone, setIsStandalone] = useState<boolean>(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
@@ -186,6 +189,18 @@ export default function PWAInstallAndStatus() {
           </>
         )}
       </div>
+
+      {/* PWA Update Ready Action Pill */}
+      {updateAvailable && (
+        <button
+          onClick={applyUpdateNow}
+          className="apple-press flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition cursor-pointer text-[11px] shadow-sm animate-pulse"
+          title="New version downloaded. Click to reload with latest features."
+        >
+          <Sparkles className="w-3 h-3 text-black" />
+          <span>Update Ready</span>
+        </button>
+      )}
 
       {/* 2. Offline Action Sync Pill (Shows if actions are queued) */}
       {pendingActions.length > 0 && (

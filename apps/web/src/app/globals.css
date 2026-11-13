@@ -7,6 +7,40 @@
   --foreground: #f1f5f9;
 }
 
+/* Multi-Theme System Support */
+:root[data-theme="dark"],
+body[data-theme="dark"] {
+  --background: #090d16;
+  --foreground: #f1f5f9;
+}
+
+:root[data-theme="light"],
+body[data-theme="light"] {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+:root[data-theme="midnight"],
+body[data-theme="midnight"] {
+  --background: #000000;
+  --foreground: #ffffff;
+}
+
+:root[data-theme="bloomberg"],
+body[data-theme="bloomberg"] {
+  --background: #060d1f;
+  --foreground: #e2e8f0;
+}
+
+/* Interface Density Support */
+[data-density="compact"] {
+  font-size: 0.9375rem;
+}
+
+[data-high-contrast="true"] {
+  filter: contrast(1.15);
+}
+
 /* Apple HIG Foundations & Mobile Viewport Polish */
 html {
   -webkit-text-size-adjust: 100%;

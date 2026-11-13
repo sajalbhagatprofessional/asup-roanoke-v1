@@ -68,6 +68,14 @@ tokens_table = Table(
     Column("created_at", DateTime, nullable=False, default=datetime.utcnow),
 )
 
+user_settings_table = Table(
+    "user_settings_durable",
+    metadata,
+    Column("user_id", String(64), primary_key=True),
+    Column("settings_json", Text, nullable=False),
+    Column("updated_at", DateTime, nullable=False, default=datetime.utcnow),
+)
+
 
 class DurablePipelineStore(RBACPipelineStore):
     """
@@ -97,6 +105,8 @@ class DurablePipelineStore(RBACPipelineStore):
 
         self.engine: Engine = create_engine(self.db_url, connect_args=connect_args)
         metadata.create_all(self.engine)
+
+        self._user_settings: Dict[str, Dict[str, Any]] = {}
 
         # 3. Hydrate In-Memory Cache from Storage on Startup
         self._hydrate_from_storage()
@@ -132,6 +142,12 @@ class DurablePipelineStore(RBACPipelineStore):
                         counsel_verified_by=m["counsel_verified_by"],
                     )
                     self._deals[deal.deal_id] = deal
+
+                stmt_settings = select(user_settings_table)
+                results_settings = conn.execute(stmt_settings).fetchall()
+                for row in results_settings:
+                    sm = row._mapping
+                    self._user_settings[sm["user_id"]] = json.loads(sm["settings_json"])
         except Exception as e:
             # Safe initial start if table was empty
             pass
@@ -224,3 +240,37 @@ class DurablePipelineStore(RBACPipelineStore):
         except Exception:
             pass
         return None
+
+    def get_user_settings(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve persistent user settings from cache or storage."""
+        if user_id in self._user_settings:
+            return self._user_settings[user_id]
+        try:
+            with self.engine.connect() as conn:
+                stmt = select(user_settings_table).where(user_settings_table.c.user_id == user_id)
+                row = conn.execute(stmt).fetchone()
+                if row:
+                    m = row._mapping
+                    settings = json.loads(m["settings_json"])
+                    self._user_settings[user_id] = settings
+                    return settings
+        except Exception:
+            pass
+        return None
+
+    def save_user_settings(self, user_id: str, settings: Dict[str, Any]) -> Dict[str, Any]:
+        """Save user settings with write-through durability across devices and sessions."""
+        self._user_settings[user_id] = settings
+        try:
+            with self.engine.begin() as conn:
+                conn.execute(user_settings_table.delete().where(user_settings_table.c.user_id == user_id))
+                conn.execute(
+                    user_settings_table.insert().values(
+                        user_id=user_id,
+                        settings_json=json.dumps(settings),
+                        updated_at=datetime.utcnow(),
+                    )
+                )
+        except Exception:
+            pass
+        return settings

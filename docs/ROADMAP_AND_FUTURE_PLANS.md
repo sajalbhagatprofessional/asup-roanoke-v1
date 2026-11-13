@@ -165,41 +165,50 @@ timeline
   3. Integrated Next.js 15 4-subview tab ("WAR_ROOM_OPERATIONS") with live sliders, BATNA tables, roadmap timeline, and statutory milestone pills.
 
 ### Milestone 32: Argus Asset Flip & Capital Velocity Engine (40-Year Veteran Sourcing Suite)
-- **Delivered**: `packages/flipper_deal_engine/` (4 sub-engines: `sale_leaseback_solver.py`, `flip_strategy_optimizer.py`, `contract_assignment_engine.py`, `tear_sheet_generator.py`), `tests/unit/test_flipper_deal_engine.py`, `tests/integration/test_flipper_engine_endpoints.py`, 5 FastAPI endpoints under `/v1/flipper/*`, 4 MCP tools (catalog: 38 tools), and interactive Web UI tab ("ASSET_FLIPPER") in `UniversalAssetDossierModal.tsx`.
+- **Delivered**: `packages/flipper_deal_engine/` (4 sub-engines: `sale_leaseback_solver.py`, `flip_strategy_optimizer.py`, `contract_assignment_engine.py`, `tear_sheet_generator.py`), `tests/unit/test_flipper_deal_engine.py`, `tests/integration/test_flipper_engine_endpoints.py`, 5 FastAPI endpoints under `/v1/flipper/*`, 4 MCP tools, and interactive Web UI tab ("ASSET_FLIPPER") in `UniversalAssetDossierModal.tsx`.
 - **Key Features**:
   1. **Sale-Leaseback Capital Arbitrage Solver**: Monetizes corporate CRE at institutional cap rates, wipes out purchase basis, models annual NNN rent, and triggers the "house money" infinite return flag when net SLB proceeds exceed total acquisition cost.
   2. **4-Way Flip Strategy Matrix & Breakup Optimizer**: Compares SLB Hold, Wholesale Contract Assignment, Orderly Liquidation Breakup, and 90-Day Turnaround Flip, ranked by Capital Velocity Index and annualized ROIC with <90-day payback tags.
   3. **Wholesaling Contract Paper Flip & Double-Closing Escrow Gate**: Computes assignment spread, EMD cash-on-cash yield, triggers double-closing circuit breaker ($100k+ or 10%+), and provides Virginia assignability clause.
   4. **1-Click Executive Flip Tear-Sheet Generator**: Assembles dense 1-page IC brief with 1-click clipboard copy.
 
+### Milestone 33: PWA Auto-Update Engine & Persistent Cross-Device User Settings
+- **Delivered**: `apps/web/public/sw.js`, `apps/web/src/context/SettingsContext.tsx`, `apps/web/src/components/SettingsModal.tsx`, `apps/web/src/components/PWAInstallAndStatus.tsx`, `services/security/user_settings.py`, `services/persistence/durable_pipeline_store.py` (`user_settings_durable` table), endpoints `GET /v1/pwa/version`, `GET /v1/user/settings`, `POST /v1/user/settings`, 2 MCP tools (`get_user_settings`, `update_user_settings` — total 40 tools), `tests/unit/test_user_settings_and_pwa.py`, `tests/integration/test_user_settings_endpoints.py`.
+- **Key Features**:
+  1. **PWA Service Worker Auto-Update Lifecycle**: Version-tagged cache (`asup-argus-v1.1.0`), `onupdatefound` background worker download, user-selectable prompt modes (`NOTIFY_BEFORE_RELOAD` glowing pill vs `SILENT_AUTO_RELOAD` on idle), manual "Check for Updates" trigger calling `registration.update()`.
+  2. **Dedicated Apple HIG Settings Modal (`SettingsModal.tsx`)**: Zero dashboard crowding; 5 organized tabs (Account & Profile, Theme & Display, Notifications & Alerts, PWA & Auto-Update, Underwriting & Mandate Defaults). Accessible via gear icon, user dropdown, tools menu, or `⌘,` (`Ctrl+,`) shortcut.
+  3. **5-Theme Engine & Interface Density**: Live instantaneous theme switching (`Dark Standard`, `Light Clean`, `Midnight OLED`, `Bloomberg Terminal Navy`), density modes (`Comfortable` vs `Compact Micro-OLAP`), and high-contrast toggle.
+  4. **Multi-Device ACID Persistence**: Persistent SQLite WAL / PostgreSQL 16 store (`user_settings_durable`), synchronizing preferences across desktop workstations, tablets, and field mobile PWAs.
+  5. **Verification**: 162/162 unit & integration tests passing (100% coverage), 50/50 Golden Suite backtest passing, and Next.js 15 production build passing with Exit Code 0.
+
 ---
 
-## 3. Future Strategic Roadmap (Milestones 33–36)
+## 3. Future Strategic Roadmap (Milestones 34–37)
 
 Any future AI agent or engineer continuing this project should tackle the following milestones in strict sequence:
 
-### Milestone 33: Autonomous Court PDF OCR & Docket Document Parser
+### Milestone 34: Autonomous Court PDF OCR & Docket Document Parser
 - **Objective**: Parse scanned Ch. 11 disclosure statements, bankruptcy schedules (Schedule A/B assets and Schedule D/E/F claims), and substitute trustee notices of sale.
 - **Implementation Strategy**:
   - Integrate a self-hostable OCR pipeline (e.g. Tesseract / PyMuPDF) inside `services/ingestion/court_pdf_parser.py`.
   - Extract exact debt figures, secured lender payoff demands, and property legal descriptions directly from raw court PDFs.
   - Wrap extracted numbers in `ProvenancedValue` with PDF page references and bounding coordinates.
 
-### Milestone 34: Secondary Loan Syndication Packaging Engine
+### Milestone 35: Secondary Loan Syndication Packaging Engine
 - **Objective**: Automate the generation of standardized SBA 7(a) / 504 loan syndication memo bundles for community bank loan committees.
 - **Implementation Strategy**:
   - Partner with regional community lenders in Western Virginia (e.g., Atlantic Union Bank, Carter Bank & Trust, Freedom First Credit Union).
   - Build automated PDF export of Lender Packages conforming to RMA (Risk Management Association) credit memo formats.
   - Add interactive debt amortizer and debt yield stress scenarios.
 
-### Milestone 35: Automated Virginia Tax Sale Bidding Assistant
+### Milestone 36: Automated Virginia Tax Sale Bidding Assistant
 - **Objective**: Provide a real-time auction bidding decision engine for City of Roanoke and Roanoke County delinquent tax sales.
 - **Implementation Strategy**:
   - Ingest tax sale catalogs 30 days prior to auction.
   - Automatically query county land records for superior liens, federal tax liens (which have a 120-day IRS right of redemption under 26 U.S.C. § 7425), and municipal utility charges.
   - Compute maximum allowable bid (MAB) ensuring the purchase price remains `<= 70%` of verified assessed value.
 
-### Milestone 36: Multi-State Regional Expansion Wizard
+### Milestone 37: Multi-State Regional Expansion Wizard
 - **Objective**: Expand sourcing from Western Virginia into adjacent high-potential Appalachian and Mid-Atlantic industrial corridors (Greensboro/Winston-Salem NC, Johnson City TN, Charleston WV).
 - **Implementation Strategy**:
   - Add FIPS codes and state-specific foreclosure statutes (e.g., North Carolina General Statutes Chapter 45, Tennessee Code Title 35).
@@ -212,5 +221,5 @@ Any future AI agent or engineer continuing this project should tackle the follow
 
 When implementing any future milestone:
 1. **Never Compromise Underwriting Determinism**: Never replace pure `decimal.Decimal` math with floating-point arithmetic or LLM approximations.
-2. **Never Break Test Suite**: Run `python scripts/run_all_tests.py` and confirm all 157 tests and the 50/50 Golden Suite pass.
+2. **Never Break Test Suite**: Run `python scripts/run_all_tests.py` and confirm all 162 tests and the 50/50 Golden Suite pass.
 3. **Always Update Documentation**: Record your architectural decisions in `docs/ARCHITECTURE.md`, API changes in `docs/API_REFERENCE.md`, and data structures in `docs/DATA_MODELS_AND_SCHEMA.md`.
