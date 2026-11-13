@@ -1,0 +1,143 @@
+# =========================================================================
+# Argus (v1.0) — Coolify Multi-Container Stack (Oracle OCI ARM64)
+# Production Architecture: PostGIS 16 + Redis 7 + FastAPI + Next.js 15 PWA
+# =========================================================================
+
+name: argus-stack
+
+services:
+  postgis:
+    build:
+      context: ./infra/postgis-arm64
+      dockerfile: Dockerfile
+    image: argus-postgis:latest
+    container_name: argus-postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-argus_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ArgusSecurePostgres2026!}
+      POSTGRES_DB: ${POSTGRES_DB:-argus_db}
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=512MB"
+      - "-c"
+      - "work_mem=16MB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+    volumes:
+      - argus_postgis_data:/var/lib/postgresql/data
+      - ./services/api/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:19432:5432"
+    networks:
+      - argus_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-argus_admin} -d ${POSTGRES_DB:-argus_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - coolify.managed=true
+      - coolify.projectName=Argus
+      - coolify.serviceName=postgis
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: argus-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-ArgusSecureRedis2026!}", "--maxmemory", "384mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - argus_redis_data:/data
+    networks:
+      - argus_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-ArgusSecureRedis2026!}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - coolify.managed=true
+      - coolify.projectName=Argus
+      - coolify.serviceName=redis
+
+  api:
+    build:
+      context: .
+      dockerfile: ./infra/api-arm64/Dockerfile
+    image: argus-api:latest
+    container_name: argus-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-argus_admin}:${POSTGRES_PASSWORD:-ArgusSecurePostgres2026!}@postgis:5432/${POSTGRES_DB:-argus_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-ArgusSecureRedis2026!}@redis:6379/0
+      PORT: "8000"
+      HOST: "0.0.0.0"
+      PII_PEPPER_KEY: ${PII_PEPPER_KEY:-argus_secure_pii_pepper_key_2026_salt}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-argus_secure_jwt_secret_token_vault_2026}
+      PACER_DAILY_CAP_USD: "3.00"
+      KILL_SWITCH_MEMO_DRAFTER: "false"
+      OUTREACH_GLOBAL_FREEZE: "0"
+    ports:
+      - "19001:8000"
+    depends_on:
+      postgis:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - argus_net
+      - coolify
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    labels:
+      - coolify.managed=true
+      - coolify.projectName=Argus
+      - coolify.serviceName=api
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    image: argus-web:latest
+    container_name: argus-web
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      NODE_ENV: "production"
+      FASTAPI_URL: "http://api:8000"
+      NEXT_PUBLIC_API_URL: "http://150.136.103.204:19001"
+    ports:
+      - "19080:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - argus_net
+      - coolify
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    labels:
+      - coolify.managed=true
+      - coolify.projectName=Argus
+      - coolify.serviceName=web
+
+volumes:
+  argus_postgis_data:
+    name: argus_postgis_data
+  argus_redis_data:
+    name: argus_redis_data
+
+networks:
+  argus_net:
+    name: argus_net
+    driver: bridge
+  coolify:
+    external: true

@@ -1,0 +1,27 @@
+# Argus Panoptes (v1.0) — Coolify Traefik Route Configuration
+# Enables public access over standard HTTP (port 80) and HTTPS (port 443) via sslip.io wildcard DNS
+# Route 1: http://argus.150.136.103.204.sslip.io -> web:3000 (Next.js 15 PWA)
+# Route 2: http://api.argus.150.136.103.204.sslip.io -> api:8000 (FastAPI Backend)
+
+http:
+  routers:
+    argus-web-http:
+      rule: "Host(`argus.150.136.103.204.sslip.io`)"
+      entryPoints:
+        - http
+      service: argus-web-svc
+    argus-api-http:
+      rule: "Host(`api.argus.150.136.103.204.sslip.io`)"
+      entryPoints:
+        - http
+      service: argus-api-svc
+
+  services:
+    argus-web-svc:
+      loadBalancer:
+        servers:
+          - url: "http://argus-web:3000"
+    argus-api-svc:
+      loadBalancer:
+        servers:
+          - url: "http://argus-api:8000"
