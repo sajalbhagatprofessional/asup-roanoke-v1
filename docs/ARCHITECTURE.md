@@ -349,5 +349,45 @@ flowchart TD
    - Audits 38 state, federal, SBA, and tax milestones across Corporate & Authority, Real Estate & Title, Lender & Regulatory (SBA SOP 50 10 8.1), and Tax & Operations (VA Form R-1 Certificate of No Tax Due).
    - Calculates real-time `closing_readiness_score_pct` and acts as a cryptographic circuit breaker: wire disbursement is strictly blocked if any critical path item is missing or delinquent.
 
+---
+
+## 15. Argus Asset Flip & Capital Velocity Engine (Milestone 32)
+
+Built from the operational feedback of a 40-year veteran nationwide asset finder flipping businesses, commercial real estate, and distressed notes, this engine optimizes for capital velocity, downside debt wipeout, and paper wholesaling rather than decade-long holds:
+
+```mermaid
+flowchart TD
+    subgraph Ingestion["Distressed Commercial Asset Ingestion"]
+        A1["Raw Docket / Distress Filing\n(OpCo + CRE Parcel)"] --> A2["Acquisition Cost Basis ($)"]
+    end
+
+    subgraph Solvers["Argus Capital Velocity Solvers"]
+        A2 --> S1["Sale-Leaseback Arbitrage\n(packages/flipper_deal_engine/sale_leaseback_solver.py)\nCRE Monetization at 7.25% Cap Rate\nRecoups >=100% Acquisition Basis\nInfinite Return 'House Money' OpCo"]
+        A2 --> S2["4-Way Flip Strategy Matrix\n(packages/flipper_deal_engine/flip_strategy_optimizer.py)\nCompares SLB Hold vs Wholesale Assignment\nvs Liquidation Breakup vs 90D Turnaround\nRanks by Capital Velocity Index & Annualized ROIC"]
+        A2 --> S3["Wholesale Contract Paper Flip\n(packages/flipper_deal_engine/contract_assignment_engine.py)\nCalculates Spread & EMD Cash-on-Cash\nTriggers Double Closing ($100k+ or 10%+)\nGenerates VA Code § 55.1-320 Assignability Clause"]
+    end
+
+    subgraph Output["Executive Delivery"]
+        S1 --> T1["1-Click Executive Flip Tear-Sheet\n(Dense 1-Page Investment Committee Memo)\nActionable Verdict, Return Spreads, Exit Paths"]
+        S2 --> T1
+        S3 --> T1
+    end
+```
+
+1. **Sale-Leaseback (SLB) Capital Arbitrage Solver (`packages/flipper_deal_engine/sale_leaseback_solver.py`)**:
+   - Models corporate sale-leaseback monetization of commercial/industrial real estate at institutional cap rates (e.g. 7.25%).
+   - Calculates annual NNN rent, transaction fees, net proceeds recouped, and remaining OpCo basis.
+   - Automatically detects and flags **Infinite Return ("House Money")** when net SLB proceeds exceed total purchase/cure price.
+2. **4-Way Flip Strategy Matrix & Breakup Optimizer (`packages/flipper_deal_engine/flip_strategy_optimizer.py`)**:
+   - Evaluates and ranks 4 distinct exit strategies: `SALE_LEASEBACK_OPERATING_HOLD`, `WHOLESALE_CONTRACT_ASSIGNMENT`, `ORDERLY_LIQUIDATION_BREAKUP`, and `RAPID_OPERATIONAL_TURNAROUND_FLIP`.
+   - Computes the **Capital Velocity Index** ($\frac{\text{Net Profit}}{\text{Capital Invested}} \times \frac{365}{\text{Days to Cash}}$) and identifies strategies with $<90$-day payback.
+3. **Wholesaling Contract Paper Flip & Double-Closing Escrow Gate (`packages/flipper_deal_engine/contract_assignment_engine.py`)**:
+   - Calculates assignment fee spread and EMD cash-on-cash yield.
+   - Enforces a double-closing circuit breaker: if assignment fee exceeds $\$100,000$ or $10\%$ of contract price, it mandates a simultaneous double-closing escrow to conceal the spread from distressed counterparties.
+   - Provides a legally vetted Virginia assignability clause compliant with Va. Code § 55.1-320.
+4. **1-Click Executive Flip Tear-Sheet Generator (`packages/flipper_deal_engine/tear_sheet_generator.py`)**:
+   - Assembles all quantitative outputs into a dense, 1-page Investment Committee deal brief.
+
+
 
 

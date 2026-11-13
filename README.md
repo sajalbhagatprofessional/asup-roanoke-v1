@@ -1,9 +1,10 @@
 # Argus (v1.0)
 ### *Autonomous Asset Intelligence, Sourcing & Underwriting Platform*
 
-[![Test Suite](https://img.shields.io/badge/Test_Suite-147%2F147_Passing_(100%25)-emerald.svg)](tests/)
+[![Test Suite](https://img.shields.io/badge/Test_Suite-157%2F157_Passing_(100%25)-emerald.svg)](tests/)
 [![Golden Suite](https://img.shields.io/badge/Golden_Suite-50%2F50_Accuracy_(100%25)-blue.svg)](tests/golden_suite/)
 [![Underwriting Engine](https://img.shields.io/badge/Underwriting-Air--Gapped_Pure_Decimal-purple.svg)](packages/underwriting_engine/)
+[![Capital Velocity](https://img.shields.io/badge/Asset_Flipper-40_Yr_Deal_Box_Engine-amber.svg)](packages/flipper_deal_engine/)
 [![Operational Supremacy](https://img.shields.io/badge/Operations-Palantir_War_Room_&_Closing_Room-red.svg)](packages/war_room_simulator/)
 [![Titan Systems](https://img.shields.io/badge/Titan_Suite-Goldman_BlackRock_Vanguard_Bridgewater-blueviolet.svg)](packages/reactive_underwriting_dag/)
 [![Sourcing Intelligence](https://img.shields.io/badge/Sourcing_Radar-Inven_Trepp_PropertyRadar-rose.svg)](packages/sourcing_intelligence/)
@@ -11,7 +12,7 @@
 [![SBA Compliance](https://img.shields.io/badge/SBA_Compliance-SOP_50_10_8.1-amber.svg)](packages/underwriting_engine/sba_sop_50_10_8_1.py)
 [![Virginia Foreclosure](https://img.shields.io/badge/Virginia_Statute-Va._Code_§§_55.1--320--322-red.svg)](packages/underwriting_engine/va_foreclosure_solver.py)
 [![Infrastructure](https://img.shields.io/badge/Infrastructure-Oracle_OCI_ARM64_Ubuntu_24.04-orange.svg)](infra/)
-[![AI Agent Protocol](https://img.shields.io/badge/AI_Agent_Gateway-Anthropic_MCP_34_Tools-cyan.svg)](services/mcp/)
+[![AI Agent Protocol](https://img.shields.io/badge/AI_Agent_Gateway-Anthropic_MCP_38_Tools-cyan.svg)](services/mcp/)
 
 ---
 
@@ -54,11 +55,11 @@ pip install -r requirements.txt
 ```
 
 ### 2. Run the Master Verification Gate
-Verify that all 147 unit, integration, RBAC, golden backtests, institutional titan, and operational supremacy tests pass with 100% coverage:
+Verify that all 157 unit, integration, RBAC, golden backtests, institutional titan, operational supremacy, and asset flipper tests pass with 100% coverage:
 ```bash
 python scripts/run_all_tests.py
 ```
-*(Expected Output: `Total Test Suite: 147/147 Tests PASSED (100% Coverage)!` and `[GOLDEN SUITE] 50-Deal Accuracy: 50/50`)*
+*(Expected Output: `Total Test Suite: 157/157 Tests PASSED (100% Coverage)!` and `[GOLDEN SUITE] 50-Deal Accuracy: 50/50`)*
 
 ### 3. Launch Local Backend Server
 ```bash
@@ -122,6 +123,11 @@ asup-roanoke-v1/
 │   │   ├── hundred_day_engine.py                  # 14-week chronological operational modernization roadmap
 │   ├── deal_room_engine/                          # Autonomous Closing Command Center
 │   │   ├── closing_command_center.py              # 38 statutory pre-closing milestone gate tracker
+│   ├── flipper_deal_engine/                       # 40-Yr Deal Box Asset Flipper & Capital Velocity Engine
+│   │   ├── sale_leaseback_solver.py               # Commercial real estate monetization & infinite return solver
+│   │   ├── flip_strategy_optimizer.py             # 4-way exit routes (SLB, wholesale, breakup, turnaround)
+│   │   ├── contract_assignment_engine.py          # Paper flip spread, EMD yield & double-closing evaluator
+│   │   └── tear_sheet_generator.py                # 1-click dense IC memo generator
 │   ├── reactive_underwriting_dag/                 # Goldman SecDB / Athena sub-50μs Reactive DAG
 │   │   ├── models.py                              # DAG Node State, Formulas & Evaluation Reports
 │   │   └── dag_engine.py                          # Kahn's topological sort & forward invalidation
@@ -163,7 +169,7 @@ asup-roanoke-v1/
 │       ├── edgar_comps_engine.py                  # SEC EDGAR comps & multiple arbitrage
 │       └── tax_document_parser.py                 # IRS Form 1040/1120-S/1065 financial parser
 ├── services/                                      # Backend Microservices & API
-│   ├── api/main.py                                # Production FastAPI REST server (52+ endpoints)
+│   ├── api/main.py                                # Production FastAPI REST server (57+ endpoints)
 │   ├── gis/roanoke_adapters.py                    # Roanoke City & County ArcGIS REST normalizers
 │   ├── ingestion/                                 # Distress docket pollers & 24h circuit breaker
 │   ├── enrichment/conditional_enrichment.py       # Virginia SCC, FEMA, EPA UST, FMCSA router
@@ -171,20 +177,20 @@ asup-roanoke-v1/
 │   ├── memo_drafter/memo_engine.py                # Citation-locked deal memo drafter
 │   ├── outreach/compliance_gate.py                # Human-gated single-recipient outreach
 │   ├── lender_pack/exporter.py                    # SBA 7(a)/504 lender package exporter
-│   └── mcp/server.py                              # Anthropic Model Context Protocol (MCP 34 tools)
+│   └── mcp/server.py                              # Anthropic Model Context Protocol (MCP 38 tools)
 ├── apps/web/                                      # Next.js 15 App Router Frontend (Apple HIG)
 │   ├── src/app/                                   # Role-based views (Principal, Analyst, Counsel, CPA, Lender)
-│   ├── src/components/                            # High-density Apple Card components, 3D Twins, War Room & Dossier
+│   ├── src/components/                            # High-density Apple Card components, 3D Twins, War Room, Flipper Terminal & Dossier
 │   └── src/lib/api.ts                             # Typed client API integration
 ├── scripts/                                       # Automation & Deployment Scripts
-│   ├── run_all_tests.py                           # Master 147-test verification runner
+│   ├── run_all_tests.py                           # Master 157-test verification runner
 │   ├── run_golden_backtest.py                     # 50-deal golden dataset backtest
 │   ├── sync_upstream_dependencies.py              # Upstream dependency tracker CLI
 │   ├── provision_oci_arm64_vps.sh                 # Oracle OCI Ubuntu 24.04 ARM64 bootstrap
 │   └── rollback_vps.sh                            # Rapid container rollback script
 └── tests/                                         # Test Suite (100% Coverage)
-    ├── unit/                                      # AST air-gap, SBA SOP, Va. foreclosure, War Room, Closing tests
-    ├── integration/                               # Milestones 1–31 integration tests
+    ├── unit/                                      # AST air-gap, SBA SOP, Va. foreclosure, War Room, Flipper tests
+    ├── integration/                               # Milestones 1–32 integration tests
     └── golden_suite/roanoke_golden_50.json        # 50 stratified Roanoke golden deals
 ```
 
@@ -194,18 +200,18 @@ asup-roanoke-v1/
 
 For in-depth technical documentation, consult the dedicated guides in the [`docs/`](docs/) directory:
 
-1. **[System Architecture (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md)**: Detailed data flows, five-stage ingestion pipeline, spatial intelligence, operational supremacy, and cryptographic security.
+1. **[System Architecture (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md)**: Detailed data flows, five-stage ingestion pipeline, spatial intelligence, operational supremacy, asset flipper engine, and cryptographic security.
 2. **[AI Agent Onboarding Guide (`docs/AI_AGENT_ONBOARDING.md`)](docs/AI_AGENT_ONBOARDING.md)**: Critical invariants, golden rules, repository locator, and step-by-step developer workflows for AI systems.
-3. **[REST & MCP API Reference (`docs/API_REFERENCE.md`)](docs/API_REFERENCE.md)**: Full endpoint definitions, request/response schemas, RBAC requirements, and Model Context Protocol specification (34 tools).
+3. **[REST & MCP API Reference (`docs/API_REFERENCE.md`)](docs/API_REFERENCE.md)**: Full endpoint definitions, request/response schemas, RBAC requirements, and Model Context Protocol specification (38 tools).
 4. **[Data Models & Database Schema (`docs/DATA_MODELS_AND_SCHEMA.md`)](docs/DATA_MODELS_AND_SCHEMA.md)**: PostgreSQL 16 + PostGIS DDL, Pydantic data models, and `ProvenancedValue[T]` epistemic definitions.
 5. **[Operations & Deployment (`docs/OPERATIONS_AND_DEPLOYMENT.md`)](docs/OPERATIONS_AND_DEPLOYMENT.md)**: Oracle Cloud Infrastructure ARM64 VPS setup, Docker Compose, Caddy reverse proxy, and rollback procedures.
-6. **[Product Roadmap & Evolution (`docs/ROADMAP_AND_FUTURE_PLANS.md`)](docs/ROADMAP_AND_FUTURE_PLANS.md)**: Complete milestone ledger (Milestones 1–31) and future strategic roadmap.
+6. **[Product Roadmap & Evolution (`docs/ROADMAP_AND_FUTURE_PLANS.md`)](docs/ROADMAP_AND_FUTURE_PLANS.md)**: Complete milestone ledger (Milestones 1–32) and future strategic roadmap.
 
 ---
 
 ## 6. Guidelines for Autonomous AI Agents
 
 If you are an AI assistant (Google Antigravity, Claude, Hermes, Copilot, etc.) working on this repository:
-1. **Always Run Verification First**: Execute `python scripts/run_all_tests.py` and confirm all 147 tests pass before touching any code.
-2. **Preserve Underwriting Air-Gap**: Never introduce floating-point math, unverified network calls, or LLM hallucinations into `packages/underwriting_engine/`.
+1. **Always Run Verification First**: Execute `python scripts/run_all_tests.py` and confirm all 157 tests pass before touching any code.
+2. **Preserve Underwriting Air-Gap**: Never introduce floating-point math, unverified network calls, or LLM hallucinations into `packages/underwriting_engine/` or `packages/flipper_deal_engine/`.
 3. **Keep Documentation Synchronized**: Whenever you introduce a new feature, API endpoint, or architectural component, immediately update `README.md` and the appropriate files in `docs/` according to the **Autonomous Documentation Protocol** in [`AGENTS.md`](AGENTS.md).

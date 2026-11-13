@@ -655,6 +655,102 @@ MCP_TOOLS_CATALOG: List[McpTool] = [
             },
         },
     ),
+    McpTool(
+        name="evaluate_sale_leaseback_arbitrage",
+        description=(
+            "Evaluates Sale-Leaseback (SLB) capital arbitrage on acquired commercial real estate. "
+            "Calculates monetizable CRE value at market cap rate, annual NNN rent obligation, transaction fees, "
+            "and net remaining equity basis in the operating business."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["total_acquisition_cost_usd", "facility_sqft"],
+            "properties": {
+                "deal_id": {"type": "string", "default": "DEAL-001"},
+                "asset_name": {"type": "string", "default": "Roanoke Industrial Fabrication"},
+                "total_acquisition_cost_usd": {"type": "number", "description": "Total acquisition/cure cost in USD"},
+                "facility_sqft": {"type": "number", "description": "Facility square footage"},
+                "market_nnn_rent_per_sqft_usd": {"type": "number", "default": 9.0, "description": "Market NNN rent per sqft in USD"},
+                "investor_exit_cap_rate": {"type": "number", "default": 0.0725, "description": "Exit NNN cap rate (e.g. 0.0725 for 7.25%)"},
+                "transaction_broker_fee_pct": {"type": "number", "default": 0.04, "description": "Broker fee % on SLB transaction"},
+                "baseline_annual_ebitda_usd": {"type": "number", "default": 450000.0, "description": "Current unburdened annual EBITDA in USD"},
+            },
+        },
+    ),
+    McpTool(
+        name="optimize_flip_exit_strategies",
+        description=(
+            "Runs 4-way deal flip strategy matrix comparing Sale-Leaseback Hold, Wholesale Contract Assignment, "
+            "Orderly Breakup Liquidation, and Rapid Operational Turnaround. Ranks strategies by net cash profit, "
+            "annualized ROIC, and capital payback velocity."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["purchase_price_usd", "cre_market_assessed_value_usd", "equipment_liquidation_floor_usd", "current_annual_ebitda_usd"],
+            "properties": {
+                "deal_id": {"type": "string", "default": "DEAL-001"},
+                "asset_name": {"type": "string", "default": "Star City Tool & Die"},
+                "purchase_price_usd": {"type": "number", "description": "Purchase / cure price in USD"},
+                "cre_market_assessed_value_usd": {"type": "number", "description": "Appraised commercial real estate value in USD"},
+                "equipment_liquidation_floor_usd": {"type": "number", "description": "Hard equipment FLV in USD"},
+                "current_annual_ebitda_usd": {"type": "number", "description": "Annual EBITDA in USD"},
+                "turnaround_target_ebitda_usd": {"type": "number", "description": "Turnaround target EBITDA in USD"},
+                "facility_sqft": {"type": "number", "default": 20000.0, "description": "Facility square feet"},
+                "market_nnn_rent_per_sqft_usd": {"type": "number", "default": 9.0, "description": "Market NNN rent per sqft"},
+                "exit_cap_rate": {"type": "number", "default": 0.0725, "description": "Exit cap rate"},
+                "wholesaling_assignment_fee_usd": {"type": "number", "default": 85000.0, "description": "Wholesale gross spread in USD"},
+            },
+        },
+    ),
+    McpTool(
+        name="calculate_contract_assignment_fee",
+        description=(
+            "Calculates wholesale paper contract assignment fee, ROI on earnest money deposit (EMD), "
+            "and evaluates Virginia assignability notice and statutory double-closing requirements (when spread exceeds $100k or 10%)."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["contract_purchase_price_usd", "end_buyer_takeout_price_usd"],
+            "properties": {
+                "deal_id": {"type": "string", "default": "DEAL-001"},
+                "asset_name": {"type": "string", "default": "Roanoke Commercial Lot & Building"},
+                "contract_purchase_price_usd": {"type": "number", "description": "Contract purchase price from seller in USD"},
+                "end_buyer_takeout_price_usd": {"type": "number", "description": "Takeout price from end buyer in USD"},
+                "earnest_money_deposit_usd": {"type": "number", "default": 25000.0, "description": "EMD at risk in USD"},
+                "inspection_contingency_days": {"type": "integer", "default": 14, "description": "Inspection window days"},
+                "closing_deadline_days": {"type": "integer", "default": 30, "description": "Contract closing days"},
+                "title_and_legal_costs_usd": {"type": "number", "default": 3500.0, "description": "Title & legal costs in USD"},
+            },
+        },
+    ),
+    McpTool(
+        name="generate_executive_flip_tearsheet",
+        description=(
+            "Generates an ultra-dense, 1-page plaintext Investment Committee tear-sheet for 40-year deal-flippers, "
+            "presenting capital basis, hard liquidation floor, 4 flip pathways, and statutory clearance in under 60 seconds."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["deal_id", "asset_name", "asking_or_cure_price_usd"],
+            "properties": {
+                "deal_id": {"type": "string", "default": "DEAL-001"},
+                "asset_name": {"type": "string", "default": "Roanoke Industrial Machining"},
+                "naics_code": {"type": "string", "default": "332710"},
+                "jurisdiction_fips": {"type": "string", "default": "51770"},
+                "asking_or_cure_price_usd": {"type": "number", "description": "Asking or cure price in USD"},
+                "cre_market_assessed_usd": {"type": "number", "default": 2200000.0},
+                "machinery_floor_usd": {"type": "number", "default": 450000.0},
+                "current_annual_ebitda_usd": {"type": "number", "default": 450000.0},
+                "slb_net_cash_recouped_usd": {"type": "number", "default": 2087000.0},
+                "slb_net_remaining_basis_usd": {"type": "number", "default": 413000.0},
+                "wholesale_assignment_fee_usd": {"type": "number", "default": 150000.0},
+                "turnaround_18m_ev_usd": {"type": "number", "default": 3300000.0},
+                "va_statutory_notice_days": {"type": "integer", "default": 18},
+                "sba_baseline_dscr": {"type": "number", "default": 1.45},
+                "recommended_action": {"type": "string", "default": "EXECUTE SALE-LEASEBACK (Recoups 83% Cash in 45 Days)"},
+            },
+        },
+    ),
 ]
 
 
@@ -1129,6 +1225,86 @@ def execute_mcp_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any
             )
             rep = audit_closing_checklist(inp)
             return {"closing_report": rep.dict()}
+
+        elif tool_name == "evaluate_sale_leaseback_arbitrage":
+            from packages.flipper_deal_engine import SaleLeasebackInput, solve_sale_leaseback_arbitrage
+            inp = SaleLeasebackInput(
+                deal_id=arguments.get("deal_id", "DEAL-001"),
+                asset_name=arguments.get("asset_name", "Roanoke Industrial Fabrication"),
+                total_acquisition_cost_usd=Decimal(str(arguments["total_acquisition_cost_usd"])),
+                facility_sqft=Decimal(str(arguments["facility_sqft"])),
+                market_nnn_rent_per_sqft_usd=Decimal(str(arguments.get("market_nnn_rent_per_sqft_usd", 9.0))),
+                investor_exit_cap_rate=Decimal(str(arguments.get("investor_exit_cap_rate", 0.0725))),
+                transaction_broker_fee_pct=Decimal(str(arguments.get("transaction_broker_fee_pct", 0.04))),
+                baseline_annual_ebitda_usd=Decimal(str(arguments.get("baseline_annual_ebitda_usd", 450000.0))),
+            )
+            rep = solve_sale_leaseback_arbitrage(inp)
+            return {"sale_leaseback_report": rep.dict()}
+
+        elif tool_name == "optimize_flip_exit_strategies":
+            from packages.flipper_deal_engine import FlipStrategyInput, optimize_flip_strategies
+            turnaround_tgt = arguments.get("turnaround_target_ebitda_usd")
+            inp = FlipStrategyInput(
+                deal_id=arguments.get("deal_id", "DEAL-001"),
+                asset_name=arguments.get("asset_name", "Star City Tool & Die"),
+                purchase_price_usd=Decimal(str(arguments["purchase_price_usd"])),
+                cre_market_assessed_value_usd=Decimal(str(arguments["cre_market_assessed_value_usd"])),
+                equipment_liquidation_floor_usd=Decimal(str(arguments["equipment_liquidation_floor_usd"])),
+                current_annual_ebitda_usd=Decimal(str(arguments["current_annual_ebitda_usd"])),
+                turnaround_target_ebitda_usd=Decimal(str(turnaround_tgt)) if turnaround_tgt is not None else None,
+                facility_sqft=Decimal(str(arguments.get("facility_sqft", 20000.0))),
+                market_nnn_rent_per_sqft_usd=Decimal(str(arguments.get("market_nnn_rent_per_sqft_usd", 9.0))),
+                exit_cap_rate=Decimal(str(arguments.get("exit_cap_rate", 0.0725))),
+                wholesaling_assignment_fee_usd=Decimal(str(arguments.get("wholesaling_assignment_fee_usd", 85000.0))),
+            )
+            rep = optimize_flip_strategies(inp)
+            return {"flip_strategy_report": rep.dict()}
+
+        elif tool_name == "calculate_contract_assignment_fee":
+            from packages.flipper_deal_engine import ContractAssignmentInput, calculate_contract_assignment
+            inp = ContractAssignmentInput(
+                deal_id=arguments.get("deal_id", "DEAL-001"),
+                asset_name=arguments.get("asset_name", "Roanoke Commercial Lot & Building"),
+                contract_purchase_price_usd=Decimal(str(arguments["contract_purchase_price_usd"])),
+                end_buyer_takeout_price_usd=Decimal(str(arguments["end_buyer_takeout_price_usd"])),
+                earnest_money_deposit_usd=Decimal(str(arguments.get("earnest_money_deposit_usd", 25000.0))),
+                inspection_contingency_days=int(arguments.get("inspection_contingency_days", 14)),
+                closing_deadline_days=int(arguments.get("closing_deadline_days", 30)),
+                title_and_legal_costs_usd=Decimal(str(arguments.get("title_and_legal_costs_usd", 3500.0))),
+            )
+            rep = calculate_contract_assignment(inp)
+            return {"contract_assignment_report": rep.dict()}
+
+        elif tool_name == "generate_executive_flip_tearsheet":
+            from packages.flipper_deal_engine import TearSheetData, generate_executive_tear_sheet
+            cre_val = Decimal(str(arguments.get("cre_market_assessed_usd", 2200000.0)))
+            mach_val = Decimal(str(arguments.get("machinery_floor_usd", 450000.0)))
+            floor_val = cre_val + mach_val
+            asking = Decimal(str(arguments["asking_or_cure_price_usd"]))
+            cushion = floor_val - asking
+            cushion_pct = ((cushion / asking) * Decimal("100")).quantize(Decimal("0.01")) if asking > Decimal("0") else Decimal("0.00")
+            data = TearSheetData(
+                deal_id=arguments.get("deal_id", "DEAL-001"),
+                asset_name=arguments.get("asset_name", "Roanoke Industrial Machining"),
+                naics_code=arguments.get("naics_code", "332710"),
+                jurisdiction_fips=arguments.get("jurisdiction_fips", "51770"),
+                asking_or_cure_price_usd=asking,
+                cre_market_assessed_usd=cre_val,
+                machinery_floor_usd=mach_val,
+                total_liquidation_floor_usd=floor_val,
+                cushion_spread_usd=cushion,
+                cushion_spread_pct=cushion_pct,
+                current_annual_ebitda_usd=Decimal(str(arguments.get("current_annual_ebitda_usd", 450000.0))),
+                slb_net_cash_recouped_usd=Decimal(str(arguments.get("slb_net_cash_recouped_usd", 2087000.0))),
+                slb_net_remaining_basis_usd=Decimal(str(arguments.get("slb_net_remaining_basis_usd", 413000.0))),
+                wholesale_assignment_fee_usd=Decimal(str(arguments.get("wholesale_assignment_fee_usd", 150000.0))),
+                turnaround_18m_ev_usd=Decimal(str(arguments.get("turnaround_18m_ev_usd", 3300000.0))),
+                va_statutory_notice_days=int(arguments.get("va_statutory_notice_days", 18)),
+                sba_baseline_dscr=Decimal(str(arguments.get("sba_baseline_dscr", 1.45))),
+                recommended_action=arguments.get("recommended_action", "EXECUTE SALE-LEASEBACK (Recoups 83% Cash in 45 Days)"),
+            )
+            memo_text = generate_executive_tear_sheet(data)
+            return {"deal_id": data.deal_id, "tear_sheet_text": memo_text}
 
 
         else:

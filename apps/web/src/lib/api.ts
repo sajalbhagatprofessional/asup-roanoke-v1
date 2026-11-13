@@ -1459,6 +1459,116 @@ export async function auditCustomClosingChecklist(
   return res.json();
 }
 
+// =========================================================================
+// MILESTONE 32: ARGUS ASSET FLIP & CAPITAL VELOCITY CLIENT FETCHERS
+// =========================================================================
+
+export async function fetchSaleLeaseback(params: {
+  deal_id?: string;
+  asset_name?: string;
+  total_acquisition_cost_usd: number;
+  facility_sqft: number;
+  market_nnn_rent_per_sqft_usd?: number;
+  investor_exit_cap_rate?: number;
+  transaction_broker_fee_pct?: number;
+  baseline_annual_ebitda_usd?: number;
+}): Promise<{ status: string; sale_leaseback_report: import("./types").SaleLeasebackReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/flipper/sale-leaseback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to calculate sale-leaseback: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchFlipStrategies(params: {
+  deal_id?: string;
+  asset_name?: string;
+  purchase_price_usd: number;
+  cre_market_assessed_value_usd: number;
+  equipment_liquidation_floor_usd: number;
+  current_annual_ebitda_usd: number;
+  turnaround_target_ebitda_usd?: number;
+  facility_sqft?: number;
+  market_nnn_rent_per_sqft_usd?: number;
+  exit_cap_rate?: number;
+  wholesaling_assignment_fee_usd?: number;
+}): Promise<{ status: string; flip_strategy_report: import("./types").FlipStrategyReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/flipper/flip-strategy-matrix`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to optimize flip strategies: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchContractAssignment(params: {
+  deal_id?: string;
+  asset_name?: string;
+  contract_purchase_price_usd: number;
+  end_buyer_takeout_price_usd: number;
+  earnest_money_deposit_usd?: number;
+  inspection_contingency_days?: number;
+  closing_deadline_days?: number;
+  title_and_legal_costs_usd?: number;
+}): Promise<{ status: string; contract_assignment_report: import("./types").ContractAssignmentReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/flipper/contract-assignment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to calculate contract assignment: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchExecutiveTearSheet(deal_id: string): Promise<{
+  status: string;
+  deal_id: string;
+  tear_sheet_text: string;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/flipper/tear-sheet/${deal_id}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch executive tear-sheet: ${res.statusText}`);
+  return res.json();
+}
+
+export async function generateCustomTearSheet(params: {
+  deal_id: string;
+  asset_name: string;
+  naics_code: string;
+  jurisdiction_fips: string;
+  asking_or_cure_price_usd: number;
+  cre_market_assessed_usd: number;
+  machinery_floor_usd: number;
+  total_liquidation_floor_usd: number;
+  cushion_spread_usd: number;
+  cushion_spread_pct: number;
+  current_annual_ebitda_usd: number;
+  slb_net_cash_recouped_usd: number;
+  slb_net_remaining_basis_usd: number;
+  wholesale_assignment_fee_usd: number;
+  turnaround_18m_ev_usd: number;
+  va_statutory_notice_days: number;
+  sba_baseline_dscr: number;
+  recommended_action: string;
+}): Promise<{ status: string; deal_id: string; tear_sheet_text: string }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/flipper/tear-sheet`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to generate custom tear-sheet: ${res.statusText}`);
+  return res.json();
+}
+
 
 
 

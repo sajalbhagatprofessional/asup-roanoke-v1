@@ -294,9 +294,19 @@ The platform exposes an Anthropic Model Context Protocol (MCP 2024-11-05) gatewa
 
 ---
 
-## 15. Model Context Protocol (MCP 2024-11-05) Agent Gateway (34 Tools Catalog)
+## 15. Argus Asset Flip & Capital Velocity Engine (40-Year Veteran Sourcing Suite)
 
-Argus exposes 34 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
+- `POST /v1/flipper/sale-leaseback`: Sale-Leaseback (SLB) Capital Arbitrage Solver. Models corporate sale-leaseback monetization of commercial/industrial real estate at institutional cap rates (e.g. 7.25%), computes net cash recouped, remaining OpCo basis, and triggers the "house money" infinite return flag when net proceeds exceed total acquisition cost.
+- `POST /v1/flipper/flip-strategy-matrix`: 4-Way Flip Strategy Matrix & Breakup Optimizer. Evaluates and ranks 4 distinct exit strategies (`SALE_LEASEBACK_OPERATING_HOLD`, `WHOLESALE_CONTRACT_ASSIGNMENT`, `ORDERLY_LIQUIDATION_BREAKUP`, `RAPID_OPERATIONAL_TURNAROUND_FLIP`) using Capital Velocity Index, annualized ROIC %, and <90-day payback tags.
+- `POST /v1/flipper/contract-assignment`: Wholesaling Contract Paper Flip & Double-Closing Escrow Gate. Calculates assignment spread, EMD cash-on-cash yield, triggers simultaneous double-closing alerts (when fee > $100k or > 10% deal value), and provides Virginia Code § 55.1-320 assignability contract clauses.
+- `GET /v1/flipper/tear-sheet/{deal_id}`: 1-Click Executive Flip Tear-Sheet & IC Memo Generator for stored deals. Generates dense 1-page Investment Committee deal brief.
+- `POST /v1/flipper/tear-sheet`: 1-Click Executive Flip Tear-Sheet generator with custom parameters and financial overrides.
+
+---
+
+## 16. Model Context Protocol (MCP 2024-11-05) Agent Gateway (38 Tools Catalog)
+
+Argus exposes 38 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
 1. `filter_deal_by_mandate`: Stage 2 zero-cost mandate evaluation.
 2. `solve_sba_sop_50_10_8_1`: Stage 4 pure decimal SBA underwriting solver.
 3. `solve_va_foreclosure_compliance`: Virginia Code § 55.1-321 14-day notice & basis solver.
@@ -331,5 +341,10 @@ Argus exposes 34 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
 32. `solve_stakeholder_game_theory`: 5-party Nash equilibrium stakeholder game theory & BATNA solver.
 33. `generate_100day_value_creation_blueprint`: 100-Day Warp Speed™ post-acquisition operational roadmap & EBITDA bridge.
 34. `audit_statutory_closing_checklist`: Autonomous Closing Command Center 38 statutory milestone gate auditor.
+35. `evaluate_sale_leaseback_arbitrage`: Sale-Leaseback capital arbitrage, NNN rent, broker fees, and infinite return solver.
+36. `optimize_flip_exit_strategies`: 4-way flip strategy matrix, capital velocity index, and <90-day payback ranker.
+37. `calculate_contract_assignment_fee`: Wholesale contract paper flip, EMD yield, double-closing gate, and assignment clause.
+38. `generate_executive_flip_tearsheet`: 1-click executive flip tear-sheet & IC memo generator.
+
 
 

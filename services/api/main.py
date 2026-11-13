@@ -3650,6 +3650,63 @@ class ClosingChecklistAuditRequest(BaseModel):
     counsel_signoff_present: bool = True
 
 
+class SaleLeasebackRequest(BaseModel):
+    deal_id: str = "DEAL-001"
+    asset_name: str = "Roanoke Industrial Fabrication"
+    total_acquisition_cost_usd: float = 2500000.0
+    facility_sqft: float = 25000.0
+    market_nnn_rent_per_sqft_usd: float = 9.0
+    investor_exit_cap_rate: float = 0.0725
+    transaction_broker_fee_pct: float = 0.04
+    baseline_annual_ebitda_usd: float = 450000.0
+
+
+class FlipStrategyMatrixRequest(BaseModel):
+    deal_id: str = "DEAL-001"
+    asset_name: str = "Star City Tool & Die"
+    purchase_price_usd: float = 2200000.0
+    cre_market_assessed_value_usd: float = 1900000.0
+    equipment_liquidation_floor_usd: float = 350000.0
+    current_annual_ebitda_usd: float = 420000.0
+    turnaround_target_ebitda_usd: Optional[float] = None
+    facility_sqft: float = 20000.0
+    market_nnn_rent_per_sqft_usd: float = 9.0
+    exit_cap_rate: float = 0.0725
+    wholesaling_assignment_fee_usd: float = 85000.0
+
+
+class ContractAssignmentRequest(BaseModel):
+    deal_id: str = "DEAL-001"
+    asset_name: str = "Roanoke Commercial Lot & Building"
+    contract_purchase_price_usd: float = 750000.0
+    end_buyer_takeout_price_usd: float = 900000.0
+    earnest_money_deposit_usd: float = 25000.0
+    inspection_contingency_days: int = 14
+    closing_deadline_days: int = 30
+    title_and_legal_costs_usd: float = 3500.0
+
+
+class FlipTearSheetRequest(BaseModel):
+    deal_id: str = "DEAL-001"
+    asset_name: str = "Roanoke Industrial Machining"
+    naics_code: str = "332710"
+    jurisdiction_fips: str = "51770"
+    asking_or_cure_price_usd: float = 2500000.0
+    cre_market_assessed_usd: float = 2200000.0
+    machinery_floor_usd: float = 450000.0
+    total_liquidation_floor_usd: float = 2650000.0
+    cushion_spread_usd: float = 150000.0
+    cushion_spread_pct: float = 6.0
+    current_annual_ebitda_usd: float = 450000.0
+    slb_net_cash_recouped_usd: float = 2087000.0
+    slb_net_remaining_basis_usd: float = 413000.0
+    wholesale_assignment_fee_usd: float = 150000.0
+    turnaround_18m_ev_usd: float = 3300000.0
+    va_statutory_notice_days: int = 18
+    sba_baseline_dscr: float = 1.45
+    recommended_action: str = "EXECUTE SALE-LEASEBACK (Recoups 83% Cash in 45 Days)"
+
+
 @app.post("/v1/operations/war-room/simulate", tags=["Palantir Operational Supremacy"])
 def run_war_room_crisis_simulation_endpoint(req: WarRoomSimulationRequest) -> Dict[str, Any]:
     """
@@ -3775,6 +3832,155 @@ def audit_custom_closing_checklist_endpoint(deal_id: str, req: ClosingChecklistA
         "status": "success",
         "closing_report": report.dict(),
     }
+
+
+# =========================================================================
+# MILESTONE 32: ARGUS ASSET FLIP & CAPITAL VELOCITY ENDPOINTS
+# =========================================================================
+
+@app.post("/v1/flipper/sale-leaseback", tags=["Argus Flipper Deal Engine"])
+def evaluate_sale_leaseback_endpoint(req: SaleLeasebackRequest) -> Dict[str, Any]:
+    """
+    Sale-Leaseback (SLB) Capital Arbitrage Solver.
+    Monetizes commercial real estate to rapidly recoup acquisition equity while retaining OpCo cash flow.
+    """
+    from packages.flipper_deal_engine import SaleLeasebackInput, solve_sale_leaseback_arbitrage
+    inp = SaleLeasebackInput(
+        deal_id=req.deal_id,
+        asset_name=req.asset_name,
+        total_acquisition_cost_usd=Decimal(str(req.total_acquisition_cost_usd)),
+        facility_sqft=Decimal(str(req.facility_sqft)),
+        market_nnn_rent_per_sqft_usd=Decimal(str(req.market_nnn_rent_per_sqft_usd)),
+        investor_exit_cap_rate=Decimal(str(req.investor_exit_cap_rate)),
+        transaction_broker_fee_pct=Decimal(str(req.transaction_broker_fee_pct)),
+        baseline_annual_ebitda_usd=Decimal(str(req.baseline_annual_ebitda_usd)),
+    )
+    res = solve_sale_leaseback_arbitrage(inp)
+    return {
+        "status": "success",
+        "sale_leaseback_report": res.dict(),
+    }
+
+
+@app.post("/v1/flipper/flip-strategy-matrix", tags=["Argus Flipper Deal Engine"])
+def evaluate_flip_strategy_matrix_endpoint(req: FlipStrategyMatrixRequest) -> Dict[str, Any]:
+    """
+    4-Way Flip Strategy & Breakup Net Proceeds Optimizer.
+    Evaluates SLB hold, wholesale assignment, orderly breakup, and turnaround flip.
+    """
+    from packages.flipper_deal_engine import FlipStrategyInput, optimize_flip_strategies
+    inp = FlipStrategyInput(
+        deal_id=req.deal_id,
+        asset_name=req.asset_name,
+        purchase_price_usd=Decimal(str(req.purchase_price_usd)),
+        cre_market_assessed_value_usd=Decimal(str(req.cre_market_assessed_value_usd)),
+        equipment_liquidation_floor_usd=Decimal(str(req.equipment_liquidation_floor_usd)),
+        current_annual_ebitda_usd=Decimal(str(req.current_annual_ebitda_usd)),
+        turnaround_target_ebitda_usd=Decimal(str(req.turnaround_target_ebitda_usd)) if req.turnaround_target_ebitda_usd is not None else None,
+        facility_sqft=Decimal(str(req.facility_sqft)),
+        market_nnn_rent_per_sqft_usd=Decimal(str(req.market_nnn_rent_per_sqft_usd)),
+        exit_cap_rate=Decimal(str(req.exit_cap_rate)),
+        wholesaling_assignment_fee_usd=Decimal(str(req.wholesaling_assignment_fee_usd)),
+    )
+    res = optimize_flip_strategies(inp)
+    return {
+        "status": "success",
+        "flip_strategy_report": res.dict(),
+    }
+
+
+@app.post("/v1/flipper/contract-assignment", tags=["Argus Flipper Deal Engine"])
+def evaluate_contract_assignment_endpoint(req: ContractAssignmentRequest) -> Dict[str, Any]:
+    """
+    Wholesale Paper Contract Assignment & Proof-of-Funds Gate.
+    Calculates assignment fee spread, EMD yield, and double closing statutory requirements.
+    """
+    from packages.flipper_deal_engine import ContractAssignmentInput, calculate_contract_assignment
+    inp = ContractAssignmentInput(
+        deal_id=req.deal_id,
+        asset_name=req.asset_name,
+        contract_purchase_price_usd=Decimal(str(req.contract_purchase_price_usd)),
+        end_buyer_takeout_price_usd=Decimal(str(req.end_buyer_takeout_price_usd)),
+        earnest_money_deposit_usd=Decimal(str(req.earnest_money_deposit_usd)),
+        inspection_contingency_days=req.inspection_contingency_days,
+        closing_deadline_days=req.closing_deadline_days,
+        title_and_legal_costs_usd=Decimal(str(req.title_and_legal_costs_usd)),
+    )
+    res = calculate_contract_assignment(inp)
+    return {
+        "status": "success",
+        "contract_assignment_report": res.dict(),
+    }
+
+
+@app.get("/v1/flipper/tear-sheet/{deal_id}", tags=["Argus Flipper Deal Engine"])
+def get_deal_tear_sheet_endpoint(deal_id: str) -> Dict[str, Any]:
+    """
+    1-Click Executive Flip Tear-Sheet & Investment Committee Memo Generator.
+    Returns 1-page condensed deal overview for capital partners and 40-year deal-flippers.
+    """
+    from packages.flipper_deal_engine import TearSheetData, generate_executive_tear_sheet
+    data = TearSheetData(
+        deal_id=deal_id,
+        asset_name=f"Roanoke Asset {deal_id}",
+        naics_code="332710",
+        jurisdiction_fips="51770",
+        asking_or_cure_price_usd=Decimal("2500000.00"),
+        cre_market_assessed_usd=Decimal("2200000.00"),
+        machinery_floor_usd=Decimal("450000.00"),
+        total_liquidation_floor_usd=Decimal("2650000.00"),
+        cushion_spread_usd=Decimal("150000.00"),
+        cushion_spread_pct=Decimal("6.0"),
+        current_annual_ebitda_usd=Decimal("450000.00"),
+        slb_net_cash_recouped_usd=Decimal("2087000.00"),
+        slb_net_remaining_basis_usd=Decimal("413000.00"),
+        wholesale_assignment_fee_usd=Decimal("150000.00"),
+        turnaround_18m_ev_usd=Decimal("3300000.00"),
+        va_statutory_notice_days=18,
+        sba_baseline_dscr=Decimal("1.45"),
+        recommended_action="EXECUTE SALE-LEASEBACK (Recoups 83% Cash in 45 Days)",
+    )
+    memo_text = generate_executive_tear_sheet(data)
+    return {
+        "status": "success",
+        "deal_id": deal_id,
+        "tear_sheet_text": memo_text,
+    }
+
+
+@app.post("/v1/flipper/tear-sheet", tags=["Argus Flipper Deal Engine"])
+def generate_custom_tear_sheet_endpoint(req: FlipTearSheetRequest) -> Dict[str, Any]:
+    """
+    1-Click Executive Flip Tear-Sheet custom generator.
+    """
+    from packages.flipper_deal_engine import TearSheetData, generate_executive_tear_sheet
+    data = TearSheetData(
+        deal_id=req.deal_id,
+        asset_name=req.asset_name,
+        naics_code=req.naics_code,
+        jurisdiction_fips=req.jurisdiction_fips,
+        asking_or_cure_price_usd=Decimal(str(req.asking_or_cure_price_usd)),
+        cre_market_assessed_usd=Decimal(str(req.cre_market_assessed_usd)),
+        machinery_floor_usd=Decimal(str(req.machinery_floor_usd)),
+        total_liquidation_floor_usd=Decimal(str(req.total_liquidation_floor_usd)),
+        cushion_spread_usd=Decimal(str(req.cushion_spread_usd)),
+        cushion_spread_pct=Decimal(str(req.cushion_spread_pct)),
+        current_annual_ebitda_usd=Decimal(str(req.current_annual_ebitda_usd)),
+        slb_net_cash_recouped_usd=Decimal(str(req.slb_net_cash_recouped_usd)),
+        slb_net_remaining_basis_usd=Decimal(str(req.slb_net_remaining_basis_usd)),
+        wholesale_assignment_fee_usd=Decimal(str(req.wholesale_assignment_fee_usd)),
+        turnaround_18m_ev_usd=Decimal(str(req.turnaround_18m_ev_usd)),
+        va_statutory_notice_days=req.va_statutory_notice_days,
+        sba_baseline_dscr=Decimal(str(req.sba_baseline_dscr)),
+        recommended_action=req.recommended_action,
+    )
+    memo_text = generate_executive_tear_sheet(data)
+    return {
+        "status": "success",
+        "deal_id": req.deal_id,
+        "tear_sheet_text": memo_text,
+    }
+
 
 
 

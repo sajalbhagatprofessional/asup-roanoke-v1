@@ -82,6 +82,9 @@ import {
   NegotiationStrategyReport,
   HundredDayBlueprintReport,
   ClosingChecklistReport,
+  SaleLeasebackReport,
+  FlipStrategyReport,
+  ContractAssignmentReport,
 } from "../lib/types";
 import {
   runAssetDeepOsint,
@@ -116,6 +119,11 @@ import {
   fetchHundredDayBlueprint,
   fetchClosingChecklist,
   auditCustomClosingChecklist,
+  fetchSaleLeaseback,
+  fetchFlipStrategies,
+  fetchContractAssignment,
+  fetchExecutiveTearSheet,
+  generateCustomTearSheet,
 } from "../lib/api";
 import InfoPop from "./InfoPop";
 
@@ -123,7 +131,7 @@ interface UniversalAssetDossierModalProps {
   asset: UniversalAsset | null;
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "TITAN_ANALYTICS" | "WAR_ROOM_OPERATIONS" | "OUTREACH" | "PIPELINE";
+  initialTab?: "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "TITAN_ANALYTICS" | "WAR_ROOM_OPERATIONS" | "ASSET_FLIPPER" | "OUTREACH" | "PIPELINE";
   onAssetUpdated: (updated: UniversalAsset) => void;
 }
 
@@ -135,7 +143,7 @@ export default function UniversalAssetDossierModal({
   onAssetUpdated,
 }: UniversalAssetDossierModalProps) {
   const [activeTab, setActiveTab] = useState<
-    "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "TITAN_ANALYTICS" | "WAR_ROOM_OPERATIONS" | "OUTREACH" | "PIPELINE"
+    "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "TITAN_ANALYTICS" | "WAR_ROOM_OPERATIONS" | "ASSET_FLIPPER" | "OUTREACH" | "PIPELINE"
   >(initialTab);
   const [currentAsset, setCurrentAsset] = useState<UniversalAsset | null>(asset);
   const [spatialTwin, setSpatialTwin] = useState<ParcelSpatialTwin | null>(null);
@@ -255,6 +263,29 @@ export default function UniversalAssetDossierModal({
   const [closingReport, setClosingReport] = useState<ClosingChecklistReport | null>(null);
   const [loadingClosing, setLoadingClosing] = useState(false);
 
+  // Milestone 32: Asset Flipper Terminal States
+  const [flipperSubTab, setFlipperSubTab] = useState<
+    "SALE_LEASEBACK" | "FLIP_MATRIX" | "CONTRACT_ASSIGNMENT" | "EXECUTIVE_TEARSHEET"
+  >("SALE_LEASEBACK");
+  const [slbReport, setSlbReport] = useState<SaleLeasebackReport | null>(null);
+  const [loadingSlb, setLoadingSlb] = useState(false);
+  const [slbSqft, setSlbSqft] = useState<number>(25000);
+  const [slbRentSqft, setSlbRentSqft] = useState<number>(9.0);
+  const [slbCapRate, setSlbCapRate] = useState<number>(0.0725);
+
+  const [flipMatrixReport, setFlipMatrixReport] = useState<FlipStrategyReport | null>(null);
+  const [loadingFlipMatrix, setLoadingFlipMatrix] = useState(false);
+
+  const [contractReport, setContractReport] = useState<ContractAssignmentReport | null>(null);
+  const [loadingContract, setLoadingContract] = useState(false);
+  const [contractTakeoutPrice, setContractTakeoutPrice] = useState<number>(1050000);
+  const [contractEmd, setContractEmd] = useState<number>(25000);
+
+  const [tearSheetText, setTearSheetText] = useState<string>("");
+  const [loadingTearSheet, setLoadingTearSheet] = useState(false);
+  const [copiedTearSheet, setCopiedTearSheet] = useState(false);
+  const [copiedClause, setCopiedClause] = useState(false);
+
   useEffect(() => {
     setCurrentAsset(asset);
     setActiveTab(initialTab);
@@ -336,7 +367,13 @@ export default function UniversalAssetDossierModal({
       if (operationsSubTab === "BLUEPRINT_100D" && !blueprintReport) loadBlueprint();
       if (operationsSubTab === "CLOSING_COMMAND" && !closingReport) loadClosingChecklist();
     }
-  }, [activeTab, currentAsset, playbookType, radarSubTab, titanSubTab, operationsSubTab]);
+    if (activeTab === "ASSET_FLIPPER" && currentAsset) {
+      if (flipperSubTab === "SALE_LEASEBACK" && !slbReport) loadSaleLeaseback();
+      if (flipperSubTab === "FLIP_MATRIX" && !flipMatrixReport) loadFlipMatrix();
+      if (flipperSubTab === "CONTRACT_ASSIGNMENT" && !contractReport) loadContractAssignment();
+      if (flipperSubTab === "EXECUTIVE_TEARSHEET" && !tearSheetText) loadExecutiveTearSheet();
+    }
+  }, [activeTab, currentAsset, playbookType, radarSubTab, titanSubTab, operationsSubTab, flipperSubTab]);
 
   const loadAssetHealth = async () => {
     if (!currentAsset) return;
@@ -883,6 +920,93 @@ export default function UniversalAssetDossierModal({
     }
   };
 
+  const loadSaleLeaseback = async () => {
+    if (!currentAsset) return;
+    setLoadingSlb(true);
+    try {
+      const price = parseFloat(currentAsset.asking_or_estimated_value_usd || "2500000");
+      const ebitda = parseFloat(currentAsset.estimated_sde_or_ebitda_usd || "450000");
+      const res = await fetchSaleLeaseback({
+        deal_id: currentAsset.asset_id,
+        asset_name: currentAsset.title,
+        total_acquisition_cost_usd: price > 0 ? price : 2500000,
+        facility_sqft: slbSqft,
+        market_nnn_rent_per_sqft_usd: slbRentSqft,
+        investor_exit_cap_rate: slbCapRate,
+        transaction_broker_fee_pct: 0.04,
+        baseline_annual_ebitda_usd: ebitda > 0 ? ebitda : 450000,
+      });
+      setSlbReport(res.sale_leaseback_report);
+    } catch (e) {
+      console.error("Failed to load SLB report:", e);
+    } finally {
+      setLoadingSlb(false);
+    }
+  };
+
+  const loadFlipMatrix = async () => {
+    if (!currentAsset) return;
+    setLoadingFlipMatrix(true);
+    try {
+      const price = parseFloat(currentAsset.asking_or_estimated_value_usd || "2200000");
+      const ebitda = parseFloat(currentAsset.estimated_sde_or_ebitda_usd || "420000");
+      const creVal = currentAsset.parcel_assessed_value_usd ? parseFloat(currentAsset.parcel_assessed_value_usd) : 1900000;
+      const res = await fetchFlipStrategies({
+        deal_id: currentAsset.asset_id,
+        asset_name: currentAsset.title,
+        purchase_price_usd: price > 0 ? price : 2200000,
+        cre_market_assessed_value_usd: creVal > 0 ? creVal : 1900000,
+        equipment_liquidation_floor_usd: 350000,
+        current_annual_ebitda_usd: ebitda > 0 ? ebitda : 420000,
+        facility_sqft: slbSqft,
+        market_nnn_rent_per_sqft_usd: slbRentSqft,
+        exit_cap_rate: slbCapRate,
+        wholesaling_assignment_fee_usd: 85000,
+      });
+      setFlipMatrixReport(res.flip_strategy_report);
+    } catch (e) {
+      console.error("Failed to load Flip Matrix report:", e);
+    } finally {
+      setLoadingFlipMatrix(false);
+    }
+  };
+
+  const loadContractAssignment = async () => {
+    if (!currentAsset) return;
+    setLoadingContract(true);
+    try {
+      const price = parseFloat(currentAsset.asking_or_estimated_value_usd || "750000");
+      const res = await fetchContractAssignment({
+        deal_id: currentAsset.asset_id,
+        asset_name: currentAsset.title,
+        contract_purchase_price_usd: price > 0 ? price : 750000,
+        end_buyer_takeout_price_usd: contractTakeoutPrice > price ? contractTakeoutPrice : price + 150000,
+        earnest_money_deposit_usd: contractEmd,
+        inspection_contingency_days: 14,
+        closing_deadline_days: 30,
+        title_and_legal_costs_usd: 3500,
+      });
+      setContractReport(res.contract_assignment_report);
+    } catch (e) {
+      console.error("Failed to load Contract Assignment report:", e);
+    } finally {
+      setLoadingContract(false);
+    }
+  };
+
+  const loadExecutiveTearSheet = async () => {
+    if (!currentAsset) return;
+    setLoadingTearSheet(true);
+    try {
+      const res = await fetchExecutiveTearSheet(currentAsset.asset_id);
+      setTearSheetText(res.tear_sheet_text);
+    } catch (e) {
+      console.error("Failed to load Tear Sheet:", e);
+    } finally {
+      setLoadingTearSheet(false);
+    }
+  };
+
   const formatUSD = (val?: string) => {
     if (!val) return "—";
     const num = parseFloat(val);
@@ -1052,6 +1176,20 @@ export default function UniversalAssetDossierModal({
             <span>War Room Operations</span>
             <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-red-950 border border-red-800 text-red-300 font-bold">
               Palantir War Room
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("ASSET_FLIPPER")}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition whitespace-nowrap ${
+              activeTab === "ASSET_FLIPPER"
+                ? "bg-amber-600 text-white shadow-md shadow-amber-950"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-400" />
+            <span>Asset Flipper Terminal</span>
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-amber-950 border border-amber-800 text-amber-300 font-bold">
+              40-Yr Deal Box
             </span>
           </button>
           <button
@@ -4720,6 +4858,561 @@ export default function UniversalAssetDossierModal({
             </div>
           )}
 
+          {/* TAB: ASSET FLIPPER TERMINAL (Milestone 32: 40-Yr Deal Box) */}
+          {activeTab === "ASSET_FLIPPER" && (
+            <div className="space-y-6">
+              {/* Sub-Tab Navigation */}
+              <div className="flex items-center gap-2 p-1 bg-zinc-950 border border-zinc-800 rounded-xl text-xs overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFlipperSubTab("SALE_LEASEBACK");
+                    if (!slbReport) loadSaleLeaseback();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition whitespace-nowrap ${
+                    flipperSubTab === "SALE_LEASEBACK"
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
+                  }`}
+                >
+                  <Building className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Sale-Leaseback Arbitrage</span>
+                  <InfoPop term="SALE_LEASEBACK_ARBITRAGE" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFlipperSubTab("FLIP_MATRIX");
+                    if (!flipMatrixReport) loadFlipMatrix();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition whitespace-nowrap ${
+                    flipperSubTab === "FLIP_MATRIX"
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5 text-amber-300" />
+                  <span>4-Way Flip Strategy Matrix</span>
+                  <InfoPop term="CAPITAL_VELOCITY_INDEX" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFlipperSubTab("CONTRACT_ASSIGNMENT");
+                    if (!contractReport) loadContractAssignment();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition whitespace-nowrap ${
+                    flipperSubTab === "CONTRACT_ASSIGNMENT"
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Wholesale Contract Paper Flip</span>
+                  <InfoPop term="WHOLESALE_ASSIGNMENT_SPREAD" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFlipperSubTab("EXECUTIVE_TEARSHEET");
+                    if (!tearSheetText) loadExecutiveTearSheet();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition whitespace-nowrap ${
+                    flipperSubTab === "EXECUTIVE_TEARSHEET"
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-300" />
+                  <span>1-Click IC Tear-Sheet</span>
+                </button>
+              </div>
+
+              {/* SUB-TAB 1: SALE-LEASEBACK ARBITRAGE */}
+              {flipperSubTab === "SALE_LEASEBACK" && (
+                <div className="space-y-5 animate-fadeIn">
+                  {/* Parameter Controls Bar */}
+                  <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800/80 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+                      <div>
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Building className="w-4 h-4 text-amber-400" />
+                          Sale-Leaseback Capital Arbitrage Controls
+                          <InfoPop term="SALE_LEASEBACK_ARBITRAGE" />
+                        </h4>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                          Monetize physical real estate at market cap rates to return purchase equity in 45 days.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadSaleLeaseback}
+                        disabled={loadingSlb}
+                        className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {loadingSlb ? "Calculating..." : "Recalculate SLB"}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                      <div>
+                        <label className="text-[11px] text-zinc-400 block mb-1 font-medium">
+                          Facility Size (SqFt)
+                        </label>
+                        <input
+                          type="number"
+                          value={slbSqft}
+                          onChange={(e) => setSlbSqft(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-zinc-400 block mb-1 font-medium">
+                          Market NNN Rent ($/SqFt/Yr)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.25"
+                          value={slbRentSqft}
+                          onChange={(e) => setSlbRentSqft(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="text-[11px] text-zinc-400 font-medium">
+                            Investor Exit Cap Rate
+                          </label>
+                          <span className="text-[11px] font-mono text-amber-400 font-bold">
+                            {(slbCapRate * 100).toFixed(2)}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.060"
+                          max="0.090"
+                          step="0.0025"
+                          value={slbCapRate}
+                          onChange={(e) => setSlbCapRate(parseFloat(e.target.value))}
+                          className="w-full accent-amber-500 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {loadingSlb && (
+                    <div className="p-8 text-center text-xs text-zinc-400 font-mono">
+                      Computing institutional sale-leaseback arbitrage metrics...
+                    </div>
+                  )}
+
+                  {!loadingSlb && slbReport && (
+                    <div className="space-y-4">
+                      {/* Status Banner */}
+                      {slbReport.is_infinite_return ? (
+                        <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/60 flex items-start gap-3">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider block">
+                              ★ Infinite Return Achieved — House Money Status
+                            </span>
+                            <p className="text-xs text-emerald-200 mt-1 leading-relaxed">
+                              {slbReport.flipper_synthesis}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/40 flex items-start gap-2.5 text-xs">
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                          <p className="text-amber-200 leading-relaxed font-sans">
+                            {slbReport.flipper_synthesis}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 4 Core Financial KPI Cards */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                        <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800">
+                          <span className="text-[10px] text-zinc-400 uppercase tracking-wider block mb-1">
+                            Gross SLB Valuation
+                          </span>
+                          <span className="text-lg font-bold font-mono text-white block">
+                            {formatUSD(slbReport.gross_slb_sale_proceeds_usd)}
+                          </span>
+                          <span className="text-[10px] text-zinc-500">
+                            @ {(slbCapRate * 100).toFixed(2)}% exit cap
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800">
+                          <span className="text-[10px] text-zinc-400 uppercase tracking-wider block mb-1">
+                            Net Cash Recouped
+                          </span>
+                          <span className="text-lg font-bold font-mono text-emerald-400 block">
+                            {formatUSD(slbReport.net_slb_cash_recouped_usd)}
+                          </span>
+                          <span className="text-[10px] text-emerald-500/80 font-mono">
+                            {slbReport.capital_recouped_pct}% of acquisition basis
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800">
+                          <span className="text-[10px] text-zinc-400 uppercase tracking-wider block mb-1">
+                            Net OpCo Basis Left
+                          </span>
+                          <span className={`text-lg font-bold font-mono block ${
+                            parseFloat(slbReport.net_remaining_equity_basis_usd) <= 0
+                              ? "text-emerald-400"
+                              : "text-amber-400"
+                          }`}>
+                            {formatUSD(slbReport.net_remaining_equity_basis_usd)}
+                          </span>
+                          <span className="text-[10px] text-zinc-500">
+                            Retained operating business basis
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800">
+                          <span className="text-[10px] text-zinc-400 uppercase tracking-wider block mb-1">
+                            Rent Coverage Ratio
+                          </span>
+                          <span className="text-lg font-bold font-mono text-blue-400 block">
+                            {slbReport.rent_coverage_ratio}x
+                          </span>
+                          <span className="text-[10px] text-zinc-500 font-mono">
+                            {formatUSD(slbReport.annual_nnn_rent_usd)}/yr NNN rent
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SUB-TAB 2: 4-WAY FLIP STRATEGY MATRIX */}
+              {flipperSubTab === "FLIP_MATRIX" && (
+                <div className="space-y-5 animate-fadeIn">
+                  {loadingFlipMatrix && (
+                    <div className="p-8 text-center text-xs text-zinc-400 font-mono">
+                      Evaluating 4 simultaneous exit routes across capital velocity index...
+                    </div>
+                  )}
+
+                  {!loadingFlipMatrix && flipMatrixReport && (
+                    <div className="space-y-4">
+                      {/* Executive Recommendation Banner */}
+                      <div className="p-4 rounded-xl bg-zinc-950 border border-amber-500/40 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <Zap className="w-3.5 h-3.5 text-amber-400" />
+                            Primary Exit Recommendation: {flipMatrixReport.recommended_primary_route.replace(/_/g, " ")}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800">
+                              Velocity Index: {flipMatrixReport.capital_velocity_index_score}/100
+                            </span>
+                            <InfoPop term="CAPITAL_VELOCITY_INDEX" />
+                          </div>
+                        </div>
+                        <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                          {flipMatrixReport.executive_recommendation}
+                        </p>
+                      </div>
+
+                      {/* 4 Exit Routes Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 text-xs">
+                        {flipMatrixReport.routes.map((route, idx) => (
+                          <div
+                            key={idx}
+                            className={`p-4 rounded-xl border transition ${
+                              route.route_type === flipMatrixReport.recommended_primary_route
+                                ? "bg-amber-950/20 border-amber-500/60 shadow-lg shadow-amber-950/30"
+                                : "bg-zinc-950 border-zinc-800 hover:border-zinc-700"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-bold text-white">
+                                    {route.route_name}
+                                  </span>
+                                  {route.route_type === flipMatrixReport.recommended_primary_route && (
+                                    <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-amber-600 text-white">
+                                      RECOMMENDED
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-zinc-500 font-mono block mt-0.5">
+                                  Route #{idx + 1} • Risk Score: {route.execution_risk_score_1_to_10}/10
+                                </span>
+                              </div>
+                              {route.is_capital_recouped_under_90_days && (
+                                <span className="px-2 py-0.5 rounded text-[9px] font-bold font-mono bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                  &lt;90D PAYBACK
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 my-3 p-2.5 rounded-lg bg-zinc-900/80 border border-zinc-800/80 text-[11px]">
+                              <div>
+                                <span className="text-[9px] text-zinc-500 block">Gross Proceeds</span>
+                                <span className="font-bold font-mono text-zinc-200">
+                                  {formatUSD(route.estimated_gross_proceeds_usd)}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-zinc-500 block">Net Profit / Cushion</span>
+                                <span className="font-bold font-mono text-emerald-400">
+                                  {formatUSD(route.net_profit_or_cushion_usd)}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-zinc-500 block">Annualized ROIC</span>
+                                <span className="font-bold font-mono text-amber-400">
+                                  {route.annualized_roic_pct}%
+                                </span>
+                              </div>
+                            </div>
+
+                            <p className="text-[11px] text-zinc-400 leading-relaxed">
+                              {route.strategic_rationale}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SUB-TAB 3: WHOLESALE CONTRACT PAPER FLIP */}
+              {flipperSubTab === "CONTRACT_ASSIGNMENT" && (
+                <div className="space-y-5 animate-fadeIn">
+                  {/* Parameter Controls Bar */}
+                  <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800/80 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+                      <div>
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-amber-400" />
+                          Wholesale Contract Paper Flip & Double-Closing Solver
+                          <InfoPop term="WHOLESALE_ASSIGNMENT_SPREAD" />
+                        </h4>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                          Flip purchase paper for risk-free fee spreads without taking physical title.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadContractAssignment}
+                        disabled={loadingContract}
+                        className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {loadingContract ? "Calculating..." : "Recalculate Flip"}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <label className="text-[11px] text-zinc-400 block mb-1 font-medium">
+                          End-Buyer Takeout Purchase Price ($)
+                        </label>
+                        <input
+                          type="number"
+                          step="10000"
+                          value={contractTakeoutPrice}
+                          onChange={(e) => setContractTakeoutPrice(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-zinc-400 block mb-1 font-medium">
+                          Earnest Money Deposit at Risk (EMD in $)
+                        </label>
+                        <input
+                          type="number"
+                          step="5000"
+                          value={contractEmd}
+                          onChange={(e) => setContractEmd(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {loadingContract && (
+                    <div className="p-8 text-center text-xs text-zinc-400 font-mono">
+                      Computing paper flip economics and double closing requirements...
+                    </div>
+                  )}
+
+                  {!loadingContract && contractReport && (
+                    <div className="space-y-4">
+                      {/* Double Closing Caution Banner */}
+                      {contractReport.is_double_close_recommended && (
+                        <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/60 flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                                Simultaneous Double Closing Recommended
+                              </span>
+                              <InfoPop term="DOUBLE_CLOSING_ESCROW" />
+                            </div>
+                            <p className="text-xs text-amber-200 mt-1 leading-relaxed">
+                              Assignment fee spread ({formatUSD(contractReport.gross_assignment_fee_usd)}) exceeds $100,000 or 10% of deal value. Execute back-to-back A-B and B-C closings at a Virginia title company to keep the massive spread confidential from the distressed seller.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* KPI Cards */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                        <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800">
+                          <span className="text-[10px] text-zinc-400 uppercase tracking-wider block mb-1">
+                            Gross Assignment Fee
+                          </span>
+                          <span className="text-lg font-bold font-mono text-emerald-400 block">
+                            {formatUSD(contractReport.gross_assignment_fee_usd)}
+                          </span>
+                          <span className="text-[10px] text-zinc-500 font-mono">
+                            {contractReport.assignment_fee_percentage_pct}% spread
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800">
+                          <span className="text-[10px] text-zinc-400 uppercase tracking-wider block mb-1">
+                            Net Paper Profit
+                          </span>
+                          <span className="text-lg font-bold font-mono text-white block">
+                            {formatUSD(contractReport.net_assignment_profit_usd)}
+                          </span>
+                          <span className="text-[10px] text-zinc-500">
+                            After $3.5k title/legal
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800">
+                          <span className="text-[10px] text-zinc-400 uppercase tracking-wider block mb-1">
+                            Cash-on-Cash Return on EMD
+                          </span>
+                          <span className="text-lg font-bold font-mono text-amber-400 block">
+                            {contractReport.cash_on_cash_return_pct}%
+                          </span>
+                          <span className="text-[10px] text-zinc-500 font-mono">
+                            On {formatUSD(contractReport.earnest_money_deposit_usd)} EMD
+                          </span>
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800">
+                          <span className="text-[10px] text-zinc-400 uppercase tracking-wider block mb-1">
+                            Target Closing Clock
+                          </span>
+                          <span className="text-lg font-bold font-mono text-blue-400 block">
+                            {contractReport.days_to_closing} Days
+                          </span>
+                          <span className="text-[10px] text-zinc-500">
+                            14D inspection window
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Enforceable Virginia Assignability Clause */}
+                      <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                            Virginia Statutory Enforceable Assignability Clause
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(contractReport.enforceable_assignment_clause);
+                              setCopiedClause(true);
+                              setTimeout(() => setCopiedClause(false), 2000);
+                            }}
+                            className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition flex items-center gap-1"
+                          >
+                            {copiedClause ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-400" />
+                                <span>Copied Clause</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copy Clause</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 font-mono leading-relaxed bg-zinc-900/90 p-3 rounded-lg border border-zinc-800/80">
+                          {contractReport.enforceable_assignment_clause}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SUB-TAB 4: 1-CLICK EXECUTIVE TEAR-SHEET */}
+              {flipperSubTab === "EXECUTIVE_TEARSHEET" && (
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-950 border border-zinc-800">
+                    <div>
+                      <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-amber-400" />
+                        Executive Flip Tear-Sheet & Investment Committee Memo
+                      </h4>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">
+                        1-page condensed memo designed for 40-year deal-flippers to review capital basis and liquidation floor in under 60 seconds.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={loadExecutiveTearSheet}
+                        disabled={loadingTearSheet}
+                        className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs transition disabled:opacity-50"
+                      >
+                        {loadingTearSheet ? "Refreshing..." : "Refresh"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(tearSheetText);
+                          setCopiedTearSheet(true);
+                          setTimeout(() => setCopiedTearSheet(false), 2000);
+                        }}
+                        disabled={!tearSheetText}
+                        className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        {copiedTearSheet ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-white" />
+                            <span>Copied Memo!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy Memo</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {loadingTearSheet && (
+                    <div className="p-8 text-center text-xs text-zinc-400 font-mono">
+                      Generating dense Investment Committee tear-sheet...
+                    </div>
+                  )}
+
+                  {!loadingTearSheet && tearSheetText && (
+                    <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800/90 shadow-2xl overflow-x-auto">
+                      <pre className="text-[11px] font-mono text-zinc-200 whitespace-pre-wrap leading-relaxed select-all">
+                        {tearSheetText}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB: OUTREACH PLAYBOOKS */}
           {activeTab === "OUTREACH" && (
             <div className="space-y-5">
               {/* Playbook Switcher */}

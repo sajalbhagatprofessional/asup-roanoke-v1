@@ -1550,6 +1550,76 @@ export interface ClosingChecklistReport {
   counsel_closing_opinion: string;
 }
 
+// =========================================================================
+// MILESTONE 32: ARGUS ASSET FLIP & CAPITAL VELOCITY ENGINE TYPES
+// =========================================================================
+
+export interface SaleLeasebackReport {
+  deal_id: string;
+  asset_name: string;
+  total_acquisition_cost_usd: string;
+  facility_sqft: string;
+  annual_nnn_rent_usd: string;
+  gross_slb_sale_proceeds_usd: string;
+  broker_closing_costs_usd: string;
+  net_slb_cash_recouped_usd: string;
+  net_remaining_equity_basis_usd: string;
+  capital_recouped_pct: string;
+  post_slb_adjusted_ebitda_usd: string;
+  rent_coverage_ratio: string;
+  is_slb_viable: boolean;
+  is_infinite_return: boolean;
+  flipper_synthesis: string;
+}
+
+export type FlipExitRouteType =
+  | "SALE_LEASEBACK_OPERATING_HOLD"
+  | "WHOLESALE_CONTRACT_ASSIGNMENT"
+  | "ORDERLY_LIQUIDATION_BREAKUP"
+  | "RAPID_OPERATIONAL_TURNAROUND_FLIP";
+
+export interface ExitRouteEvaluation {
+  route_type: FlipExitRouteType;
+  route_name: string;
+  estimated_gross_proceeds_usd: string;
+  execution_capital_required_usd: string;
+  net_profit_or_cushion_usd: string;
+  target_timeline_days: number;
+  annualized_roic_pct: string;
+  execution_risk_score_1_to_10: number;
+  is_capital_recouped_under_90_days: boolean;
+  strategic_rationale: string;
+}
+
+export interface FlipStrategyReport {
+  deal_id: string;
+  asset_name: string;
+  purchase_price_usd: string;
+  recommended_primary_route: FlipExitRouteType;
+  highest_roic_route: FlipExitRouteType;
+  fastest_payback_route: FlipExitRouteType;
+  routes: ExitRouteEvaluation[];
+  capital_velocity_index_score: string;
+  executive_recommendation: string;
+}
+
+export interface ContractAssignmentReport {
+  deal_id: string;
+  asset_name: string;
+  contract_purchase_price_usd: string;
+  end_buyer_takeout_price_usd: string;
+  gross_assignment_fee_usd: string;
+  net_assignment_profit_usd: string;
+  assignment_fee_percentage_pct: string;
+  cash_on_cash_return_pct: string;
+  earnest_money_deposit_usd: string;
+  days_to_closing: number;
+  is_assignment_viable: boolean;
+  is_double_close_recommended: boolean;
+  enforceable_assignment_clause: string;
+  executive_synthesis: string;
+}
+
 
 
 

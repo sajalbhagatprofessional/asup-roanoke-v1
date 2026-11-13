@@ -734,6 +734,62 @@ export const GLOSSARY_TERMS: Record<string, GlossaryTerm> = {
       "Prevents catastrophic post-closing successor liabilities like unpaid state sales tax (VA Form R-1) or unrecorded deed-of-trust releases.",
     statuteCitation: "Va. Code §§ 55.1-321, 58.1-629; SBA SOP 50 10 8.1",
   },
+
+  SALE_LEASEBACK_ARBITRAGE: {
+    id: "SALE_LEASEBACK_ARBITRAGE",
+    name: "Sale-Leaseback (SLB) Capital Arbitrage",
+    shortName: "SLB Arbitrage",
+    category: "UNDERWRITING_FINANCE",
+    categoryLabel: "Flipper Capital Velocity",
+    simpleDefinition:
+      "Selling the acquired facility to a triple-net (NNN) institutional buyer immediately after closing to recoup 80-100%+ of acquisition equity while keeping the cash-flowing operating company.",
+    formulaOrRule: "Gross Proceeds = (Facility SqFt * Market NNN Rent) / Exit Cap Rate; Net Basis = Purchase Price - Net SLB Cash",
+    whyItMatters:
+      "Allows 40-year deal-flippers to pull all cash off the table in 45-60 days, achieving 'infinite return' on the retained debt-free operating business.",
+    idealRange: "7.0% - 7.5% Exit Cap Rate; Rent Coverage >= 2.0x EBITDA",
+  },
+
+  WHOLESALE_ASSIGNMENT_SPREAD: {
+    id: "WHOLESALE_ASSIGNMENT_SPREAD",
+    name: "Wholesale Contract Assignment Spread",
+    shortName: "Paper Flip Spread",
+    category: "LEGAL_STATUTORY",
+    categoryLabel: "Flipper Capital Velocity",
+    simpleDefinition:
+      "Assigning the underlying purchase contract to an end-buyer prior to closing for a cash assignment fee without ever taking title to the real estate.",
+    formulaOrRule: "Net Spread = End-Buyer Takeout Price - Original Contract Price - Closing Costs; CoC Return = Net Spread / EMD",
+    whyItMatters:
+      "Generates quick $50k-$200k paper profits in under 30 days with minimal capital at risk limited strictly to the earnest money deposit (EMD).",
+    statuteCitation: "Code of Virginia § 55.1-300 et seq.",
+  },
+
+  DOUBLE_CLOSING_ESCROW: {
+    id: "DOUBLE_CLOSING_ESCROW",
+    name: "Simultaneous Double Closing Escrow",
+    shortName: "Double Closing",
+    category: "LEGAL_STATUTORY",
+    categoryLabel: "Flipper Capital Velocity",
+    simpleDefinition:
+      "A two-step closing (A-to-B and B-to-C back-to-back within minutes) used when assignment spreads exceed $100k or 10% of deal value.",
+    formulaOrRule: "A-to-B Purchase funded simultaneously with B-to-C End-Buyer Escrow Wire; 2 separate HUD-1/ALTA settlement statements",
+    whyItMatters:
+      "Keeps the massive wholesale profit private from the distressed seller, preventing renegotiation friction or title underwriter refusal.",
+    statuteCitation: "Va. Code § 55.1-321; ALTA Settlement Standards",
+  },
+
+  CAPITAL_VELOCITY_INDEX: {
+    id: "CAPITAL_VELOCITY_INDEX",
+    name: "Capital Velocity & Payback Index (0-100)",
+    shortName: "Capital Velocity",
+    category: "UNDERWRITING_FINANCE",
+    categoryLabel: "Flipper Capital Velocity",
+    simpleDefinition:
+      "A weighted score measuring how fast initial invested capital is recouped, prioritizing deals that pay back 100% of cash in under 90 days.",
+    formulaOrRule: "Score = (Annualized ROIC * 40%) + (Payback Speed Factor * 40%) + (Downside FLV Spread * 20%)",
+    whyItMatters:
+      "Veteran asset-flippers value rapid capital churn over 10-year holding periods. Fast capital return lets the principal flip 4x as many deals per year.",
+    idealRange: "Score >= 75/100; Full capital payback <= 90 calendar days",
+  },
 };
 
 /**

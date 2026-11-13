@@ -42,6 +42,8 @@ import tests.unit.test_negotiation_game_theory as u9
 import tests.unit.test_value_creation_blueprint as u10
 import tests.unit.test_deal_room_closing as u11
 import tests.integration.test_operational_supremacy_endpoints as i21
+import tests.unit.test_flipper_deal_engine as u12
+import tests.integration.test_flipper_engine_endpoints as i22
 
 
 def main() -> int:
@@ -288,6 +290,21 @@ def main() -> int:
 
     print(f"All {operational_passed}/{operational_passed} Palantir Operational Supremacy Suite Tests PASSED!")
 
+    # Milestone 32: Argus Asset Flip & Capital Velocity Engine Suite
+    # (Sale-Leaseback Arbitrage, 4-Way Flip Strategy Matrix, Contract Assignment & EMD, Executive Tear-Sheet)
+    flipper_modules = [u12, i22]
+    flipper_passed = 0
+    for mod in flipper_modules:
+        for attr in sorted(dir(mod)):
+            if attr.startswith("test_"):
+                fn = getattr(mod, attr)
+                if callable(fn):
+                    fn()
+                    flipper_passed += 1
+                    print(f"[PASS] {mod.__name__}.{attr}")
+
+    print(f"All {flipper_passed}/{flipper_passed} Argus Asset Flip & Capital Velocity Suite Tests PASSED!")
+
     total_passed = (
         core_passed
         + api_passed
@@ -308,6 +325,7 @@ def main() -> int:
         + sourcing_passed
         + titan_passed
         + operational_passed
+        + flipper_passed
     )
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 
