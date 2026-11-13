@@ -58,8 +58,13 @@ export default function SettingsModal() {
 
   const { user, openAuthModal } = useAuth();
   const [updateFeedback, setUpdateFeedback] = useState<string | null>(null);
+  const [copiedMcp, setCopiedMcp] = useState<string | null>(null);
 
-  if (!isSettingsOpen) return null;
+  const handleCopyMcp = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMcp(key);
+    setTimeout(() => setCopiedMcp(null), 2000);
+  };
 
   const handleManualCheckUpdate = async () => {
     setUpdateFeedback("Checking cloud for latest update...");
@@ -72,13 +77,7 @@ export default function SettingsModal() {
     setTimeout(() => setUpdateFeedback(null), 4000);
   };
 
-  const [copiedMcp, setCopiedMcp] = useState<string | null>(null);
-
-  const handleCopyMcp = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedMcp(key);
-    setTimeout(() => setCopiedMcp(null), 2000);
-  };
+  if (!isSettingsOpen) return null;
 
   const tabs = [
     { id: "ACCOUNT", label: "Account & Profile", icon: User },

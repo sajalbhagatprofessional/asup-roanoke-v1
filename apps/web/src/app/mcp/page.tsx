@@ -4,17 +4,13 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Sparkles, Terminal, Laptop, Code2, Bot, Play } from "lucide-react";
 import McpConnectModal from "../../components/McpConnectModal";
-import Navbar from "../../components/Navbar";
 
 export default function McpPage() {
   const [modalOpen, setModalOpen] = useState(true);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
+    <div className="w-full text-slate-100 flex flex-col">
+      <div className="mb-6 flex items-center justify-between">
           <Link
             href="/"
             className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition"
@@ -53,9 +49,8 @@ export default function McpPage() {
             </button>
           </div>
         </div>
-      </main>
 
-      <McpConnectModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
-    </div>
-  );
-}
+        <McpConnectModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+      </div>
+    );
+  }
