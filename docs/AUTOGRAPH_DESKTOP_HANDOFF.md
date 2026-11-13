@@ -23,11 +23,11 @@
 ## 2. Current State of the Repository & Infrastructure
 
 - **Git Branch & Commit**: Branch `main` at commit `af0bb3e` (pushed to remote `https://github.com/sajalbhagatprofessional/asup-roanoke-v1.git`).
-- **Test Suite Status**: **162/162 Tests Passing (100% Coverage)** (`python scripts/run_all_tests.py`).
+- **Test Suite Status**: **167/167 Tests Passing (100% Coverage)** (`python scripts/run_all_tests.py`).
 - **Golden Suite Status**: **50/50 Accuracy (100%)**, 0 false positives, >=95% raw filing kill rate (`scripts/run_golden_backtest.py`).
 - **Next.js 15 Web Application**: Production build verified clean (`npm run build` Exit Code 0) at `apps/web/`.
-- **FastAPI Production REST Server**: Running at `services/api/main.py` with 50+ endpoints.
-- **Model Context Protocol (MCP 2024-11-05)**: Full SSE and stdio gateway with **40 registered institutional tools** (`services/mcp/server.py`).
+- **FastAPI Production REST Server**: Running at `services/api/main.py` with 55+ endpoints.
+- **Model Context Protocol (MCP 2024-11-05)**: Full SSE and stdio gateway with **41 registered institutional tools** (`services/mcp/server.py`).
 - **Persistent Upstream Ledger**: Auto-tracking 32 open-source repos, PyPI packages, and npm dependencies (`services/persistence/upstream_dependencies_ledger.json`).
 - **Production VPS Target**: Oracle OCI ARM64 VPS (`150.136.103.204`). **Policy: Strictly on HOLD until user explicitly signals full platform completion.** Live microservices (`dip-ladder`, `Blackline`, `n8n`, `gather-store`, `vault-api`, `Supabase`, `Hermes`) remain untouched.
 
@@ -42,9 +42,9 @@ You are the Lead Autonomous Software Engineer inside the Antigravity Desktop App
 You are picking up from the Antigravity CLI session (Workspace: `C:\Users\sajal\OneDrive\Desktop\Project Asset Aggregator`). 
 - Master Governance: Read and strictly adhere to `AGENTS.md` and `GEMINI.md`.
 - Master Onboarding: Refer to `docs/AI_AGENT_ONBOARDING.md` and `docs/ARCHITECTURE.md`.
-- Verification Gate: The entire test suite is currently at 162/162 tests passing (100% coverage) with 50/50 Golden Suite accuracy.
-- Frontend Stack: Next.js 15 App Router (`apps/web/`) with Tailwind CSS, Lucide icons, Apple Human Interface styling, 5-role switching (`PRINCIPAL`, `ANALYST`, `COUNSEL`, `CPA`, `LENDER_BROKER`), the 50-term Contextual InfoPop (`InfoPop.tsx`) & Master Glossary Modal (`GlossaryModal.tsx`), the Palantir War Room Operations Suite, the Argus Asset Flip & Capital Velocity Terminal, and the PWA Auto-Update Engine with Cross-Device Persistent Settings Modal (`SettingsModal.tsx`, `⌘,`).
-- Backend Stack: FastAPI REST server (`services/api/main.py`), 40-tool Anthropic Model Context Protocol gateway (`services/mcp/server.py`), persistent SQLite/PostgreSQL store (`services/persistence/durable_pipeline_store.py`), and air-gapped pure decimal math solvers (`packages/underwriting_engine/`, `packages/flipper_deal_engine/`, `packages/war_room_simulator/`, `packages/negotiation_game_theory/`, `packages/value_creation_blueprint/`, `packages/deal_room_engine/`, `packages/reactive_underwriting_dag/`, `packages/capital_allocator/`, `packages/tax_alpha_engine/`, `packages/macro_regime/`).
+- Verification Gate: The entire test suite is currently at 167/167 tests passing (100% coverage) with 50/50 Golden Suite accuracy.
+- Frontend Stack: Next.js 15 App Router (`apps/web/`) with Tailwind CSS, Lucide icons, Apple Human Interface styling, 5-role switching (`PRINCIPAL`, `ANALYST`, `COUNSEL`, `CPA`, `LENDER_BROKER`), the 50-term Contextual InfoPop (`InfoPop.tsx`) & Master Glossary Modal (`GlossaryModal.tsx`), the Palantir War Room Operations Suite, the Argus Asset Flip & Capital Velocity Terminal, the PWA Auto-Update Engine with Persistent Settings Modal (`SettingsModal.tsx`, `⌘,`), and the 1-Click Deep Research & OSINT Suite (`AddressLink.tsx`, `AssetResearchBar.tsx`, `researchLinks.ts`).
+- Backend Stack: FastAPI REST server (`services/api/main.py`), 41-tool Anthropic Model Context Protocol gateway (`services/mcp/server.py`), persistent SQLite/PostgreSQL store (`services/persistence/durable_pipeline_store.py`), deep-research URL generator (`services/research/links_engine.py`), and air-gapped pure decimal math solvers (`packages/underwriting_engine/`, `packages/flipper_deal_engine/`, `packages/war_room_simulator/`, `packages/negotiation_game_theory/`, `packages/value_creation_blueprint/`, `packages/deal_room_engine/`, `packages/reactive_underwriting_dag/`, `packages/capital_allocator/`, `packages/tax_alpha_engine/`, `packages/macro_regime/`).
 
 ### Non-Negotiable Invariants
 1. Underwriting Air-Gap: Pure Python `decimal.Decimal` (`ROUND_HALF_EVEN`), 0 floats, 0 network/LLM calls in underwriting solvers.
@@ -56,7 +56,7 @@ You are picking up from the Antigravity CLI session (Workspace: `C:\Users\sajal\
 ### Verification First
 Before making any changes, run:
 `python scripts/run_all_tests.py`
-and verify that all 162/162 tests and the 50/50 Golden Suite pass.
+and verify that all 167/167 tests and the 50/50 Golden Suite pass.
 
 Acknowledge full understanding of the mission, invariants, and system architecture, confirm the test status, and stand ready for the next instruction.
 ```
@@ -76,9 +76,12 @@ Acknowledge full understanding of the mission, invariants, and system architectu
 | `packages/macro_regime/` | Bridgewater Ray Dalio 4-quadrant macro stress test engine. |
 | `packages/sourcing_intelligence/` | Inven lookalikes, Trepp debt maturity wall, PropertyRadar title curative, Cherre zoning. |
 | `packages/asset_health/` | Augury industrial AI (Docling, TorchGeo, Darts, Cleanlab, Alibi-Detect). |
-| `services/mcp/server.py` | Anthropic Model Context Protocol (MCP 2024-11-05) SSE server with 40 AI tools. |
+| `services/mcp/server.py` | Anthropic Model Context Protocol (MCP 2024-11-05) SSE server with 41 AI tools. |
+| `services/research/links_engine.py` | Canonical deep-research & OSINT URL generator across 7 intelligence dimensions. |
 | `services/security/user_settings.py` | Multi-device user settings schemas, themes, and PWA auto-update modes. |
 | `services/persistence/durable_pipeline_store.py` | ACID persistence layer for deals, tokens, and durable cross-device user settings. |
+| `apps/web/src/components/AddressLink.tsx` | Interactive address component with Google Maps launch and Apple HIG popover menu. |
+| `apps/web/src/components/AssetResearchBar.tsx` | 1-click deep research strip for cards and dossier modal hero header. |
 | `apps/web/src/components/SettingsModal.tsx` | Dedicated Apple HIG Settings modal with 5 tabs and `⌘,` keyboard shortcut. |
 | `apps/web/src/context/SettingsContext.tsx` | Cross-device settings synchronization and PWA auto-update provider. |
-| `scripts/run_all_tests.py` | Master verification runner (162 tests + 50-deal golden backtest). |
+| `scripts/run_all_tests.py` | Master verification runner (167 tests + 50-deal golden backtest). |

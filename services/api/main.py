@@ -4067,6 +4067,44 @@ def generate_custom_tear_sheet_endpoint(req: FlipTearSheetRequest) -> Dict[str, 
     }
 
 
+@app.get("/v1/research/links", tags=["Argus Research & OSINT Intelligence"])
+def get_asset_research_links_endpoint(
+    entity_name: Optional[str] = Query(None, description="Corporate entity or business name"),
+    street_address: Optional[str] = Query(None, description="Street address"),
+    city: Optional[str] = Query(None, description="City"),
+    state: Optional[str] = Query("VA", description="State code"),
+    zip_code: Optional[str] = Query(None, description="Postal zip code"),
+    county: Optional[str] = Query(None, description="County name"),
+    fips_code: Optional[str] = Query(None, description="5-digit FIPS code"),
+    parcel_id: Optional[str] = Query(None, description="Tax parcel GPIN / ID"),
+    naics_code: Optional[str] = Query(None, description="6-digit NAICS industry code"),
+    docket_id: Optional[str] = Query(None, description="Court docket identifier"),
+    latitude: Optional[float] = Query(None, description="Geographic latitude"),
+    longitude: Optional[float] = Query(None, description="Geographic longitude"),
+) -> Dict[str, Any]:
+    """
+    1-Click Deep Research & OSINT Links Generator.
+    Returns verified, canonical external research links across Geospatial, Corporate OSINT,
+    Court Dockets, NAICS Census Benchmarks, Environmental, and Macro Dimensions.
+    """
+    from services.research import generate_research_links
+    return generate_research_links(
+        entity_name=entity_name,
+        street_address=street_address,
+        city=city,
+        state=state,
+        zip_code=zip_code,
+        county=county,
+        fips_code=fips_code,
+        parcel_id=parcel_id,
+        naics_code=naics_code,
+        docket_id=docket_id,
+        latitude=latitude,
+        longitude=longitude,
+    )
+
+
+
 
 
 

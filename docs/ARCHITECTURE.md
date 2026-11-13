@@ -446,7 +446,61 @@ flowchart TD
    - Write-through architecture ensures updates are instantly mirrored in memory and committed to disk.
    - Settings automatically synchronize across different devices (desktop, iPad, iPhone PWA) upon sign-in or session start.
 4. **Model Context Protocol Expansion (`services/mcp/tools.py`)**:
-   - Expanded MCP catalog to **40 deterministic tools** with the addition of `get_user_settings` and `update_user_settings`.
+   - Expanded MCP catalog to **41 deterministic tools** with the addition of `get_user_settings`, `update_user_settings`, and `get_asset_research_links`.
+
+---
+
+## 17. Frictionless Asset Research & 1-Click Investigation Engine (Milestone 34)
+
+To eliminate context-switching overhead and streamline diligence for family-office principals, underwriters, and asset flippers, Argus integrates an automated 7-dimension deep-research intelligence suite:
+
+```mermaid
+flowchart TD
+    subgraph Frontend["Next.js 15 UI Layer (apps/web)"]
+        ADDR["AddressLink.tsx\n(Interactive Map Pill + Popover Palette)"]
+        BAR["AssetResearchBar.tsx\n(1-Click Deep Dive Strip on Cards & Modals)"]
+        UTIL["researchLinks.ts\n(Deterministic URL Builders & Formatted Exports)"]
+    end
+
+    subgraph Dimensions["7 Deep-Research Intelligence Dimensions"]
+        D1["Geospatial: Google Maps, Satellite Aerial, Street View, Apple Maps, OpenStreetMap, County GIS, FEMA Flood"]
+        D2["Corporate OSINT: Virginia SCC CIS, OpenCorporates, Google News, LinkedIn, BBB"]
+        D3["Court Dockets: CourtListener / RECAP, Column.us Notices, TACS Tax Sales, Va. Code § 55.1-321"]
+        D4["Economic Benchmarks: U.S. Census NAICS 2022, SEC EDGAR 10-K Comps, FMCSA SAFER Fleet"]
+        D5["Environmental: EPA UST Underground Tanks, EPA Envirofacts"]
+        D6["Macro & Capital Markets: St. Louis Fed FRED SOFR Benchmark, 10Y Treasury"]
+        D7["1-Click Synthesis: Copy Markdown IC Brief & Export CSV Underwriting Model"]
+    end
+
+    subgraph Backend["FastAPI REST & MCP Protocol"]
+        EP["GET /v1/research/links\n(Categorized JSON payload of all external intelligence URLs)"]
+        MCP["MCP Tool: get_asset_research_links\n(41 Tools Catalog)"]
+    end
+
+    ADDR --> UTIL
+    BAR --> UTIL
+    UTIL --> D1
+    UTIL --> D2
+    UTIL --> D3
+    UTIL --> D4
+    UTIL --> D5
+    UTIL --> D6
+    UTIL --> D7
+    EP --> UTIL
+    MCP --> EP
+```
+
+1. **Interactive Address & Map Intelligence Link (`AddressLink.tsx`)**:
+   - Every physical address rendered across `UniversalAssetCard`, `DealCard`, and `UniversalAssetDossierModal` is an interactive geospatial pill with direct 1-click Google Maps launch.
+   - An integrated Apple HIG popover menu enables instant jumps to Google Satellite (high-res roof and yard condition), Google Street View (curb-level panorama), Apple Maps, OpenStreetMap, County/City GIS (Roanoke City WebGIS / County TaxView), and FEMA Flood Hazard Center, plus 1-click address clipboard copying.
+2. **Asset Research Quick-Bar (`AssetResearchBar.tsx`)**:
+   - A compact, multi-functional investigation bar embedded directly on asset cards, deal cards, and modal hero headers.
+   - Provides 1-click deep research jumps into corporate registries (VA SCC CIS, OpenCorporates), federal court dockets (CourtListener RECAP), newspaper public notices (The Roanoke Times / Column.us), Census NAICS payroll benchmarks, and EPA UST tanks.
+   - Features 1-click **"Copy Brief"** (pre-formatted Markdown IC memo ready for Slack/email) and **"Export Model"** (instant CSV underwriting download).
+3. **Canonical REST API & MCP Tool Gateway**:
+   - `GET /v1/research/links` provides programmatic access to all categorized research URLs.
+   - Anthropic Model Context Protocol tool `get_asset_research_links` expands the autonomous agent catalog to **41 tools**.
+
 
 
 

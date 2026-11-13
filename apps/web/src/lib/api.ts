@@ -1609,6 +1609,28 @@ export async function fetchPwaVersion(): Promise<import("./types").PwaVersionInf
   return res.json();
 }
 
+export async function fetchAssetResearchLinks(params: {
+  entity_name?: string;
+  street_address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  county?: string;
+  fips_code?: string;
+  parcel_id?: string;
+  naics_code?: string;
+  docket_id?: string;
+}): Promise<any> {
+  const base = getApiBase();
+  const query = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v) query.set(k, v);
+  }
+  const res = await fetch(`${base}/v1/research/links?${query.toString()}`);
+  if (!res.ok) throw new Error(`Failed to fetch research links: ${res.statusText}`);
+  return res.json();
+}
+
 
 
 

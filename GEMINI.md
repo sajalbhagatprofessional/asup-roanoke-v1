@@ -104,7 +104,7 @@ asup-roanoke-v1/
 ## 6. Autonomous Execution Workflow for `agy` (What `agy` Must Do Next)
 Whenever the user invokes `/goal` or asks you to continue building, wiring, or deploying the platform:
 1. **Always Run the Verification Gate First**:
-   Run `python scripts/run_all_tests.py` and confirm all **162/162 tests** and the **50/50 Golden Suite backtest** pass before and after every change.
+   Run `python scripts/run_all_tests.py` and confirm all **167/167 tests** and the **50/50 Golden Suite backtest** pass before and after every change.
 2. **Wire the Live FastAPI Server (`services/api/main.py`) & Next.js 15 5-Role Web UI (`apps/web/`)**:
    - Expose the verified Python modules in `packages/` and `services/` via FastAPI endpoints (`GET /v1/health`, `POST /v1/dockets/ingest`, `GET /v1/deals`, `POST /v1/deals/{id}/verify`, `POST /v1/deals/{id}/memo`, `POST /v1/deals/{id}/outreach`, `GET /v1/deals/{id}/lender-pack`, `POST /v1/mcp/sse`, `GET /v1/system/dependencies`).
    - Build the Next.js 15 App Router views for the 5 roles (`Principal Weekly Digest` with `<= 5` cards and 1-click `Approve / Reject / Send to Counsel`, `Analyst Pipeline & GIS Queue`, `Counsel Title & Notice Review`, `CPA Add-Back & SOP 50 10 8.1 Audit`, and `Lender/Broker Sanitized Pack View`).

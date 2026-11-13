@@ -785,6 +785,29 @@ MCP_TOOLS_CATALOG: List[McpTool] = [
             },
         },
     ),
+    McpTool(
+        name="get_asset_research_links",
+        description=(
+            "Generates 1-click deep research & OSINT links across physical maps (Google Maps, Satellite, Street View, Apple Maps, OpenStreetMap), "
+            "corporate standing (Virginia SCC CIS, OpenCorporates, LinkedIn), court dockets (CourtListener/RECAP, Column.us), "
+            "NAICS Census benchmarks, FEMA flood maps, EPA UST storage tanks, and FRED SOFR rates."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "entity_name": {"type": "string", "description": "Corporate or business entity name"},
+                "street_address": {"type": "string", "description": "Street address"},
+                "city": {"type": "string", "description": "City"},
+                "state": {"type": "string", "description": "State abbreviation (default: VA)"},
+                "zip_code": {"type": "string", "description": "Zip code"},
+                "county": {"type": "string", "description": "County name"},
+                "fips_code": {"type": "string", "description": "5-digit county FIPS code"},
+                "parcel_id": {"type": "string", "description": "Tax parcel GPIN / ID"},
+                "naics_code": {"type": "string", "description": "6-digit NAICS code"},
+                "docket_id": {"type": "string", "description": "Court docket number"},
+            },
+        },
+    ),
 ]
 
 
@@ -1362,6 +1385,23 @@ def execute_mcp_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any
             current["updated_at"] = datetime.now(timezone.utc).isoformat()
             saved = pipeline_store.save_user_settings(user_id, current)
             return {"user_settings": saved, "status": "SAVED_PERSISTENT"}
+
+        elif tool_name == "get_asset_research_links":
+            from services.research import generate_research_links
+            return generate_research_links(
+                entity_name=arguments.get("entity_name"),
+                street_address=arguments.get("street_address"),
+                city=arguments.get("city"),
+                state=arguments.get("state", "VA"),
+                zip_code=arguments.get("zip_code"),
+                county=arguments.get("county"),
+                fips_code=arguments.get("fips_code"),
+                parcel_id=arguments.get("parcel_id"),
+                naics_code=arguments.get("naics_code"),
+                docket_id=arguments.get("docket_id"),
+                latitude=arguments.get("latitude"),
+                longitude=arguments.get("longitude"),
+            )
 
         else:
             return {"error": f"Unknown tool: {tool_name}"}

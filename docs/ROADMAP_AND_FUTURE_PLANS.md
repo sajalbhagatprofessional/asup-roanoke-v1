@@ -181,34 +181,43 @@ timeline
   4. **Multi-Device ACID Persistence**: Persistent SQLite WAL / PostgreSQL 16 store (`user_settings_durable`), synchronizing preferences across desktop workstations, tablets, and field mobile PWAs.
   5. **Verification**: 162/162 unit & integration tests passing (100% coverage), 50/50 Golden Suite backtest passing, and Next.js 15 production build passing with Exit Code 0.
 
+### Milestone 34: Frictionless Asset Research & 1-Click Investigation Engine
+- **Delivered**: `apps/web/src/lib/researchLinks.ts`, `apps/web/src/components/AddressLink.tsx`, `apps/web/src/components/AssetResearchBar.tsx`, integration across `UniversalAssetCard.tsx`, `DealCard.tsx`, and `UniversalAssetDossierModal.tsx`, `services/research/links_engine.py`, FastAPI endpoint `GET /v1/research/links`, MCP tool `get_asset_research_links` (total 41 tools), `tests/unit/test_asset_research_links.py`, `tests/integration/test_research_links_endpoints.py`.
+- **Key Features**:
+  1. **Interactive Address & Map Jump (`AddressLink.tsx`)**: Clickable address pills with direct Google Maps launch and Apple HIG popover menu for Google Satellite, Street View (360° panorama), Apple Maps, OpenStreetMap, Roanoke City/County GIS, and FEMA Flood Center with 1-click address copying.
+  2. **Asset Research Quick-Bar (`AssetResearchBar.tsx`)**: 1-click deep research strip for corporate standing (Virginia SCC CIS, OpenCorporates), bankruptcy dockets (CourtListener RECAP), public notices (The Roanoke Times / Column.us), Census NAICS benchmarks, and EPA UST tanks.
+  3. **1-Click Synthesis & Export**: Instant 1-click "Copy Brief" (pre-formatted Markdown IC memo ready for Slack/email) and "Export Model" (CSV underwriting model download).
+  4. **Backend REST & MCP Tool**: `GET /v1/research/links` and tool `get_asset_research_links` expanding the autonomous agent catalog to 41 tools.
+  5. **Verification**: 167/167 unit & integration tests passing (100% coverage), 50/50 Golden Suite backtest passing, and Next.js 15 production build passing with Exit Code 0.
+
 ---
 
-## 3. Future Strategic Roadmap (Milestones 34–37)
+## 3. Future Strategic Roadmap (Milestones 35–38)
 
 Any future AI agent or engineer continuing this project should tackle the following milestones in strict sequence:
 
-### Milestone 34: Autonomous Court PDF OCR & Docket Document Parser
+### Milestone 35: Autonomous Court PDF OCR & Docket Document Parser
 - **Objective**: Parse scanned Ch. 11 disclosure statements, bankruptcy schedules (Schedule A/B assets and Schedule D/E/F claims), and substitute trustee notices of sale.
 - **Implementation Strategy**:
   - Integrate a self-hostable OCR pipeline (e.g. Tesseract / PyMuPDF) inside `services/ingestion/court_pdf_parser.py`.
   - Extract exact debt figures, secured lender payoff demands, and property legal descriptions directly from raw court PDFs.
   - Wrap extracted numbers in `ProvenancedValue` with PDF page references and bounding coordinates.
 
-### Milestone 35: Secondary Loan Syndication Packaging Engine
+### Milestone 36: Secondary Loan Syndication Packaging Engine
 - **Objective**: Automate the generation of standardized SBA 7(a) / 504 loan syndication memo bundles for community bank loan committees.
 - **Implementation Strategy**:
   - Partner with regional community lenders in Western Virginia (e.g., Atlantic Union Bank, Carter Bank & Trust, Freedom First Credit Union).
   - Build automated PDF export of Lender Packages conforming to RMA (Risk Management Association) credit memo formats.
   - Add interactive debt amortizer and debt yield stress scenarios.
 
-### Milestone 36: Automated Virginia Tax Sale Bidding Assistant
+### Milestone 37: Automated Virginia Tax Sale Bidding Assistant
 - **Objective**: Provide a real-time auction bidding decision engine for City of Roanoke and Roanoke County delinquent tax sales.
 - **Implementation Strategy**:
   - Ingest tax sale catalogs 30 days prior to auction.
   - Automatically query county land records for superior liens, federal tax liens (which have a 120-day IRS right of redemption under 26 U.S.C. § 7425), and municipal utility charges.
   - Compute maximum allowable bid (MAB) ensuring the purchase price remains `<= 70%` of verified assessed value.
 
-### Milestone 37: Multi-State Regional Expansion Wizard
+### Milestone 38: Multi-State Regional Expansion Wizard
 - **Objective**: Expand sourcing from Western Virginia into adjacent high-potential Appalachian and Mid-Atlantic industrial corridors (Greensboro/Winston-Salem NC, Johnson City TN, Charleston WV).
 - **Implementation Strategy**:
   - Add FIPS codes and state-specific foreclosure statutes (e.g., North Carolina General Statutes Chapter 45, Tennessee Code Title 35).
@@ -221,5 +230,5 @@ Any future AI agent or engineer continuing this project should tackle the follow
 
 When implementing any future milestone:
 1. **Never Compromise Underwriting Determinism**: Never replace pure `decimal.Decimal` math with floating-point arithmetic or LLM approximations.
-2. **Never Break Test Suite**: Run `python scripts/run_all_tests.py` and confirm all 162 tests and the 50/50 Golden Suite pass.
+2. **Never Break Test Suite**: Run `python scripts/run_all_tests.py` and confirm all 167 tests and the 50/50 Golden Suite pass.
 3. **Always Update Documentation**: Record your architectural decisions in `docs/ARCHITECTURE.md`, API changes in `docs/API_REFERENCE.md`, and data structures in `docs/DATA_MODELS_AND_SCHEMA.md`.

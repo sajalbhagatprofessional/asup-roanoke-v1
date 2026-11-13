@@ -48,6 +48,9 @@ import {
   Coins,
   BarChart3,
 } from "lucide-react";
+import AddressLink from "./AddressLink";
+import AssetResearchBar from "./AssetResearchBar";
+import { ResearchTargetParams } from "../lib/researchLinks";
 import {
   UniversalAsset,
   OwnerOSINTReport,
@@ -1014,6 +1017,18 @@ export default function UniversalAssetDossierModal({
     return "$" + num.toLocaleString("en-US", { maximumFractionDigits: 0 });
   };
 
+  const researchParams: ResearchTargetParams = {
+    entityName: currentAsset.title,
+    city: currentAsset.city,
+    state: currentAsset.state,
+    zipCode: currentAsset.zip_code,
+    county: currentAsset.county,
+    parcelId: currentAsset.parcel_id,
+    naicsCode: currentAsset.naics_code,
+    askingPrice: formatUSD(currentAsset.asking_or_estimated_value_usd),
+    assessedValue: formatUSD(currentAsset.downside_liquidation_floor_usd),
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
       <div className="relative w-full max-w-4xl bg-zinc-900 border border-zinc-700/80 rounded-2xl shadow-2xl p-6 text-zinc-100 max-h-[92vh] flex flex-col">
@@ -1037,13 +1052,22 @@ export default function UniversalAssetDossierModal({
             <h2 className="text-xl md:text-2xl font-extrabold text-white leading-tight">
               {currentAsset.title}
             </h2>
-            <div className="flex items-center gap-2 text-xs text-zinc-400 mt-1">
-              <MapPin className="w-3.5 h-3.5 text-zinc-500" />
-              <span>
-                {currentAsset.city}, {currentAsset.state} {currentAsset.zip_code} (
-                {currentAsset.metro_area}) • {currentAsset.county}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400 mt-1">
+              <AddressLink
+                city={currentAsset.city}
+                state={currentAsset.state}
+                zipCode={currentAsset.zip_code}
+                county={currentAsset.county}
+                parcelId={currentAsset.parcel_id}
+                size="sm"
+              />
+              <span className="text-zinc-600">
+                ({currentAsset.metro_area}) • {currentAsset.county}
               </span>
             </div>
+
+            {/* 1-Click Research & OSINT Quick-Bar */}
+            <AssetResearchBar variant="full" params={researchParams} className="mt-3" />
           </div>
 
           <button

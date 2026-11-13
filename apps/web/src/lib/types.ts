@@ -15,6 +15,7 @@ export type DealStage =
 
 export interface Deal {
   deal_id: string;
+  docket_id?: string;
   mandate_code?: string;
   fips_code?: string;
   parcel_id?: string;

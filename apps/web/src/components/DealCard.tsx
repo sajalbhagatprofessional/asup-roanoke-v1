@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { Deal, TeamRole } from "../lib/types";
 import InfoPop from "./InfoPop";
+import AddressLink from "./AddressLink";
+import AssetResearchBar from "./AssetResearchBar";
+import { ResearchTargetParams } from "../lib/researchLinks";
 
 interface DealCardProps {
   deal: Deal;
@@ -85,6 +88,22 @@ export default function DealCard({
 
   const signalBadge = getSignalBadge(deal.signal_type);
 
+  const researchParams: ResearchTargetParams = {
+    entityName: deal.entity_name,
+    streetAddress: deal.street_address,
+    city: deal.city,
+    state: deal.state_code || "VA",
+    zipCode: deal.zip_code,
+    county: deal.county_name,
+    fipsCode: deal.fips_code,
+    parcelId: deal.parcel_id,
+    naicsCode: deal.naics_code,
+    docketId: deal.docket_id || (deal.deal_id?.startsWith("DOCK") ? deal.deal_id : undefined),
+    askingPrice: formatCurrency(deal.asking_or_cure_price_usd),
+    assessedValue: formatCurrency(deal.assessed_or_replacement_usd),
+    baseDscr: deal.base_dscr,
+  };
+
   const handleCardClick = (e: React.MouseEvent) => {
     // If the click is on an interactive button or link, don't trigger modal
     const target = e.target as HTMLElement;
@@ -133,14 +152,20 @@ export default function DealCard({
               {deal.entity_name}
             </h3>
 
-            <p className="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1.5 mt-1 font-sans">
-              <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="truncate">
-                {deal.street_address ? `${deal.street_address}, ${deal.city || ""} ${deal.state_code || ""}` : (deal.county_name || `FIPS ${deal.fips_code}`)}
-              </span>
+            <div className="flex items-center gap-1.5 mt-1 font-sans">
+              <AddressLink
+                streetAddress={deal.street_address}
+                city={deal.city}
+                state={deal.state_code || "VA"}
+                zipCode={deal.zip_code}
+                county={deal.county_name}
+                fipsCode={deal.fips_code}
+                parcelId={deal.parcel_id}
+                size="xs"
+              />
               <span className="text-slate-600 shrink-0">•</span>
               <span className="font-mono text-slate-500 shrink-0 text-[10px] sm:text-[11px]">{deal.deal_id}</span>
-            </p>
+            </div>
           </div>
 
           <span
@@ -241,6 +266,9 @@ export default function DealCard({
             </a>
           )}
         </div>
+
+        {/* 1-Click Research & OSINT Quick-Bar */}
+        <AssetResearchBar variant="card_strip" params={researchParams} className="mt-2.5" />
       </div>
 
       {/* Role Action Controls Footer (Ergonomic Touch Targets) */}

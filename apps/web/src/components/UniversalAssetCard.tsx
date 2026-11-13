@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import { UniversalAsset, AssetClass, PipelineStage } from "../lib/types";
 import InfoPop from "./InfoPop";
+import AddressLink from "./AddressLink";
+import AssetResearchBar from "./AssetResearchBar";
+import { ResearchTargetParams } from "../lib/researchLinks";
 
 interface UniversalAssetCardProps {
   asset: UniversalAsset;
@@ -85,6 +88,18 @@ export default function UniversalAssetCard({
     return "$" + num.toLocaleString("en-US", { maximumFractionDigits: 0 });
   };
 
+  const researchParams: ResearchTargetParams = {
+    entityName: asset.title,
+    city: asset.city,
+    state: asset.state,
+    zipCode: asset.zip_code,
+    county: asset.county,
+    parcelId: asset.parcel_id,
+    naicsCode: asset.naics_code,
+    askingPrice: formatUSD(asset.asking_or_estimated_value_usd),
+    assessedValue: formatUSD(asset.downside_liquidation_floor_usd),
+  };
+
   return (
     <div className="bg-zinc-900/80 hover:bg-zinc-850/90 border border-zinc-800/80 hover:border-zinc-700/90 rounded-2xl p-5 shadow-lg hover:shadow-2xl transition-all duration-200 flex flex-col justify-between group">
       <div>
@@ -147,10 +162,15 @@ export default function UniversalAssetCard({
         </h3>
 
         <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-1 mb-3.5">
-          <MapPin className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-          <span>
-            {asset.city}, {asset.state} <span className="text-zinc-600">({asset.metro_area})</span>
-          </span>
+          <AddressLink
+            city={asset.city}
+            state={asset.state}
+            zipCode={asset.zip_code}
+            county={asset.county}
+            parcelId={asset.parcel_id}
+            size="xs"
+          />
+          <span className="text-zinc-600">({asset.metro_area})</span>
         </div>
 
         {/* Primary Financial & Operating Metrics (Glanceable 3-Col Micro-Grid) */}
@@ -283,6 +303,9 @@ export default function UniversalAssetCard({
             &ldquo;{asset.ai_deal_thesis}&rdquo;
           </p>
         )}
+
+        {/* 1-Click Research & OSINT Quick-Bar */}
+        <AssetResearchBar variant="card_strip" params={researchParams} className="mb-3" />
       </div>
 
       {/* Footer: Valuation, Floor, and Actions */}

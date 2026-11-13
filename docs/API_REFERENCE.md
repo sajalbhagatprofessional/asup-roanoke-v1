@@ -304,9 +304,9 @@ The platform exposes an Anthropic Model Context Protocol (MCP 2024-11-05) gatewa
 
 ---
 
-## 16. Model Context Protocol (MCP 2024-11-05) Agent Gateway (40 Tools Catalog)
+## 16. Model Context Protocol (MCP 2024-11-05) Agent Gateway (41 Tools Catalog)
 
-Argus exposes 40 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
+Argus exposes 41 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
 1. `filter_deal_by_mandate`: Stage 2 zero-cost mandate evaluation.
 2. `solve_sba_sop_50_10_8_1`: Stage 4 pure decimal SBA underwriting solver.
 3. `solve_va_foreclosure_compliance`: Virginia Code § 55.1-321 14-day notice & basis solver.
@@ -347,6 +347,7 @@ Argus exposes 40 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
 38. `generate_executive_flip_tearsheet`: 1-click executive flip tear-sheet & IC memo generator.
 39. `get_user_settings`: Retrieve persistent user preferences (theme, density, PWA auto-update mode, notifications, underwriting defaults).
 40. `update_user_settings`: Mutate and persist cross-device user configuration with ACID durability.
+41. `get_asset_research_links`: Generates 1-click deep research & OSINT links across physical maps, corporate standing, court dockets, Census NAICS, FEMA flood maps, EPA UST storage tanks, and FRED SOFR rates.
 
 ---
 
@@ -389,6 +390,89 @@ Updates and commits user preferences with write-through ACID durability to Postg
   "updated_at": "2026-11-13T02:40:00Z"
 }
 ```
+
+---
+
+## 18. Frictionless Asset Research & 1-Click Investigation Engine (Milestone 34)
+
+### `GET /v1/research/links`
+Returns verified canonical external research and OSINT inspection links for any commercial asset, distress filing, or parcel across 6 dimensions.
+- **Query Parameters**:
+  - `entity_name` (string, optional): Business or corporate name.
+  - `street_address` (string, optional): Physical street address.
+  - `city` (string, optional): City name (e.g. Roanoke, Salem).
+  - `state` (string, optional, default "VA"): 2-letter state abbreviation.
+  - `zip_code` (string, optional): Postal zip code.
+  - `county` (string, optional): County or independent city name.
+  - `fips_code` (string, optional): 5-digit county FIPS code (e.g. 51770 for Roanoke City, 51161 for Roanoke County).
+  - `parcel_id` (string, optional): County/City tax parcel GPIN / ID.
+  - `naics_code` (string, optional): 6-digit NAICS industry classification.
+  - `docket_id` (string, optional): Court docket identifier (e.g. `7:26-bk-01420`).
+  - `latitude` (float, optional): Latitude for precise viewpoint Street View panorama.
+  - `longitude` (float, optional): Longitude for precise viewpoint Street View panorama.
+- **Response `200 OK`**:
+```json
+{
+  "status": "success",
+  "query": {
+    "entity_name": "Valley Industrial Machining Inc",
+    "full_address": "2200 Shenandoah Ave NW, Roanoke, VA 24017",
+    "fips_code": "51770",
+    "parcel_id": "P-554433",
+    "naics_code": "332710",
+    "docket_id": "7:26-bk-09911"
+  },
+  "categories": [
+    {
+      "category": "GEOSPATIAL",
+      "label": "Maps & Physical Location",
+      "links": [
+        {"id": "google_maps", "label": "Google Maps", "url": "https://www.google.com/maps/search/?api=1&query=...", "icon": "MapPin"},
+        {"id": "google_satellite", "label": "Google Satellite Aerial", "url": "...&t=k", "icon": "Layers"},
+        {"id": "google_streetview", "label": "Google Street View", "url": "...", "icon": "Eye"},
+        {"id": "county_gis", "label": "County GIS TaxView", "url": "https://www.webgis.net/va/roanokecity/?pin=P-554433", "icon": "Building"},
+        {"id": "fema_flood", "label": "FEMA Flood Center", "url": "https://msc.fema.gov/portal/search?AddressQuery=...", "icon": "Waves"}
+      ]
+    },
+    {
+      "category": "CORPORATE_OSINT",
+      "label": "Corporate OSINT & Standing",
+      "links": [
+        {"id": "va_scc_cis", "label": "Virginia SCC CIS", "url": "https://cis.scc.virginia.gov/EntitySearch/Index", "icon": "FileText"},
+        {"id": "opencorporates", "label": "OpenCorporates", "url": "https://opencorporates.com/companies?q=...", "icon": "Building"},
+        {"id": "google_news", "label": "Local News & Press", "url": "...", "icon": "Newspaper"},
+        {"id": "linkedin", "label": "LinkedIn Directory", "url": "...", "icon": "Briefcase"}
+      ]
+    },
+    {
+      "category": "LEGAL_DOCKETS",
+      "label": "Court Dockets & Public Notices",
+      "links": [
+        {"id": "courtlistener", "label": "CourtListener / RECAP", "url": "https://www.courtlistener.com/docket/?q=7%3A26-bk-09911", "icon": "Scale"},
+        {"id": "column_notices", "label": "Roanoke Times Notices", "url": "https://roanoke.column.us/search?query=...", "icon": "FileSpreadsheet"}
+      ]
+    },
+    {
+      "category": "ECONOMIC_BENCHMARKS",
+      "label": "Industry & Economic Benchmarks",
+      "links": [
+        {"id": "census_naics", "label": "Census NAICS 332710", "url": "https://www.census.gov/naics/?input=332710&year=2022", "icon": "BarChart3"},
+        {"id": "epa_ust", "label": "EPA UST Finder", "url": "https://www.epa.gov/ust/ust-finder", "icon": "Flame"},
+        {"id": "fred_sofr", "label": "FRED SOFR Rate", "url": "https://fred.stlouisfed.org/series/SOFR", "icon": "DollarSign"}
+      ]
+    }
+  ],
+  "quick_links": {
+    "google_maps": "https://www.google.com/maps/search/?api=1&query=...",
+    "google_satellite": "https://www.google.com/maps/search/?api=1&query=...&t=k",
+    "va_scc_cis": "https://cis.scc.virginia.gov/EntitySearch/Index",
+    "courtlistener": "https://www.courtlistener.com/docket/?q=7%3A26-bk-09911",
+    "fema_flood": "https://msc.fema.gov/portal/search?AddressQuery=...",
+    "census_naics": "https://www.census.gov/naics/?input=332710&year=2022"
+  }
+}
+```
+
 
 
 
