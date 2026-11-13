@@ -304,9 +304,9 @@ The platform exposes an Anthropic Model Context Protocol (MCP 2024-11-05) gatewa
 
 ---
 
-## 16. Model Context Protocol (MCP 2024-11-05) Agent Gateway (41 Tools Catalog)
+## 16. Model Context Protocol (MCP 2024-11-05) Agent Gateway (42 Tools Catalog)
 
-Argus exposes 41 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
+Argus exposes 42 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
 1. `filter_deal_by_mandate`: Stage 2 zero-cost mandate evaluation.
 2. `solve_sba_sop_50_10_8_1`: Stage 4 pure decimal SBA underwriting solver.
 3. `solve_va_foreclosure_compliance`: Virginia Code § 55.1-321 14-day notice & basis solver.
@@ -348,6 +348,7 @@ Argus exposes 41 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
 39. `get_user_settings`: Retrieve persistent user preferences (theme, density, PWA auto-update mode, notifications, underwriting defaults).
 40. `update_user_settings`: Mutate and persist cross-device user configuration with ACID durability.
 41. `get_asset_research_links`: Generates 1-click deep research & OSINT links across physical maps, corporate standing, court dockets, Census NAICS, FEMA flood maps, EPA UST storage tanks, and FRED SOFR rates.
+42. `get_mcp_connect_config`: Retrieves instant 1-click MCP configuration files (Claude Desktop, Cursor, Cline, Windsurf, OpenAPI) and zero-setup universal AI agent system prompt.
 
 ---
 
@@ -472,6 +473,62 @@ Returns verified canonical external research and OSINT inspection links for any 
   }
 }
 ```
+
+---
+
+## 19. Frictionless MCP Connect Hub & Universal AI Prompt Suite (Milestone 36)
+
+Provides instant, zero-setup AI connectivity to Argus's 42 deterministic tools across web chats, IDEs, and native desktops.
+
+### `GET /v1/mcp/hub`
+Returns the complete MCP Connect Hub manifest with ready-to-use client configs, terminal installers, universal AI prompt, and tool catalog.
+- **Query Parameters**:
+  - `token` (optional): AI Agent bearer token (default: `asup_live_anthropic_mcp_master_key_2026`).
+- **Response `200 OK`**:
+```json
+{
+  "status": "success",
+  "platform": "Argus Asset Intelligence (v1.0)",
+  "base_url": "http://api.argus.150.136.103.204.sslip.io",
+  "token": "asup_live_anthropic_mcp_master_key_2026",
+  "sse_endpoint": "http://api.argus.150.136.103.204.sslip.io/mcp/sse",
+  "messages_endpoint": "http://api.argus.150.136.103.204.sslip.io/mcp/messages",
+  "tool_count": 42,
+  "configs": {
+    "claude_desktop": { "mcpServers": { "argus": { "command": "npx", "args": ["-y", "mcp-remote", "..."] } } },
+    "cursor": { "mcpServers": { "argus": { "url": "..." } } },
+    "cline": { "mcpServers": { "argus": { "url": "..." } } },
+    "windsurf": { "mcpServers": { "argus": { "serverUrl": "..." } } }
+  },
+  "install_commands": {
+    "windows_powershell": "irm http://api.argus.150.136.103.204.sslip.io/v1/mcp/install.ps1?token=... | iex",
+    "macos_linux_bash": "curl -fsSL http://api.argus.150.136.103.204.sslip.io/v1/mcp/install.sh?token=... | bash"
+  },
+  "quick_test_prompts": [
+    "Underwrite deal ROA-GD-01 under SBA SOP 50 10 8.1 with 10% equity injection.",
+    "Run Sale-Leaseback arbitrage analysis for deal ROA-GD-01 at 7.25% exit cap rate."
+  ],
+  "universal_prompt": "You are connected to Argus Panoptes (v1.0)..."
+}
+```
+
+### `GET /v1/mcp/prompt`
+Serves the raw text or JSON universal system prompt directive for instant copy-pasting into ChatGPT, Claude Projects, or Gemini.
+- **Query Parameters**:
+  - `format` (optional): `text` (default, `text/plain`) or `json` (`application/json`).
+  - `token` (optional): Bearer token.
+
+### `GET /v1/mcp/download/{client_type}`
+Downloads pre-formatted configuration files:
+- `claude-desktop`: `claude_desktop_config.json`
+- `cursor`: `mcp.json`
+- `cline`: `cline_mcp_settings.json`
+- `windsurf`: `mcp_config.json`
+- `openapi`: `argus_openapi.json` (OpenAPI 3.1.0 schema for ChatGPT Custom GPT Actions)
+
+### `GET /v1/mcp/install.ps1` & `GET /v1/mcp/install.sh`
+Downloads safe, non-destructive terminal installers for Windows (PowerShell) and macOS/Linux (Bash) that auto-merge Argus into `claude_desktop_config.json` without overwriting existing servers.
+
 
 
 

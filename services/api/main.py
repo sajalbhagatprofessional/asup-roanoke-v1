@@ -6,12 +6,13 @@ Mandate: ROA-SMB-01 (City of Roanoke FIPS 51770, Roanoke County FIPS 51161, City
 import asyncio
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_EVEN
+import json
 import os
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from packages.core_types import EpistemicTier, ProvenancedValue
@@ -2951,6 +2952,135 @@ def get_claude_desktop_configuration() -> Dict[str, Any]:
         "status": "success",
         "config": generate_claude_desktop_config(),
     }
+
+
+@app.get("/v1/mcp/hub", tags=["Model Context Protocol (MCP)"])
+def get_mcp_hub(
+    request: Request,
+    token: Optional[str] = Query("asup_live_anthropic_mcp_master_key_2026"),
+) -> Dict[str, Any]:
+    """
+    Returns the comprehensive MCP Connect Hub manifest with client configs,
+    PowerShell/Bash installers, universal prompt, and tool catalog.
+    """
+    from services.mcp.connect_hub import get_mcp_hub_manifest
+    host = request.headers.get("host")
+    scheme = "https" if request.headers.get("x-forwarded-proto") == "https" else "http"
+    base_url = f"{scheme}://{host}" if host else "http://api.argus.150.136.103.204.sslip.io"
+    return get_mcp_hub_manifest(base_url=base_url, token=token or "asup_live_anthropic_mcp_master_key_2026")
+
+
+@app.get("/v1/mcp/prompt", tags=["Model Context Protocol (MCP)"])
+def get_mcp_universal_prompt(
+    request: Request,
+    token: Optional[str] = Query("asup_live_anthropic_mcp_master_key_2026"),
+    format: str = Query("text", description="'text' or 'json'"),
+) -> Any:
+    """
+    Returns the ready-to-paste Universal AI Agent System Prompt for ChatGPT, Claude.ai, or Gemini.
+    """
+    from services.mcp.connect_hub import get_universal_agent_prompt
+    host = request.headers.get("host")
+    scheme = "https" if request.headers.get("x-forwarded-proto") == "https" else "http"
+    base_url = f"{scheme}://{host}" if host else "http://api.argus.150.136.103.204.sslip.io"
+    prompt_text = get_universal_agent_prompt(base_url=base_url, token=token or "asup_live_anthropic_mcp_master_key_2026")
+    if format == "json":
+        return {"status": "success", "prompt": prompt_text}
+    return PlainTextResponse(prompt_text, media_type="text/plain; charset=utf-8")
+
+
+@app.get("/v1/mcp/install.ps1", tags=["Model Context Protocol (MCP)"])
+def download_powershell_installer(
+    request: Request,
+    token: Optional[str] = Query("asup_live_anthropic_mcp_master_key_2026"),
+) -> Response:
+    """
+    Serves the 1-click PowerShell installer script for Windows Claude Desktop.
+    """
+    from services.mcp.connect_hub import generate_powershell_installer_script
+    host = request.headers.get("host")
+    scheme = "https" if request.headers.get("x-forwarded-proto") == "https" else "http"
+    base_url = f"{scheme}://{host}" if host else "http://api.argus.150.136.103.204.sslip.io"
+    script = generate_powershell_installer_script(base_url=base_url, token=token or "asup_live_anthropic_mcp_master_key_2026")
+    return Response(
+        content=script,
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=install_argus_mcp.ps1"},
+    )
+
+
+@app.get("/v1/mcp/install.sh", tags=["Model Context Protocol (MCP)"])
+def download_bash_installer(
+    request: Request,
+    token: Optional[str] = Query("asup_live_anthropic_mcp_master_key_2026"),
+) -> Response:
+    """
+    Serves the 1-click Bash installer script for macOS / Linux Claude Desktop.
+    """
+    from services.mcp.connect_hub import generate_bash_installer_script
+    host = request.headers.get("host")
+    scheme = "https" if request.headers.get("x-forwarded-proto") == "https" else "http"
+    base_url = f"{scheme}://{host}" if host else "http://api.argus.150.136.103.204.sslip.io"
+    script = generate_bash_installer_script(base_url=base_url, token=token or "asup_live_anthropic_mcp_master_key_2026")
+    return Response(
+        content=script,
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=install_argus_mcp.sh"},
+    )
+
+
+@app.get("/v1/mcp/download/{client_type}", tags=["Model Context Protocol (MCP)"])
+def download_mcp_config_file(
+    client_type: str,
+    request: Request,
+    token: Optional[str] = Query("asup_live_anthropic_mcp_master_key_2026"),
+) -> Response:
+    """
+    Downloads pre-formatted configuration files:
+    - 'claude-desktop': claude_desktop_config.json
+    - 'cursor': mcp.json (.cursor/mcp.json)
+    - 'cline': cline_mcp_settings.json
+    - 'windsurf': mcp_config.json
+    - 'openapi': argus_openapi.json (ChatGPT Custom Actions)
+    """
+    from services.mcp.connect_hub import (
+        get_claude_desktop_json,
+        get_cursor_mcp_json,
+        get_cline_mcp_json,
+        get_windsurf_mcp_json,
+        generate_custom_gpt_openapi_schema,
+    )
+    host = request.headers.get("host")
+    scheme = "https" if request.headers.get("x-forwarded-proto") == "https" else "http"
+    base_url = f"{scheme}://{host}" if host else "http://api.argus.150.136.103.204.sslip.io"
+    t = token or "asup_live_anthropic_mcp_master_key_2026"
+
+    if client_type in ("claude-desktop", "claude"):
+        data = get_claude_desktop_json(base_url=base_url, token=t)
+        filename = "claude_desktop_config.json"
+    elif client_type in ("cursor", "cursor-ide"):
+        data = get_cursor_mcp_json(base_url=base_url, token=t)
+        filename = "mcp.json"
+    elif client_type in ("cline", "roo-code", "vscode"):
+        data = get_cline_mcp_json(base_url=base_url, token=t)
+        filename = "cline_mcp_settings.json"
+    elif client_type in ("windsurf", "codeium"):
+        data = get_windsurf_mcp_json(base_url=base_url, token=t)
+        filename = "mcp_config.json"
+    elif client_type in ("openapi", "chatgpt", "gpt"):
+        data = generate_custom_gpt_openapi_schema(base_url=base_url)
+        filename = "argus_openapi.json"
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported client type '{client_type}'. Choose from: claude-desktop, cursor, cline, windsurf, openapi.",
+        )
+
+    return Response(
+        content=json.dumps(data, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @app.post("/mcp/messages", tags=["Model Context Protocol (MCP)"])

@@ -30,6 +30,7 @@ import MandateSetupModal from "./MandateSetupModal";
 import SourceTrackerModal from "./SourceTrackerModal";
 import InstitutionalAladdinModal from "./InstitutionalAladdinModal";
 import McpGatewayModal from "./McpGatewayModal";
+import McpConnectModal from "./McpConnectModal";
 import UpstreamDependencyModal from "./UpstreamDependencyModal";
 import GlossaryModal from "./GlossaryModal";
 import PWAInstallAndStatus from "./PWAInstallAndStatus";
@@ -69,6 +70,7 @@ export default function Navbar() {
   const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
   const [isAladdinModalOpen, setIsAladdinModalOpen] = useState(false);
   const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
+  const [isMcpConnectModalOpen, setIsMcpConnectModalOpen] = useState(false);
   const [isDependencyModalOpen, setIsDependencyModalOpen] = useState(false);
   const [isGlossaryModalOpen, setIsGlossaryModalOpen] = useState(false);
   const [glossaryInitialTerm, setGlossaryInitialTerm] = useState<string | undefined>();
@@ -190,6 +192,17 @@ export default function Navbar() {
               {/* PWA Connection Status */}
               <PWAInstallAndStatus />
 
+              {/* ⚡ 1-Click MCP & AI Agent Connect Button */}
+              <button
+                type="button"
+                onClick={() => setIsMcpConnectModalOpen(true)}
+                className="apple-press flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-950/70 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 hover:border-emerald-400 text-xs font-semibold transition cursor-pointer shadow-sm group"
+                title="Connect AI Agent, ChatGPT, Claude Desktop, Cursor or Terminal to Argus MCP Hub"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Connect AI / MCP</span>
+              </button>
+
               {/* Consolidated Intelligence & Tools Hub (Apple Command Drawer) */}
               <div className="relative" ref={toolsMenuRef}>
                 <button
@@ -208,6 +221,26 @@ export default function Navbar() {
                     <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-500 font-bold border-b border-zinc-850">
                       Institutional Engines
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsToolsMenuOpen(false);
+                        setIsMcpConnectModalOpen(true);
+                      }}
+                      className="w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-xl text-left bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/40 transition group cursor-pointer"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-emerald-900/60 border border-emerald-500/60 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white group-hover:text-emerald-300 transition-colors flex items-center gap-1.5">
+                          MCP Connect Hub
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/30 text-emerald-300 font-mono">1-CLICK</span>
+                        </div>
+                        <div className="text-[10px] text-zinc-400">Prompts, configs & downloads</div>
+                      </div>
+                    </button>
                     
                     <button
                       type="button"
@@ -500,6 +533,12 @@ export default function Navbar() {
       <McpGatewayModal
         isOpen={isMcpModalOpen}
         onClose={() => setIsMcpModalOpen(false)}
+      />
+
+      {/* 1-Click Frictionless MCP Connect Hub Modal */}
+      <McpConnectModal
+        isOpen={isMcpConnectModalOpen}
+        onClose={() => setIsMcpConnectModalOpen(false)}
       />
 
       {/* Upstream & Open-Source Dependency Tracker Modal */}

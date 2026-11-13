@@ -1,7 +1,14 @@
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  outputFileTracingRoot: path.resolve(__dirname),
   async rewrites() {
     const apiBase = process.env.FASTAPI_URL || (process.env.NODE_ENV === "production" ? "http://argus-api:8000" : "http://127.0.0.1:8000");
     return [

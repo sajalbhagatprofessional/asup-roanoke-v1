@@ -25,6 +25,10 @@ import {
   FileText,
   Clock,
   ArrowRight,
+  Bot,
+  Terminal,
+  Copy,
+  Check,
 } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
 import { useAuth } from "../context/AuthContext";
@@ -68,12 +72,21 @@ export default function SettingsModal() {
     setTimeout(() => setUpdateFeedback(null), 4000);
   };
 
+  const [copiedMcp, setCopiedMcp] = useState<string | null>(null);
+
+  const handleCopyMcp = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMcp(key);
+    setTimeout(() => setCopiedMcp(null), 2000);
+  };
+
   const tabs = [
     { id: "ACCOUNT", label: "Account & Profile", icon: User },
     { id: "THEME", label: "Theme & Display", icon: Palette },
     { id: "NOTIFICATIONS", label: "Notifications & Alerts", icon: Bell },
     { id: "PWA", label: "PWA & Auto-Update", icon: Smartphone },
     { id: "UNDERWRITING", label: "Underwriting Defaults", icon: Sliders },
+    { id: "MCP", label: "AI Agent & MCP Hub", icon: Sparkles },
   ];
 
   return (
@@ -577,6 +590,118 @@ export default function SettingsModal() {
                         className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono transition"
                       />
                       <span className="text-[10px] text-zinc-500">Principal threshold: ≥1.15x</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 6: AI AGENT & MCP CONNECTIVITY */}
+            {activeSettingsTab === "MCP" && (
+              <div className="space-y-5 animate-fade-in">
+                <div>
+                  <h3 className="text-sm font-bold text-white mb-1">Model Context Protocol (MCP) &amp; AI Integration</h3>
+                  <p className="text-xs text-zinc-400">
+                    Connect Claude Desktop, Cursor, Cline, Windsurf, or sovereign AI agents directly into Argus.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-850 space-y-4">
+                  {/* Status Banner */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-xs">
+                    <div className="flex items-center space-x-2 text-emerald-300">
+                      <Sparkles className="w-4 h-4 text-emerald-400" />
+                      <span className="font-semibold">42 Air-Gapped Underwriting & Sourcing Tools Online</span>
+                    </div>
+                    <a
+                      href="/mcp"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center space-x-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-medium"
+                    >
+                      <span>Open Fullscreen Hub</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  {/* Remote SSE Endpoint */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+                      Remote SSE Endpoint (Anthropic Standard)
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value="http://api.argus.150.136.103.204.sslip.io/mcp/sse?token=asup_live_anthropic_mcp_master_key_2026"
+                        className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-emerald-400 focus:outline-none font-mono select-all"
+                      />
+                      <button
+                        onClick={() =>
+                          handleCopyMcp(
+                            "http://api.argus.150.136.103.204.sslip.io/mcp/sse?token=asup_live_anthropic_mcp_master_key_2026",
+                            "sse_url"
+                          )
+                        }
+                        className="px-3 py-2 rounded-xl bg-zinc-850 hover:bg-zinc-800 border border-zinc-750 text-xs text-zinc-200 transition shrink-0"
+                      >
+                        {copiedMcp === "sse_url" ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Master Token */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+                      Active AI Agent Bearer Token
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value="asup_live_anthropic_mcp_master_key_2026"
+                        className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-300 focus:outline-none font-mono select-all"
+                      />
+                      <button
+                        onClick={() =>
+                          handleCopyMcp("asup_live_anthropic_mcp_master_key_2026", "token")
+                        }
+                        className="px-3 py-2 rounded-xl bg-zinc-850 hover:bg-zinc-800 border border-zinc-750 text-xs text-zinc-200 transition shrink-0"
+                      >
+                        {copiedMcp === "token" ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Direct 1-Click Downloads */}
+                  <div className="pt-2 border-t border-zinc-850">
+                    <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+                      1-Click Download Configuration Files
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <a
+                        href="http://api.argus.150.136.103.204.sslip.io/v1/mcp/download/claude-desktop?token=asup_live_anthropic_mcp_master_key_2026"
+                        download="claude_desktop_config.json"
+                        className="p-2.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 flex items-center justify-between transition"
+                      >
+                        <span className="font-medium flex items-center gap-2">
+                          <Bot className="w-3.5 h-3.5 text-emerald-400" />
+                          Claude Desktop JSON
+                        </span>
+                        <Download className="w-3.5 h-3.5 text-zinc-400" />
+                      </a>
+
+                      <a
+                        href="http://api.argus.150.136.103.204.sslip.io/v1/mcp/download/cursor?token=asup_live_anthropic_mcp_master_key_2026"
+                        download="mcp.json"
+                        className="p-2.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 flex items-center justify-between transition"
+                      >
+                        <span className="font-medium flex items-center gap-2">
+                          <Terminal className="w-3.5 h-3.5 text-blue-400" />
+                          Cursor IDE (.cursor/mcp.json)
+                        </span>
+                        <Download className="w-3.5 h-3.5 text-zinc-400" />
+                      </a>
                     </div>
                   </div>
                 </div>

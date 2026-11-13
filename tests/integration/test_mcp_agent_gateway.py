@@ -144,7 +144,7 @@ def test_mcp_tools_list():
     )
     assert res.status_code == 200
     tools = res.json()["result"]["tools"]
-    assert len(tools) == 41
+    assert len(tools) == 42
     tool_names = {t["name"] for t in tools}
     expected = {
         "search_deals_and_assets",
@@ -188,8 +188,9 @@ def test_mcp_tools_list():
         "get_user_settings",
         "update_user_settings",
         "get_asset_research_links",
+        "get_mcp_connect_config",
     }
-    assert len(tools) == 41
+    assert len(tools) == 42
     assert tool_names == expected
 
 

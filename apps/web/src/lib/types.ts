@@ -872,6 +872,39 @@ export interface ClaudeDesktopConfigResponse {
   };
 }
 
+export interface McpHubManifest {
+  status: string;
+  platform: string;
+  base_url: string;
+  token: string;
+  sse_endpoint: string;
+  messages_endpoint: string;
+  tool_count: number;
+  tool_categories: Record<string, string[]>;
+  configs: {
+    claude_desktop: Record<string, any>;
+    cursor: Record<string, any>;
+    cline: Record<string, any>;
+    windsurf: Record<string, any>;
+    chatgpt_custom_actions: Record<string, any>;
+  };
+  install_commands: {
+    windows_powershell: string;
+    macos_linux_bash: string;
+    download_urls: {
+      claude_desktop_json: string;
+      cursor_json: string;
+      cline_json: string;
+      windsurf_json: string;
+      openapi_json: string;
+      powershell_script: string;
+      bash_script: string;
+    };
+  };
+  quick_test_prompts: string[];
+  universal_prompt: string;
+}
+
 export interface UpstreamDependencyRecord {
   id: string;
   name: string;

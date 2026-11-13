@@ -1,7 +1,7 @@
 # Argus (v1.0)
 ### *Autonomous Asset Intelligence, Sourcing & Underwriting Platform*
 
-[![Test Suite](https://img.shields.io/badge/Test_Suite-167%2F167_Passing_(100%25)-emerald.svg)](tests/)
+[![Test Suite](https://img.shields.io/badge/Test_Suite-178%2F178_Passing_(100%25)-emerald.svg)](tests/)
 [![Golden Suite](https://img.shields.io/badge/Golden_Suite-50%2F50_Accuracy_(100%25)-blue.svg)](tests/golden_suite/)
 [![Underwriting Engine](https://img.shields.io/badge/Underwriting-Air--Gapped_Pure_Decimal-purple.svg)](packages/underwriting_engine/)
 [![Capital Velocity](https://img.shields.io/badge/Asset_Flipper-40_Yr_Deal_Box_Engine-amber.svg)](packages/flipper_deal_engine/)
@@ -12,7 +12,7 @@
 [![SBA Compliance](https://img.shields.io/badge/SBA_Compliance-SOP_50_10_8.1-amber.svg)](packages/underwriting_engine/sba_sop_50_10_8_1.py)
 [![Virginia Foreclosure](https://img.shields.io/badge/Virginia_Statute-Va._Code_§§_55.1--320--322-red.svg)](packages/underwriting_engine/va_foreclosure_solver.py)
 [![Infrastructure](https://img.shields.io/badge/Infrastructure-Oracle_OCI_ARM64_Ubuntu_24.04-orange.svg)](infra/)
-[![AI Agent Protocol](https://img.shields.io/badge/AI_Agent_Gateway-Anthropic_MCP_41_Tools-cyan.svg)](services/mcp/)
+[![AI Agent Protocol](https://img.shields.io/badge/AI_Agent_Gateway-Anthropic_MCP_42_Tools-cyan.svg)](services/mcp/)
 [![Live Deployment](https://img.shields.io/badge/Production_VPS-Coolify_ARM64_Active-brightgreen.svg)](http://argus.150.136.103.204.sslip.io)
 
 ---
@@ -70,11 +70,11 @@ pip install -r requirements.txt
 ```
 
 ### 2. Run the Master Verification Gate
-Verify that all 167 unit, integration, RBAC, golden backtests, institutional titan, operational supremacy, asset flipper, PWA, and 1-click research tests pass with 100% coverage:
+Verify that all 178 unit, integration, RBAC, golden backtests, institutional titan, operational supremacy, asset flipper, PWA, 1-click research, and MCP connect hub tests pass with 100% coverage:
 ```bash
 python scripts/run_all_tests.py
 ```
-*(Expected Output: `Total Test Suite: 167/167 Tests PASSED (100% Coverage)!` and `[GOLDEN SUITE] 50-Deal Accuracy: 50/50`)*
+*(Expected Output: `Total Test Suite: 178/178 Tests PASSED (100% Coverage)!` and `[GOLDEN SUITE] 50-Deal Accuracy: 50/50`)*
 
 ### 3. Launch Local Backend Server
 ```bash

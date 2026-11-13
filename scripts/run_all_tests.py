@@ -48,6 +48,8 @@ import tests.unit.test_user_settings_and_pwa as u13
 import tests.integration.test_user_settings_endpoints as i23
 import tests.unit.test_asset_research_links as u14
 import tests.integration.test_research_links_endpoints as i24
+import tests.unit.test_mcp_connect_hub as u15
+import tests.integration.test_mcp_hub_endpoints as i25
 
 
 def main() -> int:
@@ -335,6 +337,19 @@ def main() -> int:
 
     print(f"All {research_passed}/{research_passed} Deep Research & Investigation Suite Tests PASSED!")
 
+    # Milestone 36: Frictionless MCP Connect Hub & Universal Prompt Suite
+    mcp_hub_passed = 0
+    for mod in [u15, i25]:
+        for attr in sorted(dir(mod)):
+            if attr.startswith("test_"):
+                fn = getattr(mod, attr)
+                if callable(fn):
+                    fn()
+                    mcp_hub_passed += 1
+                    print(f"[PASS] {mod.__name__}.{attr}")
+
+    print(f"All {mcp_hub_passed}/{mcp_hub_passed} Frictionless MCP Connect Hub & Universal Prompt Suite Tests PASSED!")
+
     total_passed = (
         core_passed
         + api_passed
@@ -358,6 +373,7 @@ def main() -> int:
         + flipper_passed
         + settings_passed
         + research_passed
+        + mcp_hub_passed
     )
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 

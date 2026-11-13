@@ -66,7 +66,7 @@ import {
   BridgewaterMacroRegimeReport,
 } from "./types";
 
-const getApiBase = () => {
+export const getApiBase = () => {
   if (typeof window !== "undefined") {
     // Client-side: use relative path through Next.js rewrite or direct URL
     return process.env.NEXT_PUBLIC_API_URL || "";
@@ -1016,6 +1016,20 @@ export async function fetchClaudeDesktopConfig(): Promise<import("./types").Clau
   const base = getApiBase();
   const res = await fetch(`${base}/v1/developer/mcp/config`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch Claude Desktop configuration");
+  return res.json();
+}
+
+export async function fetchMcpHubManifest(token: string = "asup_live_anthropic_mcp_master_key_2026"): Promise<import("./types").McpHubManifest> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/mcp/hub?token=${encodeURIComponent(token)}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load MCP Hub manifest");
+  return res.json();
+}
+
+export async function fetchMcpUniversalPrompt(token: string = "asup_live_anthropic_mcp_master_key_2026"): Promise<{ status: string; prompt: string }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/mcp/prompt?format=json&token=${encodeURIComponent(token)}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to fetch Universal MCP prompt");
   return res.json();
 }
 

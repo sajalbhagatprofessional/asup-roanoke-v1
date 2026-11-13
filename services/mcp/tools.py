@@ -808,6 +808,28 @@ MCP_TOOLS_CATALOG: List[McpTool] = [
             },
         },
     ),
+    McpTool(
+        name="get_mcp_connect_config",
+        description=(
+            "Returns instant copy-paste configurations, 1-click installer commands, "
+            "and Universal AI System Prompts for connecting Claude Desktop, Cursor, VS Code, "
+            "and web LLMs to the Argus Sovereign Asset Intelligence MCP Gateway."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "client": {
+                    "type": "string",
+                    "enum": ["all", "claude_desktop", "cursor", "cline", "windsurf", "prompt"],
+                    "description": "Client target to generate configuration for (default: 'all')",
+                },
+                "base_url": {
+                    "type": "string",
+                    "description": "Optional custom server base URL override",
+                },
+            },
+        },
+    ),
 ]
 
 
@@ -1402,6 +1424,17 @@ def execute_mcp_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any
                 latitude=arguments.get("latitude"),
                 longitude=arguments.get("longitude"),
             )
+
+        elif tool_name == "get_mcp_connect_config":
+            from services.mcp.connect_hub import get_mcp_hub_manifest
+            base_url = arguments.get("base_url") or "http://api.argus.150.136.103.204.sslip.io"
+            manifest = get_mcp_hub_manifest(base_url=base_url)
+            client = arguments.get("client", "all")
+            if client == "prompt":
+                return {"prompt": manifest["universal_prompt"]}
+            elif client in manifest["configs"]:
+                return {"config": manifest["configs"][client]}
+            return manifest
 
         else:
             return {"error": f"Unknown tool: {tool_name}"}
