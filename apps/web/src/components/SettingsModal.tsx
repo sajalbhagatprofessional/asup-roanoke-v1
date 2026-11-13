@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   User,
   Palette,
   Bell,
+  BellRing,
   Smartphone,
   Sliders,
   CheckCircle2,
@@ -29,10 +30,17 @@ import {
   Terminal,
   Copy,
   Check,
+  AlertTriangle,
 } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
 import { useAuth } from "../context/AuthContext";
 import { ThemeMode, InterfaceDensity, AutoUpdatePromptMode, TeamRole } from "../lib/types";
+import McpSettingsPanel from "./McpSettingsPanel";
+import {
+  getBrowserNotificationPermission,
+  requestPushNotifications,
+  sendTestPushNotification,
+} from "../lib/notifications";
 
 export default function SettingsModal() {
   const {
@@ -75,6 +83,37 @@ export default function SettingsModal() {
       setUpdateFeedback("Your app is completely up to date (v" + appVersion + ").");
     }
     setTimeout(() => setUpdateFeedback(null), 4000);
+  };
+
+  const [browserPermission, setBrowserPermission] = useState<NotificationPermission>("default");
+  const [notifFeedback, setNotifFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    setBrowserPermission(getBrowserNotificationPermission());
+  }, []);
+
+  const handleRequestPush = async () => {
+    setNotifFeedback("Requesting push permission...");
+    const res = await requestPushNotifications();
+    setBrowserPermission(res.permission);
+    if (res.permission === "granted") {
+      updateSettings({ push_notifications_enabled: true });
+      setNotifFeedback("Native push notifications activated successfully!");
+    } else {
+      setNotifFeedback(res.error || "Permission was not granted.");
+    }
+    setTimeout(() => setNotifFeedback(null), 4000);
+  };
+
+  const handleSendTestPush = async () => {
+    setNotifFeedback("Dispatching test notification...");
+    const res = await sendTestPushNotification();
+    if (res.success) {
+      setNotifFeedback("Test notification dispatched! Check your desktop or mobile notification center.");
+    } else {
+      setNotifFeedback(res.error || "Failed to dispatch test notification.");
+    }
+    setTimeout(() => setNotifFeedback(null), 4000);
   };
 
   if (!isSettingsOpen) return null;
@@ -368,6 +407,75 @@ export default function SettingsModal() {
                   <p className="text-xs text-zinc-400">Configure Web Push alerts, distress notice thresholds, and quiet hours.</p>
                 </div>
 
+                {/* Ex-Apple System Permission & Test Card */}
+                <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                          browserPermission === "granted"
+                            ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                            : "bg-blue-500/15 border-blue-500/30 text-blue-400"
+                        }`}
+                      >
+                        {browserPermission === "granted" ? (
+                          <BellRing className="w-4 h-4" />
+                        ) : (
+                          <Bell className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-semibold text-white text-xs">
+                            {browserPermission === "granted"
+                              ? "System Push Notifications Active"
+                              : "Native Push Notifications"}
+                          </span>
+                          <span
+                            className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${
+                              browserPermission === "granted"
+                                ? "bg-emerald-950 text-emerald-300 border-emerald-800"
+                                : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                            }`}
+                          >
+                            {browserPermission.toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400">
+                          {browserPermission === "granted"
+                            ? "Connected to service worker push manager for SEV-1 distress notices & digests."
+                            : "Enable desktop & mobile system banners for 14-day statutory foreclosure filings."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2 shrink-0 self-start sm:self-auto">
+                      {browserPermission !== "granted" ? (
+                        <button
+                          onClick={handleRequestPush}
+                          className="apple-press px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-md transition cursor-pointer"
+                        >
+                          Enable Alerts
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleSendTestPush}
+                          className="apple-press px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-zinc-200 border border-zinc-700 font-semibold text-xs transition cursor-pointer"
+                        >
+                          Send Test Push
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {notifFeedback && (
+                    <div className="p-2 rounded-xl bg-zinc-950 border border-emerald-500/30 text-[11px] text-emerald-300 font-mono animate-fadeIn flex items-center space-x-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>{notifFeedback}</span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
@@ -597,114 +705,7 @@ export default function SettingsModal() {
 
             {/* TAB 6: AI AGENT & MCP CONNECTIVITY */}
             {activeSettingsTab === "MCP" && (
-              <div className="space-y-5 animate-fade-in">
-                <div>
-                  <h3 className="text-sm font-bold text-white mb-1">Model Context Protocol (MCP) &amp; AI Integration</h3>
-                  <p className="text-xs text-zinc-400">
-                    Connect Claude Desktop, Cursor, Cline, Windsurf, or sovereign AI agents directly into Argus.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-850 space-y-4">
-                  {/* Status Banner */}
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-xs">
-                    <div className="flex items-center space-x-2 text-emerald-300">
-                      <Sparkles className="w-4 h-4 text-emerald-400" />
-                      <span className="font-semibold">42 Air-Gapped Underwriting & Sourcing Tools Online</span>
-                    </div>
-                    <a
-                      href="/mcp"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center space-x-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-medium"
-                    >
-                      <span>Open Fullscreen Hub</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </div>
-
-                  {/* Remote SSE Endpoint */}
-                  <div>
-                    <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
-                      Remote SSE Endpoint (Anthropic Standard)
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value="http://api.argus.150.136.103.204.sslip.io/mcp/sse?token=asup_live_anthropic_mcp_master_key_2026"
-                        className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-emerald-400 focus:outline-none font-mono select-all"
-                      />
-                      <button
-                        onClick={() =>
-                          handleCopyMcp(
-                            "http://api.argus.150.136.103.204.sslip.io/mcp/sse?token=asup_live_anthropic_mcp_master_key_2026",
-                            "sse_url"
-                          )
-                        }
-                        className="px-3 py-2 rounded-xl bg-zinc-850 hover:bg-zinc-800 border border-zinc-750 text-xs text-zinc-200 transition shrink-0"
-                      >
-                        {copiedMcp === "sse_url" ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Master Token */}
-                  <div>
-                    <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
-                      Active AI Agent Bearer Token
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value="asup_live_anthropic_mcp_master_key_2026"
-                        className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-300 focus:outline-none font-mono select-all"
-                      />
-                      <button
-                        onClick={() =>
-                          handleCopyMcp("asup_live_anthropic_mcp_master_key_2026", "token")
-                        }
-                        className="px-3 py-2 rounded-xl bg-zinc-850 hover:bg-zinc-800 border border-zinc-750 text-xs text-zinc-200 transition shrink-0"
-                      >
-                        {copiedMcp === "token" ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Direct 1-Click Downloads */}
-                  <div className="pt-2 border-t border-zinc-850">
-                    <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2">
-                      1-Click Download Configuration Files
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                      <a
-                        href="http://api.argus.150.136.103.204.sslip.io/v1/mcp/download/claude-desktop?token=asup_live_anthropic_mcp_master_key_2026"
-                        download="claude_desktop_config.json"
-                        className="p-2.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 flex items-center justify-between transition"
-                      >
-                        <span className="font-medium flex items-center gap-2">
-                          <Bot className="w-3.5 h-3.5 text-emerald-400" />
-                          Claude Desktop JSON
-                        </span>
-                        <Download className="w-3.5 h-3.5 text-zinc-400" />
-                      </a>
-
-                      <a
-                        href="http://api.argus.150.136.103.204.sslip.io/v1/mcp/download/cursor?token=asup_live_anthropic_mcp_master_key_2026"
-                        download="mcp.json"
-                        className="p-2.5 rounded-xl bg-zinc-950/80 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 flex items-center justify-between transition"
-                      >
-                        <span className="font-medium flex items-center gap-2">
-                          <Terminal className="w-3.5 h-3.5 text-blue-400" />
-                          Cursor IDE (.cursor/mcp.json)
-                        </span>
-                        <Download className="w-3.5 h-3.5 text-zinc-400" />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <McpSettingsPanel />
             )}
 
           </div>
