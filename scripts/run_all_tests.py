@@ -3,6 +3,9 @@ import pathlib
 import subprocess
 import sys
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(line_buffering=True)
+
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -34,6 +37,11 @@ import tests.integration.test_augury_asset_health_engines as i17
 import tests.integration.test_palantir_ontology_engines as i18
 import tests.integration.test_advanced_sourcing_intelligence as i19
 import tests.integration.test_institutional_titan_engines as i20
+import tests.unit.test_war_room_simulator as u8
+import tests.unit.test_negotiation_game_theory as u9
+import tests.unit.test_value_creation_blueprint as u10
+import tests.unit.test_deal_room_closing as u11
+import tests.integration.test_operational_supremacy_endpoints as i21
 
 
 def main() -> int:
@@ -265,6 +273,21 @@ def main() -> int:
 
     print(f"All {titan_passed}/{titan_passed} Institutional Titan Systems Suite Tests PASSED!")
 
+    # Milestone 28-31: Palantir Operational Supremacy Engines Suite
+    # (War Room Simulator, Negotiation Game Theory, 100-Day Blueprint, Closing Command Center)
+    operational_modules = [u8, u9, u10, u11, i21]
+    operational_passed = 0
+    for mod in operational_modules:
+        for attr in sorted(dir(mod)):
+            if attr.startswith("test_"):
+                fn = getattr(mod, attr)
+                if callable(fn):
+                    fn()
+                    operational_passed += 1
+                    print(f"[PASS] {mod.__name__}.{attr}")
+
+    print(f"All {operational_passed}/{operational_passed} Palantir Operational Supremacy Suite Tests PASSED!")
+
     total_passed = (
         core_passed
         + api_passed
@@ -284,6 +307,7 @@ def main() -> int:
         + palantir_passed
         + sourcing_passed
         + titan_passed
+        + operational_passed
     )
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 

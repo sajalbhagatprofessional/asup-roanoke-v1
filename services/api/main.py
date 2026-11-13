@@ -3591,6 +3591,193 @@ def run_macro_regime_stress_test_endpoint(req: MacroRegimeStressRequest) -> Dict
     }
 
 
+# ==============================================================================
+# MILESTONE 29-32: PALANTIR OPERATIONAL SUPREMACY ENGINES
+# 1. War Room Crisis Simulator
+# 2. Stakeholder Negotiation Game Theory Engine
+# 3. 100-Day Warp Speed Post-Acquisition Operating Blueprint
+# 4. Autonomous Closing Command Center & 38-Statute Gate Tracker
+# ==============================================================================
+
+class WarRoomSimulationRequest(BaseModel):
+    deal_id: str = "DEAL-001"
+    asset_name: str = "Roanoke Precision CNC"
+    naics_code: str = "332710"
+    base_annual_revenue_usd: float = 2500000.0
+    base_annual_ebitda_usd: float = 450000.0
+    annual_senior_debt_service_usd: float = 120000.0
+    customer_churn_pct: float = 0.18
+    cogs_inflation_pct: float = 0.12
+    unplanned_capex_usd: float = 65000.0
+    key_person_recruiting_premium_usd: float = 45000.0
+    insurance_cost_shock_pct: float = 0.35
+    baseline_insurance_expense_usd: float = 28000.0
+    existing_liquid_cash_reserves_usd: float = 120000.0
+
+
+class StakeholderNegotiationRequest(BaseModel):
+    deal_id: str = "DEAL-001"
+    asset_name: str = "Salem Precision Tooling"
+    senior_defaulted_principal_usd: float = 1200000.0
+    accrued_default_interest_and_fees_usd: float = 45000.0
+    junior_encumbrances_usd: float = 180000.0
+    verified_assessed_real_estate_usd: float = 2000000.0
+    estimated_going_concern_ebitda_usd: float = 380000.0
+    irs_tax_lien_present: bool = False
+    notice_lead_days: int = 18
+    owner_personal_guarantee_active: bool = True
+    competing_bidders_count: int = 1
+
+
+class HundredDayBlueprintRequest(BaseModel):
+    deal_id: str = "DEAL-001"
+    asset_name: str = "Star City Fabrication"
+    naics_code: str = "332312"
+    purchase_price_usd: float = 2000000.0
+    baseline_annual_revenue_usd: float = 3000000.0
+    baseline_annual_ebitda_usd: float = 400000.0
+    exit_multiple_ev_ebitda: float = 6.5
+
+
+class ClosingChecklistAuditRequest(BaseModel):
+    deal_id: str = "DEAL-001"
+    asset_name: str = "Blue Ridge Industrial"
+    total_purchase_price_usd: float = 2500000.0
+    total_escrow_holdback_required_usd: float = 175000.0
+    irs_redemption_active: bool = False
+    open_lust_or_flood_issue: bool = False
+    principal_approval_token_present: bool = True
+    counsel_signoff_present: bool = True
+
+
+@app.post("/v1/operations/war-room/simulate", tags=["Palantir Operational Supremacy"])
+def run_war_room_crisis_simulation_endpoint(req: WarRoomSimulationRequest) -> Dict[str, Any]:
+    """
+    Palantir War Room™ Multi-Variate Crisis & Stress Simulator.
+    Simulates concurrent customer churn, direct cost inflation, machine breakdown,
+    key person loss, and insurance shock with automated contractual defensive covenants.
+    """
+    from packages.war_room_simulator import OperationalShockInput, simulate_operational_crisis
+    inp = OperationalShockInput(
+        deal_id=req.deal_id,
+        asset_name=req.asset_name,
+        naics_code=req.naics_code,
+        base_annual_revenue_usd=Decimal(str(req.base_annual_revenue_usd)),
+        base_annual_ebitda_usd=Decimal(str(req.base_annual_ebitda_usd)),
+        annual_senior_debt_service_usd=Decimal(str(req.annual_senior_debt_service_usd)),
+        customer_churn_pct=Decimal(str(req.customer_churn_pct)),
+        cogs_inflation_pct=Decimal(str(req.cogs_inflation_pct)),
+        unplanned_capex_usd=Decimal(str(req.unplanned_capex_usd)),
+        key_person_recruiting_premium_usd=Decimal(str(req.key_person_recruiting_premium_usd)),
+        insurance_cost_shock_pct=Decimal(str(req.insurance_cost_shock_pct)),
+        baseline_insurance_expense_usd=Decimal(str(req.baseline_insurance_expense_usd)),
+        existing_liquid_cash_reserves_usd=Decimal(str(req.existing_liquid_cash_reserves_usd)),
+    )
+    report = simulate_operational_crisis(inp)
+    return {
+        "status": "success",
+        "crisis_report": report.dict(),
+    }
+
+
+@app.post("/v1/operations/negotiation/stakeholder-matrix", tags=["Palantir Operational Supremacy"])
+def solve_stakeholder_negotiation_endpoint(req: StakeholderNegotiationRequest) -> Dict[str, Any]:
+    """
+    Stakeholder Game Theory & Negotiation Posture Engine.
+    Models 5-party Nash equilibrium payoffs across Trustees, Special Servicers, Distressed Owners,
+    Junior Creditors, and Title Insurers to determine optimal M&A structure and BATNA.
+    """
+    from packages.negotiation_game_theory import NegotiationGameInput, solve_negotiation_game_theory
+    inp = NegotiationGameInput(
+        deal_id=req.deal_id,
+        asset_name=req.asset_name,
+        senior_defaulted_principal_usd=Decimal(str(req.senior_defaulted_principal_usd)),
+        accrued_default_interest_and_fees_usd=Decimal(str(req.accrued_default_interest_and_fees_usd)),
+        junior_encumbrances_usd=Decimal(str(req.junior_encumbrances_usd)),
+        verified_assessed_real_estate_usd=Decimal(str(req.verified_assessed_real_estate_usd)),
+        estimated_going_concern_ebitda_usd=Decimal(str(req.estimated_going_concern_ebitda_usd)),
+        irs_tax_lien_present=req.irs_tax_lien_present,
+        notice_lead_days=req.notice_lead_days,
+        owner_personal_guarantee_active=req.owner_personal_guarantee_active,
+        competing_bidders_count=req.competing_bidders_count,
+    )
+    report = solve_negotiation_game_theory(inp)
+    return {
+        "status": "success",
+        "negotiation_report": report.dict(),
+    }
+
+
+@app.post("/v1/operations/value-creation/100-day-blueprint", tags=["Palantir Operational Supremacy"])
+def generate_100day_blueprint_endpoint(req: HundredDayBlueprintRequest) -> Dict[str, Any]:
+    """
+    100-Day Warp Speed™ Post-Acquisition Operating Blueprint.
+    Generates chronological 14-week modernization roadmaps and quantified EBITDA expansion bridges.
+    """
+    from packages.value_creation_blueprint import BlueprintInput, generate_hundred_day_blueprint
+    inp = BlueprintInput(
+        deal_id=req.deal_id,
+        asset_name=req.asset_name,
+        naics_code=req.naics_code,
+        purchase_price_usd=Decimal(str(req.purchase_price_usd)),
+        baseline_annual_revenue_usd=Decimal(str(req.baseline_annual_revenue_usd)),
+        baseline_annual_ebitda_usd=Decimal(str(req.baseline_annual_ebitda_usd)),
+        exit_multiple_ev_ebitda=Decimal(str(req.exit_multiple_ev_ebitda)),
+    )
+    report = generate_hundred_day_blueprint(inp)
+    return {
+        "status": "success",
+        "blueprint_report": report.dict(),
+    }
+
+
+@app.get("/v1/operations/closing/checklist/{deal_id}", tags=["Palantir Operational Supremacy"])
+def get_closing_checklist_endpoint(deal_id: str) -> Dict[str, Any]:
+    """
+    Autonomous Closing Command Center: Audit 38 statutory pre-closing milestones.
+    """
+    from packages.deal_room_engine import ClosingAuditInput, audit_closing_checklist
+    inp = ClosingAuditInput(
+        deal_id=deal_id,
+        asset_name=f"Acquisition Target {deal_id}",
+        total_purchase_price_usd=Decimal("2500000.00"),
+        total_escrow_holdback_required_usd=Decimal("175000.00"),
+        irs_redemption_active=False,
+        open_lust_or_flood_issue=False,
+        principal_approval_token_present=True,
+        counsel_signoff_present=True,
+    )
+    report = audit_closing_checklist(inp)
+    return {
+        "status": "success",
+        "closing_report": report.dict(),
+    }
+
+
+@app.post("/v1/operations/closing/checklist/{deal_id}/audit", tags=["Palantir Operational Supremacy"])
+def audit_custom_closing_checklist_endpoint(deal_id: str, req: ClosingChecklistAuditRequest) -> Dict[str, Any]:
+    """
+    Autonomous Closing Command Center: Custom audit with parameter overrides.
+    """
+    from packages.deal_room_engine import ClosingAuditInput, audit_closing_checklist
+    inp = ClosingAuditInput(
+        deal_id=deal_id,
+        asset_name=req.asset_name,
+        total_purchase_price_usd=Decimal(str(req.total_purchase_price_usd)),
+        total_escrow_holdback_required_usd=Decimal(str(req.total_escrow_holdback_required_usd)),
+        irs_redemption_active=req.irs_redemption_active,
+        open_lust_or_flood_issue=req.open_lust_or_flood_issue,
+        principal_approval_token_present=req.principal_approval_token_present,
+        counsel_signoff_present=req.counsel_signoff_present,
+    )
+    report = audit_closing_checklist(inp)
+    return {
+        "status": "success",
+        "closing_report": report.dict(),
+    }
+
+
+
 
 
 

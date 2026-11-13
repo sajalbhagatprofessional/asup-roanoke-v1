@@ -680,6 +680,60 @@ export const GLOSSARY_TERMS: Record<string, GlossaryTerm> = {
     whyItMatters:
       "Groups adjacent businesses together to spot 'roll-up' opportunities where buying 3 nearby shops creates massive economies of scale.",
   },
+
+  PALANTIR_WAR_ROOM: {
+    id: "PALANTIR_WAR_ROOM",
+    name: "Palantir War Room™ Multi-Variate Crisis Simulator",
+    shortName: "Crisis War Room",
+    category: "COMPLIANCE_OPERATIONS",
+    categoryLabel: "Operational Supremacy",
+    simpleDefinition:
+      "A crisis simulation engine that models simultaneous customer churn, COGS inflation, unplanned machine breakdown, and key person loss.",
+    formulaOrRule: "Crisis DSCR = Stressed EBITDA / Stressed Senior Debt Service, automated capital call triggers & defensive covenants",
+    whyItMatters:
+      "Ensures the buyer never overpays and automatically drafts contractual holdbacks ($150k customer retention escrow) into the purchase agreement.",
+  },
+
+  NASH_STAKEHOLDER_MATRIX: {
+    id: "NASH_STAKEHOLDER_MATRIX",
+    name: "Stakeholder Game Theory & Negotiation Posture",
+    shortName: "Negotiation Posture",
+    category: "LEGAL_STATUTORY",
+    categoryLabel: "Operational Supremacy",
+    simpleDefinition:
+      "A 5-party Nash equilibrium solver that calculates the Best Alternative to a Negotiated Agreement (BATNA) across lenders, trustees, and owners.",
+    formulaOrRule: "5-Party Payoff Matrix: Substitute Trustee, Special Servicer, Retiring Owner, Junior Creditors, Title Underwriter",
+    whyItMatters:
+      "Determines whether to purchase the defaulted promissory note directly, file a friendly Deed-in-Lieu, or act as a § 363 bankruptcy stalking horse.",
+    statuteCitation: "Va. Code §§ 55.1-320 to 55.1-322; 11 U.S.C. § 363",
+  },
+
+  HUNDRED_DAY_BLUEPRINT: {
+    id: "HUNDRED_DAY_BLUEPRINT",
+    name: "100-Day Warp Speed™ Post-Acquisition Operating Blueprint",
+    shortName: "100-Day Blueprint",
+    category: "UNDERWRITING_FINANCE",
+    categoryLabel: "Operational Supremacy",
+    simpleDefinition:
+      "A 14-week chronological operational modernization roadmap that turns an owner-dependent distressed shop into an institutional turnkey enterprise.",
+    formulaOrRule: "EBITDA Bridge = Baseline EBITDA + Dynamic Pricing (+3.5%) + Direct Sourcing (-5% COGS) + Telemetry Overtime Reduction (-8%)",
+    whyItMatters:
+      "Eliminates deal drag by pre-planning every operational hire, ERP cutover, and pricing adjustment before wiring the acquisition capital.",
+  },
+
+  CLOSING_COMMAND_CENTER: {
+    id: "CLOSING_COMMAND_CENTER",
+    name: "Autonomous Closing Command Center & 38 Statutory Gates",
+    shortName: "Closing Command",
+    category: "LEGAL_STATUTORY",
+    categoryLabel: "Operational Supremacy",
+    simpleDefinition:
+      "An automated legal closing room auditing 38 state, federal, SBA, and tax milestones before acquisition funds can be released.",
+    formulaOrRule: "Readiness Score % = (Passed Milestones / 38) * 100%; Zero-blocker gate for wire disbursement",
+    whyItMatters:
+      "Prevents catastrophic post-closing successor liabilities like unpaid state sales tax (VA Form R-1) or unrecorded deed-of-trust releases.",
+    statuteCitation: "Va. Code §§ 55.1-321, 58.1-629; SBA SOP 50 10 8.1",
+  },
 };
 
 /**

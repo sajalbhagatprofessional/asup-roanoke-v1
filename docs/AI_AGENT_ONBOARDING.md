@@ -137,7 +137,7 @@ python scripts/run_all_tests.py
 11. **The 50-Deal Roanoke Golden Suite**:
    - Executes `scripts/run_golden_backtest.py` against `tests/golden_suite/roanoke_golden_50.json`.
    - Requires **50/50 Accuracy (100.0%)**, **0 False Positives** reaching the Principal, and **>= 95% Raw Filing Kill Rate**.
-   - Verified across all **131/131 Tests PASSED (100% Coverage)**.
+   - Verified across all **147/147 Tests PASSED (100% Coverage)**.
 
 ---
 

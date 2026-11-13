@@ -23,7 +23,7 @@
 ## 2. Current State of the Repository & Infrastructure
 
 - **Git Branch & Commit**: Branch `main` at commit `af0bb3e` (pushed to remote `https://github.com/sajalbhagatprofessional/asup-roanoke-v1.git`).
-- **Test Suite Status**: **131/131 Tests Passing (100% Coverage)** (`python scripts/run_all_tests.py`).
+- **Test Suite Status**: **147/147 Tests Passing (100% Coverage)** (`python scripts/run_all_tests.py`).
 - **Golden Suite Status**: **50/50 Accuracy (100%)**, 0 false positives, >=95% raw filing kill rate (`scripts/run_golden_backtest.py`).
 - **Next.js 15 Web Application**: Production build verified clean (`npm run build` Exit Code 0) at `apps/web/`.
 - **FastAPI Production REST Server**: Running at `services/api/main.py` with 45+ endpoints.
@@ -42,9 +42,9 @@ You are the Lead Autonomous Software Engineer inside the Antigravity Desktop App
 You are picking up from the Antigravity CLI session (Workspace: `C:\Users\sajal\OneDrive\Desktop\Project Asset Aggregator`). 
 - Master Governance: Read and strictly adhere to `AGENTS.md` and `GEMINI.md`.
 - Master Onboarding: Refer to `docs/AI_AGENT_ONBOARDING.md` and `docs/ARCHITECTURE.md`.
-- Verification Gate: The entire test suite is currently at 131/131 tests passing (100% coverage) with 50/50 Golden Suite accuracy.
-- Frontend Stack: Next.js 15 App Router (`apps/web/`) with Tailwind CSS, Lucide icons, Apple Human Interface styling, 5-role switching (`PRINCIPAL`, `ANALYST`, `COUNSEL`, `CPA`, `LENDER_BROKER`), and the new 46-term Contextual InfoPop (`InfoPop.tsx`) & Master Glossary Modal (`GlossaryModal.tsx`).
-- Backend Stack: FastAPI REST server (`services/api/main.py`), 30-tool Anthropic Model Context Protocol gateway (`services/mcp/server.py`), and air-gapped pure decimal math solvers (`packages/underwriting_engine/`, `packages/reactive_underwriting_dag/`, `packages/capital_allocator/`, `packages/tax_alpha_engine/`, `packages/macro_regime/`).
+- Verification Gate: The entire test suite is currently at 147/147 tests passing (100% coverage) with 50/50 Golden Suite accuracy.
+- Frontend Stack: Next.js 15 App Router (`apps/web/`) with Tailwind CSS, Lucide icons, Apple Human Interface styling, 5-role switching (`PRINCIPAL`, `ANALYST`, `COUNSEL`, `CPA`, `LENDER_BROKER`), the 46-term Contextual InfoPop (`InfoPop.tsx`) & Master Glossary Modal (`GlossaryModal.tsx`), and the Palantir War Room Operations Suite (`UniversalAssetDossierModal.tsx`).
+- Backend Stack: FastAPI REST server (`services/api/main.py`), 34-tool Anthropic Model Context Protocol gateway (`services/mcp/server.py`), and air-gapped pure decimal math solvers (`packages/underwriting_engine/`, `packages/war_room_simulator/`, `packages/negotiation_game_theory/`, `packages/value_creation_blueprint/`, `packages/deal_room_engine/`, `packages/reactive_underwriting_dag/`, `packages/capital_allocator/`, `packages/tax_alpha_engine/`, `packages/macro_regime/`).
 
 ### Non-Negotiable Invariants
 1. Underwriting Air-Gap: Pure Python `decimal.Decimal` (`ROUND_HALF_EVEN`), 0 floats, 0 network/LLM calls in underwriting solvers.
@@ -56,7 +56,7 @@ You are picking up from the Antigravity CLI session (Workspace: `C:\Users\sajal\
 ### Verification First
 Before making any changes, run:
 `python scripts/run_all_tests.py`
-and verify that all 131/131 tests and the 50/50 Golden Suite pass.
+and verify that all 147/147 tests and the 50/50 Golden Suite pass.
 
 Acknowledge full understanding of the mission, invariants, and system architecture, confirm the test status, and stand ready for the next instruction.
 ```
@@ -80,4 +80,4 @@ Acknowledge full understanding of the mission, invariants, and system architectu
 | `apps/web/src/lib/glossary.ts` | 46-term financial, statutory, institutional, and compliance glossary. |
 | `apps/web/src/components/InfoPop.tsx` | Apple-style contextual information popover component. |
 | `apps/web/src/components/GlossaryModal.tsx` | Searchable, category-filtered full-screen master glossary modal. |
-| `scripts/run_all_tests.py` | Master verification runner (131 tests + 50-deal golden backtest). |
+| `scripts/run_all_tests.py` | Master verification runner (147 tests + 50-deal golden backtest). |

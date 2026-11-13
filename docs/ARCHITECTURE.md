@@ -305,5 +305,49 @@ flowchart LR
    - Searchable, category-filtered full-screen translucent modal accessible globally from the navigation bar or from any contextual InfoPop.
    - Real-time search across terms, formulas, and legal statutes, with 1-click citation copying to the clipboard.
 
+---
+
+## 14. Palantir Operational Supremacy & Deal Execution Suite (Milestones 29–31)
+
+To bridge the gap between upstream asset intelligence and execution after LOI signing, Argus integrates 4 deterministic, Palantir-grade operational engines that protect principal capital, solve multi-party negotiation equilibria, accelerate 100-day EBITDA expansion, and gate wire disbursements:
+
+```mermaid
+flowchart TD
+    subgraph Engine1["Engine 1: Palantir War Room™ Crisis Simulator"]
+        W1["5 Concurrent Operational Shocks\n(Churn, Inflation, Capex, Key Tech, Insurance)"] --> W2["Crisis Solvency Solver\n(Crisis DSCR, 12M Gross Burn, Reserve Buffer)"]
+        W2 --> W3["Contractual Defensive Covenants\n($150k Escrow Holdbacks, Warranty, Note Subordination)"]
+    end
+
+    subgraph Engine2["Engine 2: Stakeholder Game Theory"]
+        N1["5 Stakeholders: Trustee, Servicer, Owner, Juniors, Title"] --> N2["Nash Equilibrium Solver\n(BATNA Values, Pain Thresholds, Optimal Structure)"]
+        N2 --> N3["Recommended Structure & Offer Anchors\n(Direct Note vs § 363 Stalking Horse vs Deed-in-Lieu)"]
+    end
+
+    subgraph Engine3["Engine 3: 100-Day Operating Blueprint"]
+        B1["Baseline EBITDA Run-Rate"] --> B2["14-Week Chronological Roadmap\n(Phases 1-4: Triage, Systems, Expansion, Exit)"]
+        B2 --> B3["EBITDA Expansion Bridge (+28%)\n(Dynamic Pricing, Vendor Sourcing, Telemetry Overtime)"]
+    end
+
+    subgraph Engine4["Engine 4: Autonomous Closing Command Center"]
+        C1["38 Statutory Pre-Closing Milestones\n(Corporate, Real Estate/Title, SBA, Tax/Operations)"] --> C2["Closing Readiness Auditor\n(Readiness Score %, Blocker Detection, Holdbacks)"]
+        C2 --> C3["Funding Authorization Gate\n(Zero-Blocker Wire Authorization & Counsel Opinion)"]
+    end
+
+    Engine1 --> Engine2 --> Engine3 --> Engine4
+```
+
+1. **Palantir War Room™ Multi-Variate Crisis & Stress Simulator (`packages/war_room_simulator/`)**:
+   - Air-gapped pure `decimal.Decimal` simulation of 5 simultaneous operational shocks: customer churn %, direct cost inflation %, unplanned machine breakdown capex, key technician loss recruiting premium, and commercial liability insurance shock.
+   - Computes Crisis DSCR, 12-month burn under stress, emergency liquidity reserves, and automatically drafts enforceable contractual defensive covenants ($150,000 customer retention escrow holdback, equipment condition warranty, and seller promissory note subordination).
+2. **Stakeholder Game Theory & Negotiation Posture Engine (`packages/negotiation_game_theory/`)**:
+   - 5-party Nash equilibrium solver evaluating payoffs, timelines, and legal leverage across Substitute Trustee, Senior Special Servicer, Retiring Owner, Junior Creditors, and Title Insurer.
+   - Recommends the dominant transaction structure (`DIRECT_NOTE_PURCHASE`, `SECTION_363_STALKING_HORSE`, `DEED_IN_LIEU_FRIENDLY`, `COURTHOUSE_STEP_FORECLOSURE`), identifies counterparty BATNAs, and computes target opening offer anchors.
+3. **100-Day Warp Speed™ Post-Acquisition Operating Blueprint (`packages/value_creation_blueprint/`)**:
+   - 14-week chronological operational modernization roadmap divided into 4 phases: Phase 1 (Immediate Triage Weeks 1–2), Phase 2 (Cash & Systems Lockdown Weeks 3–6), Phase 3 (Operational Expansion Weeks 7–10), and Phase 4 (Institutional Exit Readiness Weeks 11–14).
+   - Generates a quantified EBITDA value creation bridge (+3.5% dynamic pricing, 5% direct vendor sourcing, 8% predictive telemetry overtime reduction, commercial utility audit) expanding baseline to pro-forma EBITDA.
+4. **Autonomous Closing Command Center & 38-Statute Gate Tracker (`packages/deal_room_engine/`)**:
+   - Audits 38 state, federal, SBA, and tax milestones across Corporate & Authority, Real Estate & Title, Lender & Regulatory (SBA SOP 50 10 8.1), and Tax & Operations (VA Form R-1 Certificate of No Tax Due).
+   - Calculates real-time `closing_readiness_score_pct` and acts as a cryptographic circuit breaker: wire disbursement is strictly blocked if any critical path item is missing or delinquent.
+
 
 

@@ -284,9 +284,19 @@ The platform exposes an Anthropic Model Context Protocol (MCP 2024-11-05) gatewa
 
 ---
 
-## 14. Model Context Protocol (MCP 2024-11-05) Agent Gateway (30 Tools Catalog)
+## 14. Palantir Operational Supremacy & Deal Execution Suite
 
-Argus exposes 30 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
+- `POST /v1/operations/war-room/simulate`: Palantir War Room™ Multi-Variate Crisis & Stress Simulator. Simulates 5 simultaneous operational shocks (customer churn %, COGS inflation %, unplanned machine capex, key technician loss premium, insurance shock). Solves Crisis DSCR, 12-month gross burn, and generates contractual defensive covenants ($150k customer retention holdback, equipment warranty, seller note subordination) to protect principal capital.
+- `POST /v1/operations/negotiation/stakeholder-matrix`: Stakeholder Game Theory & Negotiation Posture Engine. Solves 5-party Nash equilibrium across Substitute Trustee, Senior Special Servicer, Retiring Owner, Junior Creditors, and Title Underwriter. Determines optimal transaction structure (`DIRECT_NOTE_PURCHASE`, `SECTION_363_STALKING_HORSE`, `DEED_IN_LIEU_FRIENDLY`, `COURTHOUSE_STEP_FORECLOSURE`), counterparty BATNAs, and opening offer anchors.
+- `POST /v1/operations/value-creation/100-day-blueprint`: 100-Day Warp Speed™ Post-Acquisition Operating Blueprint. Generates chronological 14-week operational modernization roadmap (Phases 1–4) and quantified EBITDA expansion bridge (+3.5% pricing, 5% vendor sourcing, 8% predictive telemetry overtime reduction, commercial utility audit) expanding baseline to pro-forma EBITDA.
+- `GET /v1/operations/closing/checklist/{deal_id}`: Autonomous Closing Command Center. Audits 38 statutory pre-closing milestones across Corporate & Authority, Real Estate & Title, Lender & Regulatory (SBA SOP 50 10 8.1), and Tax & Operations (VA Form R-1 Certificate of No Tax Due). Solves `closing_readiness_score_pct` and guards fund disbursement.
+- `POST /v1/operations/closing/checklist/{deal_id}/audit`: Autonomous Closing Command Center custom audit with statutory parameter overrides and critical path blocker enforcement.
+
+---
+
+## 15. Model Context Protocol (MCP 2024-11-05) Agent Gateway (34 Tools Catalog)
+
+Argus exposes 34 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
 1. `filter_deal_by_mandate`: Stage 2 zero-cost mandate evaluation.
 2. `solve_sba_sop_50_10_8_1`: Stage 4 pure decimal SBA underwriting solver.
 3. `solve_va_foreclosure_compliance`: Virginia Code § 55.1-321 14-day notice & basis solver.
@@ -317,5 +327,9 @@ Argus exposes 30 deterministic tools over SSE (`POST /v1/mcp/sse`) and JSON-RPC:
 28. `audit_portfolio_concentration`: Citadel multi-mandate portfolio factor neutrality and allocation gate.
 29. `audit_1031_exchange_and_cost_seg`: Vanguard & CPA § 1031 statutory countdown and MACRS cost seg solver.
 30. `simulate_macro_regimes`: Bridgewater Associates 4-Quadrant macro economic regime stress-tester.
+31. `run_war_room_crisis_simulation`: Palantir War Room™ multi-variate crisis & defensive covenants simulator.
+32. `solve_stakeholder_game_theory`: 5-party Nash equilibrium stakeholder game theory & BATNA solver.
+33. `generate_100day_value_creation_blueprint`: 100-Day Warp Speed™ post-acquisition operational roadmap & EBITDA bridge.
+34. `audit_statutory_closing_checklist`: Autonomous Closing Command Center 38 statutory milestone gate auditor.
 
 

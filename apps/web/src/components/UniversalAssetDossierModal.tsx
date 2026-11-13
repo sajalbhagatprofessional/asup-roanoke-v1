@@ -78,6 +78,10 @@ import {
   CostSegregationAnalysisReport,
   ReplayLedgerReport,
   BridgewaterMacroRegimeReport,
+  CrisisSimulationResult,
+  NegotiationStrategyReport,
+  HundredDayBlueprintReport,
+  ClosingChecklistReport,
 } from "../lib/types";
 import {
   runAssetDeepOsint,
@@ -107,6 +111,11 @@ import {
   fetchCostSegregationAnalysis,
   fetchCanonicalEventReplay,
   fetchMacroRegimeStressTest,
+  fetchWarRoomSimulation,
+  fetchNegotiationStrategy,
+  fetchHundredDayBlueprint,
+  fetchClosingChecklist,
+  auditCustomClosingChecklist,
 } from "../lib/api";
 import InfoPop from "./InfoPop";
 
@@ -114,7 +123,7 @@ interface UniversalAssetDossierModalProps {
   asset: UniversalAsset | null;
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "TITAN_ANALYTICS" | "OUTREACH" | "PIPELINE";
+  initialTab?: "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "TITAN_ANALYTICS" | "WAR_ROOM_OPERATIONS" | "OUTREACH" | "PIPELINE";
   onAssetUpdated: (updated: UniversalAsset) => void;
 }
 
@@ -126,7 +135,7 @@ export default function UniversalAssetDossierModal({
   onAssetUpdated,
 }: UniversalAssetDossierModalProps) {
   const [activeTab, setActiveTab] = useState<
-    "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "TITAN_ANALYTICS" | "OUTREACH" | "PIPELINE"
+    "OVERVIEW" | "SPATIAL_TWIN" | "OSINT" | "UNDERWRITING" | "ASSET_HEALTH" | "GOTHAM_ONTOLOGY" | "SOURCING_RADAR" | "TITAN_ANALYTICS" | "WAR_ROOM_OPERATIONS" | "OUTREACH" | "PIPELINE"
   >(initialTab);
   const [currentAsset, setCurrentAsset] = useState<UniversalAsset | null>(asset);
   const [spatialTwin, setSpatialTwin] = useState<ParcelSpatialTwin | null>(null);
@@ -227,6 +236,25 @@ export default function UniversalAssetDossierModal({
   const [macroRegimeReport, setMacroRegimeReport] = useState<BridgewaterMacroRegimeReport | null>(null);
   const [loadingMacroRegime, setLoadingMacroRegime] = useState(false);
 
+  // Palantir Operational Supremacy States
+  const [operationsSubTab, setOperationsSubTab] = useState<
+    "WAR_ROOM" | "NEGOTIATION" | "BLUEPRINT_100D" | "CLOSING_COMMAND"
+  >("WAR_ROOM");
+  const [warRoomReport, setWarRoomReport] = useState<CrisisSimulationResult | null>(null);
+  const [loadingWarRoom, setLoadingWarRoom] = useState(false);
+  const [warCustomerChurn, setWarCustomerChurn] = useState(15);
+  const [warCogsInflation, setWarCogsInflation] = useState(8);
+  const [warUnplannedCapex, setWarUnplannedCapex] = useState(35000);
+
+  const [negotiationReport, setNegotiationReport] = useState<NegotiationStrategyReport | null>(null);
+  const [loadingNegotiation, setLoadingNegotiation] = useState(false);
+
+  const [blueprintReport, setBlueprintReport] = useState<HundredDayBlueprintReport | null>(null);
+  const [loadingBlueprint, setLoadingBlueprint] = useState(false);
+
+  const [closingReport, setClosingReport] = useState<ClosingChecklistReport | null>(null);
+  const [loadingClosing, setLoadingClosing] = useState(false);
+
   useEffect(() => {
     setCurrentAsset(asset);
     setActiveTab(initialTab);
@@ -256,6 +284,10 @@ export default function UniversalAssetDossierModal({
     setCostSegReport(null);
     setReplayReport(null);
     setMacroRegimeReport(null);
+    setWarRoomReport(null);
+    setNegotiationReport(null);
+    setBlueprintReport(null);
+    setClosingReport(null);
     setLookalikeSearchQuery(asset ? `${asset.title} ${asset.asset_class}` : "");
   }, [asset, initialTab]);
 
@@ -298,7 +330,13 @@ export default function UniversalAssetDossierModal({
       if (titanSubTab === "JANE_STREET_REPLAY" && !replayReport) loadEventReplay();
       if (titanSubTab === "MACRO_REGIME" && !macroRegimeReport) loadMacroRegime();
     }
-  }, [activeTab, currentAsset, playbookType, radarSubTab, titanSubTab]);
+    if (activeTab === "WAR_ROOM_OPERATIONS" && currentAsset) {
+      if (operationsSubTab === "WAR_ROOM" && !warRoomReport) loadWarRoomSimulation();
+      if (operationsSubTab === "NEGOTIATION" && !negotiationReport) loadNegotiationStrategy();
+      if (operationsSubTab === "BLUEPRINT_100D" && !blueprintReport) loadBlueprint();
+      if (operationsSubTab === "CLOSING_COMMAND" && !closingReport) loadClosingChecklist();
+    }
+  }, [activeTab, currentAsset, playbookType, radarSubTab, titanSubTab, operationsSubTab]);
 
   const loadAssetHealth = async () => {
     if (!currentAsset) return;
@@ -756,6 +794,95 @@ export default function UniversalAssetDossierModal({
     }
   };
 
+  const loadWarRoomSimulation = async () => {
+    if (!currentAsset) return;
+    setLoadingWarRoom(true);
+    try {
+      const rev = Number(currentAsset.estimated_annual_revenue_usd || 2500000);
+      const ebitda = Number(currentAsset.estimated_sde_or_ebitda_usd || 400000);
+      const price = Number(currentAsset.asking_or_estimated_value_usd || 1800000);
+      const seniorDebtService = Math.round(price * 0.08) || 120000;
+      const res = await fetchWarRoomSimulation({
+        deal_id: currentAsset.asset_id,
+        asset_name: currentAsset.title,
+        naics_code: currentAsset.naics_code || "332710",
+        base_annual_revenue_usd: rev,
+        base_annual_ebitda_usd: ebitda,
+        annual_senior_debt_service_usd: seniorDebtService,
+        customer_churn_pct: warCustomerChurn / 100,
+        cogs_inflation_pct: warCogsInflation / 100,
+        unplanned_capex_usd: warUnplannedCapex,
+      });
+      setWarRoomReport(res.crisis_report);
+    } catch (e) {
+      console.error("Failed to simulate war room crisis:", e);
+    } finally {
+      setLoadingWarRoom(false);
+    }
+  };
+
+  const loadNegotiationStrategy = async () => {
+    if (!currentAsset) return;
+    setLoadingNegotiation(true);
+    try {
+      const price = Number(currentAsset.asking_or_estimated_value_usd || 1800000);
+      const assessed = Math.round(price * 1.35);
+      const ebitda = Number(currentAsset.estimated_sde_or_ebitda_usd || 350000);
+      const res = await fetchNegotiationStrategy({
+        deal_id: currentAsset.asset_id,
+        asset_name: currentAsset.title,
+        senior_defaulted_principal_usd: Math.round(price * 0.75),
+        verified_assessed_real_estate_usd: assessed,
+        estimated_going_concern_ebitda_usd: ebitda,
+        irs_tax_lien_present: false,
+        notice_lead_days: 18,
+        owner_personal_guarantee_active: true,
+      });
+      setNegotiationReport(res.negotiation_report);
+    } catch (e) {
+      console.error("Failed to solve negotiation strategy:", e);
+    } finally {
+      setLoadingNegotiation(false);
+    }
+  };
+
+  const loadBlueprint = async () => {
+    if (!currentAsset) return;
+    setLoadingBlueprint(true);
+    try {
+      const price = Number(currentAsset.asking_or_estimated_value_usd || 1800000);
+      const rev = Number(currentAsset.estimated_annual_revenue_usd || 2800000);
+      const ebitda = Number(currentAsset.estimated_sde_or_ebitda_usd || 380000);
+      const res = await fetchHundredDayBlueprint({
+        deal_id: currentAsset.asset_id,
+        asset_name: currentAsset.title,
+        naics_code: currentAsset.naics_code || "332710",
+        purchase_price_usd: price,
+        baseline_annual_revenue_usd: rev,
+        baseline_annual_ebitda_usd: ebitda,
+        exit_multiple_ev_ebitda: 6.5,
+      });
+      setBlueprintReport(res.blueprint_report);
+    } catch (e) {
+      console.error("Failed to load 100-day blueprint:", e);
+    } finally {
+      setLoadingBlueprint(false);
+    }
+  };
+
+  const loadClosingChecklist = async () => {
+    if (!currentAsset) return;
+    setLoadingClosing(true);
+    try {
+      const res = await fetchClosingChecklist(currentAsset.asset_id);
+      setClosingReport(res.closing_report);
+    } catch (e) {
+      console.error("Failed to load closing checklist:", e);
+    } finally {
+      setLoadingClosing(false);
+    }
+  };
+
   const formatUSD = (val?: string) => {
     if (!val) return "—";
     const num = parseFloat(val);
@@ -911,6 +1038,20 @@ export default function UniversalAssetDossierModal({
             <span>Titan Analytics</span>
             <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-cyan-950 border border-cyan-800 text-cyan-300 font-bold">
               5 Systems
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("WAR_ROOM_OPERATIONS")}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition whitespace-nowrap ${
+              activeTab === "WAR_ROOM_OPERATIONS"
+                ? "bg-red-600 text-white shadow-md shadow-red-950"
+                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 text-red-400" />
+            <span>War Room Operations</span>
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-red-950 border border-red-800 text-red-300 font-bold">
+              Palantir War Room
             </span>
           </button>
           <button
@@ -3919,6 +4060,656 @@ export default function UniversalAssetDossierModal({
                           </span>
                           <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
                             {macroRegimeReport.recommended_hedging_strategy}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* PALANTIR OPERATIONAL SUPREMACY SUITE (WAR ROOM, NEGOTIATION, BLUEPRINT, CLOSING) */}
+          {/* ========================================================================= */}
+          {activeTab === "WAR_ROOM_OPERATIONS" && (
+            <div className="space-y-6">
+              {/* Operations Sub-Tab Navigation */}
+              <div className="flex items-center gap-1.5 p-1 bg-zinc-950/80 rounded-xl border border-zinc-800 text-xs font-semibold overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOperationsSubTab("WAR_ROOM");
+                    if (!warRoomReport) loadWarRoomSimulation();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition whitespace-nowrap ${
+                    operationsSubTab === "WAR_ROOM"
+                      ? "bg-red-600 text-white shadow-md shadow-red-950"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <Flame className="w-3.5 h-3.5 text-red-300" />
+                  <span>War Room Simulator</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOperationsSubTab("NEGOTIATION");
+                    if (!negotiationReport) loadNegotiationStrategy();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition whitespace-nowrap ${
+                    operationsSubTab === "NEGOTIATION"
+                      ? "bg-amber-600 text-white shadow-md shadow-amber-950"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <Scale className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Stakeholder Game Theory</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOperationsSubTab("BLUEPRINT_100D");
+                    if (!blueprintReport) loadBlueprint();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition whitespace-nowrap ${
+                    operationsSubTab === "BLUEPRINT_100D"
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-950"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>100-Day Operating Blueprint</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOperationsSubTab("CLOSING_COMMAND");
+                    if (!closingReport) loadClosingChecklist();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition whitespace-nowrap ${
+                    operationsSubTab === "CLOSING_COMMAND"
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-950"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-300" />
+                  <span>Closing Command Center (38 Gates)</span>
+                </button>
+              </div>
+
+              {/* 1. PALANTIR WAR ROOM CRISIS SIMULATOR */}
+              {operationsSubTab === "WAR_ROOM" && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-red-400 flex items-center gap-1.5">
+                          <Flame className="w-4 h-4 text-red-400" />
+                          Palantir War Room™ Multi-Variate Crisis &amp; Stress Simulator
+                        </span>
+                        <InfoPop term="PALANTIR_WAR_ROOM" size="xs" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadWarRoomSimulation}
+                        disabled={loadingWarRoom}
+                        className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition"
+                      >
+                        {loadingWarRoom ? "Simulating..." : "Simulate Shocks"}
+                      </button>
+                    </div>
+
+                    {/* Interactive Shock Controls */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-zinc-900/60 rounded-xl border border-zinc-800/80">
+                      <div>
+                        <div className="flex justify-between text-[11px] mb-1">
+                          <span className="text-zinc-400">Customer Churn:</span>
+                          <span className="font-mono text-red-400 font-bold">{warCustomerChurn}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="50"
+                          value={warCustomerChurn}
+                          onChange={(e) => setWarCustomerChurn(Number(e.target.value))}
+                          className="w-full accent-red-500 cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-[11px] mb-1">
+                          <span className="text-zinc-400">COGS Inflation:</span>
+                          <span className="font-mono text-amber-400 font-bold">+{warCogsInflation}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="30"
+                          value={warCogsInflation}
+                          onChange={(e) => setWarCogsInflation(Number(e.target.value))}
+                          className="w-full accent-amber-500 cursor-pointer"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-[11px] mb-1">
+                          <span className="text-zinc-400">Unplanned Capex:</span>
+                          <span className="font-mono text-zinc-200 font-bold">{formatUSD(String(warUnplannedCapex))}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="150000"
+                          step="5000"
+                          value={warUnplannedCapex}
+                          onChange={(e) => setWarUnplannedCapex(Number(e.target.value))}
+                          className="w-full accent-blue-500 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    {warRoomReport && (
+                      <div className="space-y-4">
+                        {/* Summary KPI Badges */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Solvency Status</span>
+                            <span className={`text-sm font-extrabold font-mono mt-0.5 block ${
+                              warRoomReport.solvency_status === "ROBUST_RESILIENT"
+                                ? "text-emerald-400"
+                                : warRoomReport.solvency_status === "STRESSED_MODERATE"
+                                ? "text-amber-400"
+                                : "text-red-400"
+                            }`}>
+                              {warRoomReport.solvency_status.replace(/_/g, " ")}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">Crisis Tier</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Crisis DSCR</span>
+                            <div className="flex items-baseline gap-1.5 mt-0.5">
+                              <span className={`text-lg font-extrabold font-mono ${
+                                parseFloat(warRoomReport.crisis_dscr) >= 1.25
+                                  ? "text-emerald-400"
+                                  : parseFloat(warRoomReport.crisis_dscr) >= 1.0
+                                  ? "text-amber-400"
+                                  : "text-red-400"
+                              }`}>
+                                {warRoomReport.crisis_dscr}x
+                              </span>
+                              <span className="text-[10px] text-zinc-500 line-through font-mono">
+                                {warRoomReport.base_dscr}x
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-zinc-400 block font-mono">Stressed Coverage</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Stressed EBITDA</span>
+                            <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
+                              {formatUSD(warRoomReport.crisis_ebitda_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">
+                              Base: {formatUSD(warRoomReport.base_ebitda_usd)}
+                            </span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Emergency Reserve</span>
+                            <span className="text-base font-extrabold text-amber-300 font-mono mt-0.5 block">
+                              {formatUSD(warRoomReport.recommended_emergency_liquidity_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">Buffer Required</span>
+                          </div>
+                        </div>
+
+                        {/* Capital Call Alert if needed */}
+                        {warRoomReport.is_capital_call_required && (
+                          <div className="p-3.5 rounded-xl bg-red-950/40 border border-red-500/50 flex items-start gap-2.5">
+                            <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                            <div className="space-y-0.5">
+                              <span className="text-xs font-bold text-red-300">
+                                Capital Call Triggered: {formatUSD(warRoomReport.capital_call_shortfall_usd)} Shortfall
+                              </span>
+                              <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
+                                Operating cash flow under concurrent stress drops below senior debt service. Contractual defensive holdbacks must be enforced prior to closing.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Contractual Defensive Covenants */}
+                        <div className="space-y-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 block">
+                            Contractual Defensive Covenants &amp; Escrow Protections ({warRoomReport.defensive_covenants.length})
+                          </span>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {warRoomReport.defensive_covenants.map((cov, idx) => (
+                              <div
+                                key={idx}
+                                className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-white text-xs">{cov.covenant_name}</span>
+                                  <span className="font-mono text-emerald-400 font-bold text-xs">
+                                    {formatUSD(cov.dollar_impact_or_reserve_usd)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-mono">
+                                  <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                                    {cov.legal_mechanism}
+                                  </span>
+                                  <span>•</span>
+                                  <span>Target: {cov.target_counterparty}</span>
+                                </div>
+                                <div className="p-2 rounded-lg bg-zinc-950/80 border border-zinc-800/80 text-[10px] text-zinc-300 font-mono italic">
+                                  "{cov.draft_contract_language}"
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Executive Summary */}
+                        <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 text-xs text-zinc-300 space-y-1">
+                          <span className="font-bold uppercase tracking-wider text-[10px] text-red-300">
+                            Principal War Room Synthesis
+                          </span>
+                          <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                            {warRoomReport.executive_summary}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. STAKEHOLDER GAME THEORY & NEGOTIATION POSTURE */}
+              {operationsSubTab === "NEGOTIATION" && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                          <Scale className="w-4 h-4 text-amber-400" />
+                          Nash Equilibrium Stakeholder Game Theory &amp; Negotiation Posture
+                        </span>
+                        <InfoPop term="NASH_STAKEHOLDER_MATRIX" size="xs" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadNegotiationStrategy}
+                        disabled={loadingNegotiation}
+                        className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition"
+                      >
+                        {loadingNegotiation ? "Solving..." : "Solve Equilibrium"}
+                      </button>
+                    </div>
+
+                    {negotiationReport && (
+                      <div className="space-y-4">
+                        {/* Top Strategy KPI Badges */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Optimal Structure</span>
+                            <span className="text-sm font-extrabold text-amber-400 font-mono mt-0.5 block">
+                              {negotiationReport.optimal_transaction_structure.replace(/_/g, " ")}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">Nash Dominant</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Recommended Opening Offer</span>
+                            <span className="text-lg font-extrabold text-emerald-400 font-mono mt-0.5 block">
+                              {formatUSD(negotiationReport.recommended_opening_offer_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">Target Anchor</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Max Allowable Bid</span>
+                            <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
+                              {formatUSD(negotiationReport.maximum_allowable_bid_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">&le; 70% Va. Code &sect; 55.1-321</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Walk-Away Leverage Point</span>
+                            <span className="text-base font-extrabold text-red-400 font-mono mt-0.5 block">
+                              {formatUSD(negotiationReport.walk_away_leverage_point_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">Principal Ceiling</span>
+                          </div>
+                        </div>
+
+                        {/* 5-Party Stakeholder Payoff Matrix */}
+                        <div className="space-y-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 block">
+                            5-Party Stakeholder Payoffs &amp; Counterparty BATNAs
+                          </span>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {negotiationReport.stakeholder_matrix.map((s, idx) => (
+                              <div
+                                key={idx}
+                                className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-white text-xs">{s.stakeholder_name}</span>
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-zinc-800 text-zinc-300">
+                                    {s.payoff_preference.replace(/_/g, " ")}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                                  <div>
+                                    <span className="text-[10px] text-zinc-500 block">Estimated BATNA:</span>
+                                    <span className="text-emerald-400 font-bold">{formatUSD(s.estimated_batna_value_usd)}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-zinc-500 block">Pain Horizon:</span>
+                                    <span className="text-amber-400 font-bold">{s.pain_threshold_timeline_days} Days</span>
+                                  </div>
+                                </div>
+                                <div className="space-y-1 text-[11px] text-zinc-400">
+                                  <div><strong className="text-zinc-300">Legal Leverage:</strong> {s.legal_leverage_description}</div>
+                                  <div><strong className="text-red-400">Key Vulnerability:</strong> {s.key_vulnerability}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Negotiation Roadmap Steps */}
+                        <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-amber-300 block">
+                            Execution Playbook &amp; Negotiation Roadmap
+                          </span>
+                          <div className="space-y-1.5">
+                            {negotiationReport.negotiation_roadmap_steps.map((step, idx) => (
+                              <div key={idx} className="flex items-start gap-2 text-xs text-zinc-300 font-mono">
+                                <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-amber-400 font-bold text-[10px]">
+                                  {idx + 1}
+                                </span>
+                                <span>{step}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Game Theoretic Synthesis */}
+                        <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs space-y-1">
+                          <span className="font-bold text-amber-300 uppercase tracking-wider text-[10px]">
+                            Strategic Game-Theoretic Synthesis
+                          </span>
+                          <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
+                            {negotiationReport.game_theoretic_synthesis}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. 100-DAY POST-ACQUISITION OPERATING BLUEPRINT */}
+              {operationsSubTab === "BLUEPRINT_100D" && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                          <TrendingUp className="w-4 h-4 text-emerald-400" />
+                          100-Day Warp Speed™ Post-Acquisition Operating Blueprint
+                        </span>
+                        <InfoPop term="HUNDRED_DAY_BLUEPRINT" size="xs" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadBlueprint}
+                        disabled={loadingBlueprint}
+                        className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition"
+                      >
+                        {loadingBlueprint ? "Generating..." : "Generate 14-Week Plan"}
+                      </button>
+                    </div>
+
+                    {blueprintReport && (
+                      <div className="space-y-4">
+                        {/* Value Creation KPI Badges */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Baseline EBITDA</span>
+                            <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
+                              {formatUSD(blueprintReport.baseline_annual_ebitda_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">Day 0 Run-Rate</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Pro-Forma EBITDA</span>
+                            <span className="text-lg font-extrabold text-emerald-400 font-mono mt-0.5 block">
+                              {formatUSD(blueprintReport.pro_forma_annual_ebitda_usd)}
+                            </span>
+                            <span className="text-[10px] text-emerald-300 block font-mono">
+                              +{blueprintReport.ebitda_expansion_percentage_pct}% Expansion
+                            </span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Total Expansion</span>
+                            <span className="text-base font-extrabold text-emerald-400 font-mono mt-0.5 block">
+                              +{formatUSD(blueprintReport.total_ebitda_expansion_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">Annualized Bridge</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Equity Value Created</span>
+                            <span className="text-base font-extrabold text-purple-400 font-mono mt-0.5 block">
+                              +{formatUSD(blueprintReport.projected_equity_value_creation_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">At {blueprintReport.exit_multiple_applied}x Exit Multiple</span>
+                          </div>
+                        </div>
+
+                        {/* EBITDA Expansion Bridge Breakdown */}
+                        <div className="space-y-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 block">
+                            EBITDA Value Creation Bridge (4 Levers)
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                            {blueprintReport.ebitda_bridge_breakdown.map((b, idx) => (
+                              <div
+                                key={idx}
+                                className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 space-y-1.5"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-white text-xs">{b.expansion_lever}</span>
+                                  <span className="font-mono text-emerald-400 font-bold text-xs">
+                                    +{formatUSD(b.incremental_annual_ebitda_usd)}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-zinc-400 font-mono">
+                                  <span>Week {b.target_completion_week} • {b.target_domain}</span>
+                                </div>
+                                <p className="text-[10px] text-zinc-300 leading-tight">
+                                  {b.operational_mechanism}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 14-Week Chronological Milestone Roadmap */}
+                        <div className="space-y-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 block">
+                            14-Week Execution Schedule ({blueprintReport.milestone_schedule.length} Milestones)
+                          </span>
+                          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                            {blueprintReport.milestone_schedule.map((m) => (
+                              <div
+                                key={m.milestone_id}
+                                className="p-3 rounded-xl bg-zinc-900/80 border border-zinc-800 flex items-start justify-between gap-3"
+                              >
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300 font-mono text-[10px] font-bold">
+                                      Week {m.week_number}
+                                    </span>
+                                    <span className="font-bold text-white text-xs">{m.title}</span>
+                                  </div>
+                                  <p className="text-[11px] text-zinc-400">{m.objective}</p>
+                                </div>
+                                <div className="text-right shrink-0 space-y-1">
+                                  <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[9px] font-mono block">
+                                    {m.responsible_role}
+                                  </span>
+                                  <span className="text-[10px] text-emerald-400 font-mono block font-bold">
+                                    {m.statutory_or_operational_kpi}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Executive Summary */}
+                        <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs space-y-1">
+                          <span className="font-bold text-emerald-300 uppercase tracking-wider text-[10px]">
+                            100-Day Operational Mandate
+                          </span>
+                          <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
+                            {blueprintReport.executive_mandate_summary}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 4. CLOSING COMMAND CENTER */}
+              {operationsSubTab === "CLOSING_COMMAND" && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-blue-400" />
+                          Autonomous Closing Command Center &amp; 38 Statutory Pre-Closing Gates
+                        </span>
+                        <InfoPop term="CLOSING_COMMAND_CENTER" size="xs" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={loadClosingChecklist}
+                        disabled={loadingClosing}
+                        className="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition"
+                      >
+                        {loadingClosing ? "Auditing..." : "Audit Closing Gates"}
+                      </button>
+                    </div>
+
+                    {closingReport && (
+                      <div className="space-y-4">
+                        {/* Closing Readiness KPI Badges */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Readiness Score</span>
+                            <span className="text-2xl font-extrabold text-blue-400 font-mono mt-0.5 block">
+                              {closingReport.closing_readiness_score_pct}%
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">
+                              {closingReport.passed_milestones_count} / {closingReport.total_statutory_milestones_count} Gates
+                            </span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Wire Authorization</span>
+                            <span className={`text-base font-extrabold font-mono mt-0.5 block ${
+                              closingReport.is_funding_authorized ? "text-emerald-400" : "text-red-400"
+                            }`}>
+                              {closingReport.is_funding_authorized ? "AUTHORIZED" : "BLOCKED"}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">
+                              {closingReport.blocked_milestones_count} Blockers Active
+                            </span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Escrow Holdback</span>
+                            <span className="text-base font-extrabold text-amber-400 font-mono mt-0.5 block">
+                              {formatUSD(closingReport.total_escrow_holdback_usd)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block font-mono">Title &amp; Curative</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500 block">Statutory Gate</span>
+                            <span className="text-base font-extrabold text-white font-mono mt-0.5 block">
+                              Va. &sect; 55.1-321
+                            </span>
+                            <span className="text-[10px] text-emerald-400 block font-mono">SBA SOP 50 10 8.1</span>
+                          </div>
+                        </div>
+
+                        {/* Blockers alert if active */}
+                        {closingReport.critical_blockers_list.length > 0 && (
+                          <div className="p-3.5 rounded-xl bg-red-950/40 border border-red-500/50 space-y-1">
+                            <div className="flex items-center gap-1.5 text-red-300 font-bold text-xs">
+                              <AlertCircle className="w-4 h-4 text-red-400" />
+                              <span>Critical Path Blockers Preventing Wire Release ({closingReport.critical_blockers_list.length})</span>
+                            </div>
+                            <ul className="list-disc list-inside text-[11px] text-zinc-300 space-y-0.5">
+                              {closingReport.critical_blockers_list.map((b, idx) => (
+                                <li key={idx}>{b}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* 38 Milestones by Category */}
+                        <div className="space-y-3">
+                          <span className="text-xs font-bold uppercase tracking-wider text-zinc-300 block">
+                            38 Statutory Pre-Closing Milestones
+                          </span>
+                          <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                            {closingReport.milestones.map((m) => (
+                              <div
+                                key={m.milestone_code}
+                                className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 text-xs ${
+                                  m.status === "PASSED"
+                                    ? "bg-zinc-900/60 border-zinc-800"
+                                    : m.status === "BLOCKED"
+                                    ? "bg-red-950/20 border-red-500/40"
+                                    : "bg-zinc-900/40 border-zinc-800"
+                                }`}
+                              >
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-[10px] text-zinc-500 font-bold">{m.milestone_code}</span>
+                                    <span className="font-bold text-white">{m.description}</span>
+                                    {m.required_for_funding && (
+                                      <span className="px-1 py-0.2 rounded text-[8px] bg-red-950 border border-red-800 text-red-300 font-bold">
+                                        REQUIRED
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-zinc-400 block font-mono">
+                                    {m.statutory_or_contractual_basis} • {m.responsible_role}
+                                  </span>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono shrink-0 ${
+                                  m.status === "PASSED"
+                                    ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                                    : m.status === "BLOCKED"
+                                    ? "bg-red-950 text-red-300 border border-red-800"
+                                    : "bg-amber-950 text-amber-300 border border-amber-800"
+                                }`}>
+                                  {m.status}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Counsel Closing Opinion */}
+                        <div className="p-3.5 rounded-xl bg-blue-950/40 border border-blue-500/40 text-xs space-y-1">
+                          <span className="font-bold text-blue-300 uppercase tracking-wider text-[10px]">
+                            Counsel Statutory Closing Opinion
+                          </span>
+                          <p className="text-[11px] text-zinc-300 leading-relaxed font-sans">
+                            {closingReport.counsel_closing_opinion}
                           </p>
                         </div>
                       </div>

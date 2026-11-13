@@ -1354,6 +1354,111 @@ export async function fetchMacroRegimeStressTest(params: {
   return res.json();
 }
 
+// ==========================================
+// PALANTIR OPERATIONAL SUPREMACY API METHODS
+// ==========================================
+
+export async function fetchWarRoomSimulation(params: {
+  deal_id: string;
+  asset_name?: string;
+  naics_code?: string;
+  base_annual_revenue_usd: number;
+  base_annual_ebitda_usd: number;
+  annual_senior_debt_service_usd: number;
+  customer_churn_pct?: number;
+  cogs_inflation_pct?: number;
+  unplanned_capex_usd?: number;
+  key_person_recruiting_premium_usd?: number;
+  insurance_cost_shock_pct?: number;
+  baseline_insurance_expense_usd?: number;
+  existing_liquid_cash_reserves_usd?: number;
+}): Promise<{ status: string; crisis_report: import("./types").CrisisSimulationResult }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/operations/war-room/simulate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to simulate crisis war room: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchNegotiationStrategy(params: {
+  deal_id: string;
+  asset_name?: string;
+  senior_defaulted_principal_usd: number;
+  accrued_default_interest_and_fees_usd?: number;
+  junior_encumbrances_usd?: number;
+  verified_assessed_real_estate_usd: number;
+  estimated_going_concern_ebitda_usd: number;
+  irs_tax_lien_present?: boolean;
+  notice_lead_days?: number;
+  owner_personal_guarantee_active?: boolean;
+  competing_bidders_count?: number;
+}): Promise<{ status: string; negotiation_report: import("./types").NegotiationStrategyReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/operations/negotiation/stakeholder-matrix`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to solve stakeholder game theory: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchHundredDayBlueprint(params: {
+  deal_id: string;
+  asset_name?: string;
+  naics_code?: string;
+  purchase_price_usd: number;
+  baseline_annual_revenue_usd: number;
+  baseline_annual_ebitda_usd: number;
+  exit_multiple_ev_ebitda?: number;
+}): Promise<{ status: string; blueprint_report: import("./types").HundredDayBlueprintReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/operations/value-creation/100-day-blueprint`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to generate 100-day blueprint: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchClosingChecklist(deal_id: string): Promise<{
+  status: string;
+  closing_report: import("./types").ClosingChecklistReport;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/operations/closing/checklist/${deal_id}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Failed to fetch closing checklist: ${res.statusText}`);
+  return res.json();
+}
+
+export async function auditCustomClosingChecklist(
+  deal_id: string,
+  params: {
+    asset_name?: string;
+    total_purchase_price_usd: number;
+    total_escrow_holdback_required_usd?: number;
+    irs_redemption_active?: boolean;
+    open_lust_or_flood_issue?: boolean;
+    principal_approval_token_present?: boolean;
+    counsel_signoff_present?: boolean;
+  }
+): Promise<{ status: string; closing_report: import("./types").ClosingChecklistReport }> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/operations/closing/checklist/${deal_id}/audit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) throw new Error(`Failed to audit closing checklist: ${res.statusText}`);
+  return res.json();
+}
+
 
 
 

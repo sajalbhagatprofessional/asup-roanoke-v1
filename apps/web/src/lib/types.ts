@@ -1399,6 +1399,157 @@ export interface BridgewaterMacroRegimeReport {
   dalio_macro_synthesis: string;
 }
 
+// =========================================================================
+// PALANTIR OPERATIONAL SUPREMACY ENGINES
+// =========================================================================
+
+export type CrisisSolvencyStatus =
+  | "ROBUST_RESILIENT"
+  | "STRESSED_MODERATE"
+  | "COVENANT_BREACH_VULNERABLE"
+  | "INSOLVENT_DISTRESS";
+
+export interface DefensiveContractualCovenant {
+  covenant_name: string;
+  legal_mechanism: string;
+  target_counterparty: string;
+  dollar_impact_or_reserve_usd: string;
+  draft_contract_language: string;
+}
+
+export interface CrisisSimulationResult {
+  deal_id: string;
+  asset_name: string;
+  base_dscr: string;
+  crisis_dscr: string;
+  base_ebitda_usd: string;
+  crisis_ebitda_usd: string;
+  gross_cash_burn_12m_usd: string;
+  net_burn_after_reserves_usd: string;
+  solvency_status: CrisisSolvencyStatus;
+  is_capital_call_required: boolean;
+  capital_call_shortfall_usd: string;
+  recommended_emergency_liquidity_usd: string;
+  defensive_covenants: DefensiveContractualCovenant[];
+  executive_summary: string;
+}
+
+export type TransactionStructureType =
+  | "DIRECT_NOTE_PURCHASE"
+  | "SECTION_363_STALKING_HORSE"
+  | "DEED_IN_LIEU_FRIENDLY"
+  | "COURTHOUSE_STEP_FORECLOSURE";
+
+export type StakeholderRole =
+  | "SUBSTITUTE_TRUSTEE"
+  | "SENIOR_LENDER_SPECIAL_SERVICER"
+  | "DISTRESSED_RETIRING_OWNER"
+  | "JUNIOR_ENCUMBRANCE_HOLDERS"
+  | "TITLE_UNDERWRITER";
+
+export type PayoffPreference =
+  | "CASH_EXPEDIENCY"
+  | "PAR_PRINCIPAL_RECOVERY"
+  | "LIABILITY_RELEASE"
+  | "CRAMDOWN_AVOIDANCE"
+  | "INSURABLE_FEE_SIMPLE";
+
+export interface StakeholderProfile {
+  role: StakeholderRole;
+  stakeholder_name: string;
+  payoff_preference: PayoffPreference;
+  estimated_batna_value_usd: string;
+  pain_threshold_timeline_days: number;
+  legal_leverage_description: string;
+  key_vulnerability: string;
+}
+
+export interface NegotiationStrategyReport {
+  deal_id: string;
+  asset_name: string;
+  optimal_transaction_structure: TransactionStructureType;
+  recommended_opening_offer_usd: string;
+  maximum_allowable_bid_usd: string;
+  walk_away_leverage_point_usd: string;
+  stakeholder_matrix: StakeholderProfile[];
+  negotiation_roadmap_steps: string[];
+  game_theoretic_synthesis: string;
+}
+
+export type ExecutionPhase =
+  | "IMMEDIATE_TRIAGE_WEEKS_1_2"
+  | "CASH_AND_SYSTEMS_LOCKDOWN_WEEKS_3_6"
+  | "OPERATIONAL_EXPANSION_WEEKS_7_10"
+  | "EXIT_READINESS_WEEKS_11_14";
+
+export interface EBITDAExpansionBridge {
+  expansion_lever: string;
+  target_domain: string;
+  incremental_annual_ebitda_usd: string;
+  operational_mechanism: string;
+  target_completion_week: number;
+}
+
+export interface HundredDayMilestone {
+  milestone_id: string;
+  week_number: number;
+  phase: ExecutionPhase;
+  title: string;
+  objective: string;
+  responsible_role: string;
+  statutory_or_operational_kpi: string;
+}
+
+export interface HundredDayBlueprintReport {
+  deal_id: string;
+  asset_name: string;
+  purchase_price_usd: string;
+  baseline_annual_ebitda_usd: string;
+  pro_forma_annual_ebitda_usd: string;
+  total_ebitda_expansion_usd: string;
+  ebitda_expansion_percentage_pct: string;
+  projected_equity_value_creation_usd: string;
+  exit_multiple_applied: string;
+  milestone_schedule: HundredDayMilestone[];
+  ebitda_bridge_breakdown: EBITDAExpansionBridge[];
+  executive_mandate_summary: string;
+}
+
+export type MilestoneCategory =
+  | "CORPORATE_AND_AUTHORITY"
+  | "REAL_ESTATE_AND_TITLE"
+  | "LENDER_AND_REGULATORY"
+  | "TAX_AND_OPERATIONS";
+
+export type MilestoneStatus = "PASSED" | "IN_PROGRESS" | "BLOCKED" | "WAIVED";
+
+export interface StatutoryClosingMilestone {
+  milestone_code: string;
+  category: MilestoneCategory;
+  description: string;
+  statutory_or_contractual_basis: string;
+  status: MilestoneStatus;
+  required_for_funding: boolean;
+  responsible_role: string;
+  verified_timestamp?: string;
+  blocker_detail?: string;
+}
+
+export interface ClosingChecklistReport {
+  deal_id: string;
+  asset_name: string;
+  total_statutory_milestones_count: number;
+  passed_milestones_count: number;
+  blocked_milestones_count: number;
+  in_progress_milestones_count: number;
+  closing_readiness_score_pct: string;
+  is_funding_authorized: boolean;
+  total_escrow_holdback_usd: string;
+  milestones: StatutoryClosingMilestone[];
+  critical_blockers_list: string[];
+  counsel_closing_opinion: string;
+}
+
 
 
 

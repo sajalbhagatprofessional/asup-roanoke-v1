@@ -572,6 +572,89 @@ MCP_TOOLS_CATALOG: List[McpTool] = [
             },
         },
     ),
+    McpTool(
+        name="run_war_room_crisis_simulation",
+        description=(
+            "Palantir War Room™ Multi-Variate Crisis & Stress Simulator: simulates concurrent customer concentration churn, "
+            "direct material inflation, machinery failure, key person loss, and insurance shock, generating defensive contractual covenants."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["base_annual_revenue_usd", "base_annual_ebitda_usd", "annual_senior_debt_service_usd"],
+            "properties": {
+                "deal_id": {"type": "string", "default": "DEAL-001"},
+                "asset_name": {"type": "string", "default": "Roanoke Precision CNC"},
+                "naics_code": {"type": "string", "default": "332710"},
+                "base_annual_revenue_usd": {"type": "number", "description": "Baseline annual revenue in USD"},
+                "base_annual_ebitda_usd": {"type": "number", "description": "Baseline annual EBITDA in USD"},
+                "annual_senior_debt_service_usd": {"type": "number", "description": "Annual senior debt service in USD"},
+                "customer_churn_pct": {"type": "number", "default": 0.18, "description": "Simulated customer churn %"},
+                "cogs_inflation_pct": {"type": "number", "default": 0.12, "description": "Simulated COGS inflation %"},
+                "unplanned_capex_usd": {"type": "number", "default": 65000.0, "description": "Unplanned capex in USD"},
+            },
+        },
+    ),
+    McpTool(
+        name="solve_stakeholder_game_theory",
+        description=(
+            "Stakeholder Game Theory & Negotiation Posture Engine: models 5-party Nash equilibrium payoffs across Trustees, "
+            "Special Servicers, Retiring Owners, Junior Creditors, and Title Insurers to determine optimal M&A structure and BATNA."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["senior_defaulted_principal_usd", "verified_assessed_real_estate_usd", "estimated_going_concern_ebitda_usd"],
+            "properties": {
+                "deal_id": {"type": "string", "default": "DEAL-001"},
+                "asset_name": {"type": "string", "default": "Salem Precision Tooling"},
+                "senior_defaulted_principal_usd": {"type": "number", "description": "Defaulted senior principal in USD"},
+                "accrued_default_interest_and_fees_usd": {"type": "number", "default": 45000.0, "description": "Accrued fees in USD"},
+                "junior_encumbrances_usd": {"type": "number", "default": 180000.0, "description": "Junior encumbrances in USD"},
+                "verified_assessed_real_estate_usd": {"type": "number", "description": "Verified assessed CRE in USD"},
+                "estimated_going_concern_ebitda_usd": {"type": "number", "description": "Estimated EBITDA in USD"},
+                "irs_tax_lien_present": {"type": "boolean", "default": False, "description": "Whether an IRS tax lien is recorded"},
+                "notice_lead_days": {"type": "integer", "default": 18, "description": "Foreclosure notice lead days"},
+            },
+        },
+    ),
+    McpTool(
+        name="generate_100day_value_creation_blueprint",
+        description=(
+            "100-Day Warp Speed™ Post-Acquisition Operating Blueprint: generates a chronological 14-week operational modernization "
+            "playbook and a quantified EBITDA expansion bridge (+20% to +45% EBITDA expansion)."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["purchase_price_usd", "baseline_annual_revenue_usd", "baseline_annual_ebitda_usd"],
+            "properties": {
+                "deal_id": {"type": "string", "default": "DEAL-001"},
+                "asset_name": {"type": "string", "default": "Star City Fabrication"},
+                "naics_code": {"type": "string", "default": "332312"},
+                "purchase_price_usd": {"type": "number", "description": "Acquisition price in USD"},
+                "baseline_annual_revenue_usd": {"type": "number", "description": "Baseline annual revenue in USD"},
+                "baseline_annual_ebitda_usd": {"type": "number", "description": "Baseline annual EBITDA in USD"},
+                "exit_multiple_ev_ebitda": {"type": "number", "default": 6.5, "description": "Pro-forma exit multiple"},
+            },
+        },
+    ),
+    McpTool(
+        name="audit_statutory_closing_checklist",
+        description=(
+            "Autonomous Closing Command Center & 38-Statute Gate Tracker: audits all 38 pre-closing statutory gates across Corporate, "
+            "Real Estate/Title, SBA Lender, and Tax domains to compute Closing Readiness Score (0-100%) and verify funding authorization."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["total_purchase_price_usd"],
+            "properties": {
+                "deal_id": {"type": "string", "default": "DEAL-001"},
+                "asset_name": {"type": "string", "default": "Blue Ridge Industrial"},
+                "total_purchase_price_usd": {"type": "number", "description": "Total purchase price in USD"},
+                "total_escrow_holdback_required_usd": {"type": "number", "default": 175000.0, "description": "Holdback in USD"},
+                "irs_redemption_active": {"type": "boolean", "default": False, "description": "Whether IRS redemption is active"},
+                "open_lust_or_flood_issue": {"type": "boolean", "default": False, "description": "Whether an environmental defect exists"},
+            },
+        },
+    ),
 ]
 
 
@@ -987,6 +1070,65 @@ def execute_mcp_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any
                 base_annual_debt_service_usd=ads,
             )
             return {"macro_regime_report": rep.to_dict()}
+
+        elif tool_name == "run_war_room_crisis_simulation":
+            from packages.war_room_simulator import OperationalShockInput, simulate_operational_crisis
+            inp = OperationalShockInput(
+                deal_id=arguments.get("deal_id", "DEAL-001"),
+                asset_name=arguments.get("asset_name", "Roanoke Precision CNC"),
+                naics_code=arguments.get("naics_code", "332710"),
+                base_annual_revenue_usd=Decimal(str(arguments["base_annual_revenue_usd"])),
+                base_annual_ebitda_usd=Decimal(str(arguments["base_annual_ebitda_usd"])),
+                annual_senior_debt_service_usd=Decimal(str(arguments["annual_senior_debt_service_usd"])),
+                customer_churn_pct=Decimal(str(arguments.get("customer_churn_pct", 0.18))),
+                cogs_inflation_pct=Decimal(str(arguments.get("cogs_inflation_pct", 0.12))),
+                unplanned_capex_usd=Decimal(str(arguments.get("unplanned_capex_usd", 65000.0))),
+            )
+            rep = simulate_operational_crisis(inp)
+            return {"crisis_report": rep.dict()}
+
+        elif tool_name == "solve_stakeholder_game_theory":
+            from packages.negotiation_game_theory import NegotiationGameInput, solve_negotiation_game_theory
+            inp = NegotiationGameInput(
+                deal_id=arguments.get("deal_id", "DEAL-001"),
+                asset_name=arguments.get("asset_name", "Salem Precision Tooling"),
+                senior_defaulted_principal_usd=Decimal(str(arguments["senior_defaulted_principal_usd"])),
+                accrued_default_interest_and_fees_usd=Decimal(str(arguments.get("accrued_default_interest_and_fees_usd", 45000.0))),
+                junior_encumbrances_usd=Decimal(str(arguments.get("junior_encumbrances_usd", 180000.0))),
+                verified_assessed_real_estate_usd=Decimal(str(arguments["verified_assessed_real_estate_usd"])),
+                estimated_going_concern_ebitda_usd=Decimal(str(arguments["estimated_going_concern_ebitda_usd"])),
+                irs_tax_lien_present=arguments.get("irs_tax_lien_present", False),
+                notice_lead_days=int(arguments.get("notice_lead_days", 18)),
+            )
+            rep = solve_negotiation_game_theory(inp)
+            return {"negotiation_report": rep.dict()}
+
+        elif tool_name == "generate_100day_value_creation_blueprint":
+            from packages.value_creation_blueprint import BlueprintInput, generate_hundred_day_blueprint
+            inp = BlueprintInput(
+                deal_id=arguments.get("deal_id", "DEAL-001"),
+                asset_name=arguments.get("asset_name", "Star City Fabrication"),
+                naics_code=arguments.get("naics_code", "332312"),
+                purchase_price_usd=Decimal(str(arguments["purchase_price_usd"])),
+                baseline_annual_revenue_usd=Decimal(str(arguments["baseline_annual_revenue_usd"])),
+                baseline_annual_ebitda_usd=Decimal(str(arguments["baseline_annual_ebitda_usd"])),
+                exit_multiple_ev_ebitda=Decimal(str(arguments.get("exit_multiple_ev_ebitda", 6.5))),
+            )
+            rep = generate_hundred_day_blueprint(inp)
+            return {"blueprint_report": rep.dict()}
+
+        elif tool_name == "audit_statutory_closing_checklist":
+            from packages.deal_room_engine import ClosingAuditInput, audit_closing_checklist
+            inp = ClosingAuditInput(
+                deal_id=arguments.get("deal_id", "DEAL-001"),
+                asset_name=arguments.get("asset_name", "Blue Ridge Industrial"),
+                total_purchase_price_usd=Decimal(str(arguments["total_purchase_price_usd"])),
+                total_escrow_holdback_required_usd=Decimal(str(arguments.get("total_escrow_holdback_required_usd", 175000.0))),
+                irs_redemption_active=arguments.get("irs_redemption_active", False),
+                open_lust_or_flood_issue=arguments.get("open_lust_or_flood_issue", False),
+            )
+            rep = audit_closing_checklist(inp)
+            return {"closing_report": rep.dict()}
 
 
         else:
