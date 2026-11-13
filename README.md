@@ -13,6 +13,21 @@
 [![Virginia Foreclosure](https://img.shields.io/badge/Virginia_Statute-Va._Code_§§_55.1--320--322-red.svg)](packages/underwriting_engine/va_foreclosure_solver.py)
 [![Infrastructure](https://img.shields.io/badge/Infrastructure-Oracle_OCI_ARM64_Ubuntu_24.04-orange.svg)](infra/)
 [![AI Agent Protocol](https://img.shields.io/badge/AI_Agent_Gateway-Anthropic_MCP_41_Tools-cyan.svg)](services/mcp/)
+[![Live Deployment](https://img.shields.io/badge/Production_VPS-Coolify_ARM64_Active-brightgreen.svg)](http://argus.150.136.103.204.sslip.io)
+
+---
+
+## 🚀 Live Production Deployment (Oracle OCI ARM64 + Coolify)
+
+Argus (v1.0) is live and operational on an Oracle Cloud Infrastructure Ampere A1 ARM64 VPS (12 GB RAM / 4 OCPU, Ubuntu 24.04 LTS):
+
+| Service | Public Access URL | Internal Spec | Health Status |
+| :--- | :--- | :--- | :--- |
+| **Argus Web Dashboard (PWA)** | [**`http://argus.150.136.103.204.sslip.io`**](http://argus.150.136.103.204.sslip.io) | Next.js 15 Standalone (Port 3000 / Host 19080) | `HEALTHY` (HTTP 200) |
+| **Argus Backend API** | [**`http://api.argus.150.136.103.204.sslip.io/v1/health`**](http://api.argus.150.136.103.204.sslip.io/v1/health) | FastAPI + Python 3.11 (Port 8000 / Host 19001) | `HEALTHY` (HTTP 200) |
+| **Direct Web Port** | `http://150.136.103.204:19080` | Direct Host Ingress (UFW 19080/tcp open) | `HEALTHY` |
+| **Direct API Port** | `http://150.136.103.204:19001/v1/health` | Direct Host Ingress (UFW 19001/tcp open) | `HEALTHY` |
+| **Coolify 4.7.5 Management** | `http://150.136.103.204:8000` | Project: **Argus** (`weju8zsunkbu7uszqyq8wuzf`) | `ACTIVE` |
 
 ---
 

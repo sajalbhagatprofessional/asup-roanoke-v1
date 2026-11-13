@@ -108,9 +108,13 @@ Whenever the user invokes `/goal` or asks you to continue building, wiring, or d
 2. **Wire the Live FastAPI Server (`services/api/main.py`) & Next.js 15 5-Role Web UI (`apps/web/`)**:
    - Expose the verified Python modules in `packages/` and `services/` via FastAPI endpoints (`GET /v1/health`, `POST /v1/dockets/ingest`, `GET /v1/deals`, `POST /v1/deals/{id}/verify`, `POST /v1/deals/{id}/memo`, `POST /v1/deals/{id}/outreach`, `GET /v1/deals/{id}/lender-pack`, `POST /v1/mcp/sse`, `GET /v1/system/dependencies`).
    - Build the Next.js 15 App Router views for the 5 roles (`Principal Weekly Digest` with `<= 5` cards and 1-click `Approve / Reject / Send to Counsel`, `Analyst Pipeline & GIS Queue`, `Counsel Title & Notice Review`, `CPA Add-Back & SOP 50 10 8.1 Audit`, and `Lender/Broker Sanitized Pack View`).
-3. **Production Deployment Target & Holding Policy**:
+3. **Production Deployment Target & Live Operations**:
    - **Target VPS**: `150.136.103.204` (`free-instance`, Ubuntu 24.04.5 LTS ARM64, Coolify 4.7.5 at port 8000). Verified host fingerprint: `SHA256:ECtuMNJ4kgoOKfhADUfToly6YIOJzPWvB68UoeC6Im4`. SSH key: `"C:\Users\sajal\OneDrive\Desktop\Work\Funnel Bridge\Oracle OCI\ssh-key-2026-09-02.key"`.
-   - **User Holding Policy**: This VPS is set as the preferred hosting target. However, deployment is strictly on HOLD until the user explicitly signals that the product is complete. Do NOT touch, modify, or deploy to this VPS until given explicit instruction. All live services (`dip-ladder`, `Blackline`, `n8n`, `gather-store`, `vault-api`, `Supabase`, `Hermes`) must remain undisturbed.
+   - **Live Production Status (DEPLOYED & ACTIVE)**:
+     - Multi-Container Stack (`argus-stack`): `argus-web` (19080), `argus-api` (19001), `argus-redis` (6379), `argus-postgis` (127.0.0.1:19432).
+     - Public Traefik Endpoints: `http://argus.150.136.103.204.sslip.io` (Web PWA) & `http://api.argus.150.136.103.204.sslip.io/v1/health` (FastAPI).
+     - Coolify Project: **Argus** (UUID: `weju8zsunkbu7uszqyq8wuzf`), Service **argus-stack** (UUID: `hdzdjyn3gmtpsulrp2x7urlz`).
+     - Zero Interruption Guarantee: All existing services (`dip-ladder`, `Blackline`, `n8n`, `gather-store`, `vault-api`, `Supabase`, `Hermes`) remain 100% untouched and operational.
 
 ---
 

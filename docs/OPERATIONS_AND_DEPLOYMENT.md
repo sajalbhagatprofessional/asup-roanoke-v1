@@ -3,33 +3,97 @@
 
 ---
 
-## 1. Production Architecture Overview
+## 1. Live Production Deployment on Oracle OCI ARM64 & Coolify
 
-The production deployment runs as a containerized native **linux/arm64** multi-service stack on an **Oracle Cloud Infrastructure (OCI) Always-Free 12 GB RAM / 4 OCPU Ampere ARM64 Ubuntu 24.04 LTS VPS**.
+Argus (v1.0) is actively deployed and running on an **Oracle Cloud Infrastructure (OCI) Ampere A1 ARM64 VPS (12 GB RAM / 4 OCPU, Ubuntu 24.04 LTS)** managed under **Coolify 4.7.5**.
+
+### Live Access Endpoints & Network Topology:
+- **Web Dashboard (PWA)**: [`http://argus.150.136.103.204.sslip.io`](http://argus.150.136.103.204.sslip.io) *(Standard Port 80 via Traefik)*
+- **Direct Web Host Port**: `http://150.136.103.204:19080`
+- **FastAPI Backend (Subdomain)**: [`http://api.argus.150.136.103.204.sslip.io/v1/health`](http://api.argus.150.136.103.204.sslip.io/v1/health) *(Standard Port 80 via Traefik)*
+- **FastAPI Direct Host Port**: `http://150.136.103.204:19001/v1/health`
+- **Coolify Admin UI**: `http://150.136.103.204:8000` (Project **Argus**, Service **argus-stack**)
 
 ```mermaid
 graph TD
-    Client["Client Browser / AI Agent"] -->|HTTPS 443 / HTTP 80| Caddy["Caddy Auto-HTTPS Reverse Proxy"]
-    Caddy -->|Reverse Proxy :3000| Web["Next.js 15 Web Container (Node 20)"]
-    Caddy -->|Reverse Proxy /v1, /mcp| API["FastAPI Backend Container (Python 3.11)"]
-    API -->|Port 5432| DB["PostgreSQL 16 + PostGIS Container"]
-    API -->|Port 6379| Redis["Redis 7 Alpine Cache & Rate-Limiter"]
-    API -->|Port 8000 MCP| MCP["MCP SSE & JSON-RPC Gateway"]
+    Client["Client Browser / Mobile PWA / AI Agent"] -->|Port 80 / 443| Traefik["Coolify Traefik v3.6 (coolify-proxy)"]
+    Traefik -->|argus.150.136.103.204.sslip.io| Web["argus-web Container (Port 3000 / Host 19080)"]
+    Traefik -->|PathPrefix /v1, /v2 or api.argus...| API["argus-api Container (Port 8000 / Host 19001)"]
+    Web -->|Next.js Server Rewrites /v1, /v2| API
+    API -->|Port 5432 / Host 19432| DB["argus-postgis Container (PostgreSQL 16 + PostGIS 3.7)"]
+    API -->|Port 6379| Redis["argus-redis Container (Redis 7.2 Alpine)"]
 ```
 
 ---
 
-## 2. Docker Compose Production Specification (`docker-compose.prod.yml`)
+## 2. Multi-Container Stack Specification (`docker-compose.coolify.yml`)
 
-The production stack is declared in [`docker-compose.prod.yml`](file:///C:/Users/sajal/OneDrive/Desktop/Project%20Asset%20Aggregator/docker-compose.prod.yml):
+The production deployment runs via [`docker-compose.coolify.yml`](file:///C:/Users/sajal/OneDrive/Desktop/Project%20Asset%20Aggregator/docker-compose.coolify.yml):
 
-| Service | Container Image / Dockerfile | Platform | Host Port | Purpose |
-| :--- | :--- | :--- | :--- | :--- |
-| **`caddy`** | `caddy:2.8-alpine` | `linux/arm64` | `80:80`, `443:443` | Reverse proxy, automatic Let's Encrypt TLS, HSTS, and CSP headers. |
-| **`web`** | `apps/web/Dockerfile` | `linux/arm64` | `3000` (internal) | Next.js 15 production standalone build. |
-| **`api`** | Python 3.11 Bookworm | `linux/arm64` | `8000` (internal) | FastAPI server with Uvicorn workers and MCP SSE gateway. |
-| **`db`** | `infra/postgis-arm64/Dockerfile` | `linux/arm64` | `5432` (internal) | PostgreSQL 16 with PostGIS 3.4 extensions and encrypted volumes. |
-| **`redis`** | `redis:7-alpine` | `linux/arm64` | `6379` (internal) | Rate-limiting token bucket and circuit breaker state cache. |
+| Service | Container Name | Image / Base | Host Port | Internal Port | Memory Limits | Healthcheck |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`web`** | `argus-web` | `argus-web:latest` (Node 20 Alpine Standalone) | `19080:3000` | `3000` | ~150 MB | `wget -qO- http://127.0.0.1:3000` (IPv4) |
+| **`api`** | `argus-api` | `argus-api:latest` (Python 3.11 Bookworm + Uvicorn) | `19001:8000` | `8000` | ~220 MB | `curl -f http://localhost:8000/v1/health` |
+| **`postgis`** | `argus-postgis` | `argus-postgis:latest` (PG 16 + PostGIS 3.7) | `127.0.0.1:19432:5432` | `5432` | ~512 MB shared | `pg_isready -U argus_admin -d argus_db` |
+| **`redis`** | `argus-redis` | `redis:7.2-alpine` | Private Network | `6379` | ~60 MB | `redis-cli ping` |
+
+### Volume Persistence & Database Initialization:
+1. **`argus_postgis_data`**: Durable Docker volume for Postgres data directory (`/var/lib/postgresql/data`).
+2. **`argus_redis_data`**: Durable Docker volume for Redis AOF logs (`/data`).
+3. **`/docker-entrypoint-initdb.d`**: Mounts `services/api/migrations` on boot; runs [`001_initial_schema_rls.sql`](file:///C:/Users/sajal/OneDrive/Desktop/Project%20Asset%20Aggregator/services/api/migrations/001_initial_schema_rls.sql) to initialize PostGIS, Row Level Security, and seed mandate `ROA-SMB-01`.
+
+---
+
+## 3. Coolify 4.7.5 Integration & Dynamic Traefik Ingress
+
+### Coolify Registration:
+- **Project Name**: `Argus` (`UUID: weju8zsunkbu7uszqyq8wuzf`)
+- **Service Name**: `argus-stack` (`UUID: hdzdjyn3gmtpsulrp2x7urlz`)
+- **Server**: `localhost` (`UUID: yjpgrtwlcnwqbjzuy85lgust`)
+
+### Dynamic Traefik Configuration (`/data/coolify/proxy/dynamic/argus.yaml`):
+Traefik dynamically watches file changes and routes HTTP requests without proxy reload:
+```yaml
+http:
+  routers:
+    argus-api-path-http:
+      rule: "Host(`argus.150.136.103.204.sslip.io`) && (PathPrefix(`/v1`) || PathPrefix(`/v2`))"
+      entryPoints: [http]
+      priority: 100
+      service: argus-api-svc
+    argus-api-http:
+      rule: "Host(`api.argus.150.136.103.204.sslip.io`)"
+      entryPoints: [http]
+      service: argus-api-svc
+    argus-web-http:
+      rule: "Host(`argus.150.136.103.204.sslip.io`)"
+      entryPoints: [http]
+      priority: 10
+      service: argus-web-svc
+  services:
+    argus-web-svc:
+      loadBalancer:
+        servers: [{ url: "http://argus-web:3000" }]
+    argus-api-svc:
+      loadBalancer:
+        servers: [{ url: "http://argus-api:8000" }]
+```
+
+---
+
+## 4. Coexistence with Existing VPS Services
+
+The Argus deployment operates in strict isolation and shares zero ports with existing production applications:
+- **Uncollided Ports**:
+  - `8000`: Coolify Dashboard (Untouched)
+  - `80/443`: Coolify Traefik Proxy (Reused via dynamic host routing)
+  - `5678`: n8n Workflow Automation (Untouched)
+  - `8100`: Vault API (Untouched)
+  - `8642 / 9119`: Hermes AI Agent (Untouched)
+  - `8899`: Gather-store (Untouched)
+  - `18001 / 18080`: Blackline Demo Stack (Untouched)
+  - **Argus**: Uses `19001` (FastAPI), `19080` (Next.js), and `19432` (PostGIS localhost-only).
+
 
 ---
 
