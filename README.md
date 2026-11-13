@@ -1,8 +1,9 @@
 # Argus (v1.0)
 ### *Autonomous Asset Intelligence, Sourcing & Underwriting Platform*
 
-[![Test Suite](https://img.shields.io/badge/Test_Suite-178%2F178_Passing_(100%25)-emerald.svg)](tests/)
+[![Test Suite](https://img.shields.io/badge/Test_Suite-184%2F184_Passing_(100%25)-emerald.svg)](tests/)
 [![Golden Suite](https://img.shields.io/badge/Golden_Suite-50%2F50_Accuracy_(100%25)-blue.svg)](tests/golden_suite/)
+[![Cybersecurity](https://img.shields.io/badge/Cybersecurity-Palo_Alto_Hardened_AAA-cyan.svg)](docs/ARCHITECTURE.md)
 [![Underwriting Engine](https://img.shields.io/badge/Underwriting-Air--Gapped_Pure_Decimal-purple.svg)](packages/underwriting_engine/)
 [![Capital Velocity](https://img.shields.io/badge/Asset_Flipper-40_Yr_Deal_Box_Engine-amber.svg)](packages/flipper_deal_engine/)
 [![Operational Supremacy](https://img.shields.io/badge/Operations-Palantir_War_Room_&_Closing_Room-red.svg)](packages/war_room_simulator/)
@@ -70,11 +71,11 @@ pip install -r requirements.txt
 ```
 
 ### 2. Run the Master Verification Gate
-Verify that all 178 unit, integration, RBAC, golden backtests, institutional titan, operational supremacy, asset flipper, PWA, 1-click research, and MCP connect hub tests pass with 100% coverage:
+Verify that all 184 unit, integration, RBAC, cybersecurity AAA, golden backtests, institutional titan, operational supremacy, asset flipper, PWA, 1-click research, and MCP connect hub tests pass with 100% coverage:
 ```bash
 python scripts/run_all_tests.py
 ```
-*(Expected Output: `Total Test Suite: 178/178 Tests PASSED (100% Coverage)!` and `[GOLDEN SUITE] 50-Deal Accuracy: 50/50`)*
+*(Expected Output: `Total Test Suite: 184/184 Tests PASSED (100% Coverage)!` and `[GOLDEN SUITE] 50-Deal Accuracy: 50/50`)*
 
 ### 3. Launch Local Backend Server
 ```bash

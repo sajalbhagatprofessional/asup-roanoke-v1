@@ -236,13 +236,20 @@ The platform exposes an Anthropic Model Context Protocol (MCP 2024-11-05) gatewa
 
 ## 9. User Authentication & Identity Management
 
-- `POST /v1/auth/signup`: User registration with email verification token dispatch.
-- `POST /v1/auth/signin`: Password authentication returning JWT access token.
+- `POST /v1/auth/signup`: User registration with NIST SP 800-63B password complexity and verification token dispatch.
+- `POST /v1/auth/signin`: Password authentication enforcing 5-attempt sliding lockout and returning short-lived access token + rotating refresh token.
+- `POST /v1/auth/refresh`: Exchanges valid rotating refresh token for fresh short-lived access token and new refresh token (with automated family reuse attack detection).
+- `POST /v1/auth/signout`: Revokes refresh token and invalidates active session.
 - `POST /v1/auth/verify-email`: Activates user account with verification token.
-- `POST /v1/auth/forgot-password`: Generates secure password reset token.
-- `POST /v1/auth/reset-password`: Resets user password.
-- `GET /v1/auth/me`: Retrieves currently authenticated user profile and permissions.
-- `GET /v1/auth/oauth-providers`: Returns configuration for Google and Microsoft OAuth2 providers.
+- `POST /v1/auth/resend-verification`: Resends verification token to registered email.
+- `POST /v1/auth/forgot-password`: Generates secure 60-minute password reset token.
+- `POST /v1/auth/reset-password`: Resets user password, enforces NIST complexity, and invalidates all prior sessions.
+- `GET /v1/auth/me`: Retrieves currently authenticated user profile, claims, and role permissions.
+- `GET /v1/auth/oauth/providers`: Returns configuration and readiness for Google and Microsoft OAuth2 providers.
+- `GET /v1/auth/oauth/authorize-url`: Generates RFC-7636 OAuth2 PKCE authorization URL with secure state and challenge.
+- `POST /v1/auth/oauth/callback`: Exchanges OAuth authorization code, verifies CSRF state, and provisions verified institutional session.
+- **Enterprise Security Headers**: All responses carry `Strict-Transport-Security`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `X-XSS-Protection`, and `Referrer-Policy`.
+- **Perimeter Rate Limiting**: `AuthRateLimiterMiddleware` enforces sliding-window limit (30-60 rpm) on all `/v1/auth/*` routes.
 
 ---
 

@@ -21,6 +21,8 @@ import {
   NationwideScanResponse,
   NationwideScraperStatus,
   OAuthProvidersResponse,
+  OAuthAuthorizeUrlResponse,
+  OAuthCallbackPayload,
   SpatialTwinResponse,
   H3RollUpCluster,
   H3SpatialIndex,
@@ -624,6 +626,20 @@ export function setStoredAuthToken(token: string | null): void {
   }
 }
 
+export function getStoredRefreshToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("asup_refresh_token");
+}
+
+export function setStoredRefreshToken(token: string | null): void {
+  if (typeof window === "undefined") return;
+  if (token) {
+    localStorage.setItem("asup_refresh_token", token);
+  } else {
+    localStorage.removeItem("asup_refresh_token");
+  }
+}
+
 export function getAuthHeaders(): HeadersInit {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -661,8 +677,91 @@ export async function apiSignIn(payload: SignInPayload): Promise<AuthResponse> {
     body: JSON.stringify(payload),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Sign in failed");
+  if (!res.ok) {
+    if (res.status === 429) {
+      throw new Error(data.detail || "Too many failed attempts. Account temporarily locked.");
+    }
+    throw new Error(data.detail || "Sign in failed");
+  }
   setStoredAuthToken(data.access_token);
+  if (data.refresh_token) {
+    setStoredRefreshToken(data.refresh_token);
+  }
+  return data;
+}
+
+export async function apiRefreshToken(): Promise<AuthResponse | null> {
+  const refreshToken = getStoredRefreshToken();
+  if (!refreshToken) return null;
+  const base = getApiBase();
+  try {
+    const res = await fetch(`${base}/v1/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!res.ok) {
+      setStoredAuthToken(null);
+      setStoredRefreshToken(null);
+      return null;
+    }
+    const data = await res.json();
+    setStoredAuthToken(data.access_token);
+    if (data.refresh_token) {
+      setStoredRefreshToken(data.refresh_token);
+    }
+    return data;
+  } catch (err) {
+    console.error("Token refresh failed:", err);
+    return null;
+  }
+}
+
+export async function apiSignOut(): Promise<void> {
+  const refreshToken = getStoredRefreshToken();
+  const base = getApiBase();
+  try {
+    await fetch(`${base}/v1/auth/signout`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+  } catch (err) {
+    console.warn("Sign out dispatch error:", err);
+  } finally {
+    setStoredAuthToken(null);
+    setStoredRefreshToken(null);
+  }
+}
+
+export async function apiGetOAuthAuthorizeUrl(
+  provider: string,
+  redirectUri: string,
+  state?: string
+): Promise<OAuthAuthorizeUrlResponse> {
+  const base = getApiBase();
+  const sParam = state ? `&state=${encodeURIComponent(state)}` : "";
+  const res = await fetch(
+    `${base}/v1/auth/oauth/authorize-url?provider=${encodeURIComponent(provider)}&redirect_uri=${encodeURIComponent(redirectUri)}${sParam}`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) throw new Error("Failed to obtain OAuth authorization URL");
+  return res.json();
+}
+
+export async function apiHandleOAuthCallback(payload: OAuthCallbackPayload): Promise<AuthResponse> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/oauth/callback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "OAuth authentication failed");
+  setStoredAuthToken(data.access_token);
+  if (data.refresh_token) {
+    setStoredRefreshToken(data.refresh_token);
+  }
   return data;
 }
 

@@ -50,6 +50,7 @@ import tests.unit.test_asset_research_links as u14
 import tests.integration.test_research_links_endpoints as i24
 import tests.unit.test_mcp_connect_hub as u15
 import tests.integration.test_mcp_hub_endpoints as i25
+import tests.unit.test_security_hardening as u16
 
 
 def main() -> int:
@@ -350,6 +351,18 @@ def main() -> int:
 
     print(f"All {mcp_hub_passed}/{mcp_hub_passed} Frictionless MCP Connect Hub & Universal Prompt Suite Tests PASSED!")
 
+    # Milestone 37: Defensive Cybersecurity & AAA Architecture Suite
+    security_passed = 0
+    for attr in sorted(dir(u16)):
+        if attr.startswith("test_"):
+            fn = getattr(u16, attr)
+            if callable(fn):
+                fn()
+                security_passed += 1
+                print(f"[PASS] {u16.__name__}.{attr}")
+
+    print(f"All {security_passed}/{security_passed} Defensive Cybersecurity & AAA Architecture Tests PASSED!")
+
     total_passed = (
         core_passed
         + api_passed
@@ -374,6 +387,7 @@ def main() -> int:
         + settings_passed
         + research_passed
         + mcp_hub_passed
+        + security_passed
     )
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 

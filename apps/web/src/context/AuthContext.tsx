@@ -5,6 +5,9 @@ import {
   apiGetCurrentUser,
   apiSignIn,
   apiSignUp,
+  apiRefreshToken,
+  apiSignOut,
+  apiHandleOAuthCallback,
   apiVerifyEmail,
   apiResendVerification,
   apiForgotPassword,
@@ -17,6 +20,7 @@ import {
   SignInPayload,
   SignUpPayload,
   ResetPasswordPayload,
+  OAuthCallbackPayload,
 } from "../lib/types";
 
 export type AuthModalTab = "SIGNIN" | "SIGNUP" | "FORGOT" | "VERIFY";
@@ -32,6 +36,7 @@ interface AuthContextType {
     message: string;
   }>;
   signOut: () => void;
+  handleOAuthLogin: (payload: OAuthCallbackPayload) => Promise<AuthUser>;
   verifyEmail: (token: string) => Promise<string>;
   resendVerification: (email: string) => Promise<string>;
   requestPasswordReset: (email: string) => Promise<{
@@ -65,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthModalOpen(false);
   };
 
-  // Rehydrate session on mount
+  // Rehydrate session on mount with automatic refresh fallback
   useEffect(() => {
     async function rehydrateSession() {
       const storedToken = getStoredAuthToken();
@@ -76,15 +81,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (res && res.user) {
             setUser(res.user);
           } else {
+            // Attempt silent rotation via refresh token
+            const refreshRes = await apiRefreshToken();
+            if (refreshRes && refreshRes.user) {
+              setToken(refreshRes.access_token);
+              setUser(refreshRes.user);
+            } else {
+              setStoredAuthToken(null);
+              setToken(null);
+              setUser(null);
+            }
+          }
+        } catch (err) {
+          console.error("Session rehydration error:", err);
+          const refreshRes = await apiRefreshToken();
+          if (refreshRes && refreshRes.user) {
+            setToken(refreshRes.access_token);
+            setUser(refreshRes.user);
+          } else {
             setStoredAuthToken(null);
             setToken(null);
             setUser(null);
           }
-        } catch (err) {
-          console.error("Session rehydration error:", err);
-          setStoredAuthToken(null);
-          setToken(null);
-          setUser(null);
         }
       }
       setLoading(false);
@@ -92,8 +110,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     rehydrateSession();
   }, []);
 
+  // Proactive background silent refresh every 12 minutes
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(async () => {
+      try {
+        const refreshRes = await apiRefreshToken();
+        if (refreshRes) {
+          setToken(refreshRes.access_token);
+          if (refreshRes.user) setUser(refreshRes.user);
+        }
+      } catch (err) {
+        console.warn("Background silent refresh encountered error:", err);
+      }
+    }, 12 * 60 * 1000); // 12 minutes
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   const signIn = async (payload: SignInPayload): Promise<AuthUser> => {
     const res = await apiSignIn(payload);
+    setToken(res.access_token);
+    setUser(res.user);
+    closeAuthModal();
+    return res.user;
+  };
+
+  const handleOAuthLogin = async (payload: OAuthCallbackPayload): Promise<AuthUser> => {
+    const res = await apiHandleOAuthCallback(payload);
     setToken(res.access_token);
     setUser(res.user);
     closeAuthModal();
@@ -110,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = () => {
+    apiSignOut();
     setStoredAuthToken(null);
     setToken(null);
     setUser(null);
@@ -150,6 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         signOut,
+        handleOAuthLogin,
         verifyEmail,
         resendVerification,
         requestPasswordReset,

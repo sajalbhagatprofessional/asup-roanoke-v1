@@ -544,8 +544,27 @@ export interface AuthUser {
 export interface AuthResponse {
   status: string;
   access_token: string;
+  refresh_token?: string;
   token_type: string;
+  expires_in?: number;
   user: AuthUser;
+}
+
+export interface OAuthAuthorizeUrlResponse {
+  status: string;
+  auth_url: string;
+  state: string;
+  code_challenge: string;
+  provider: string;
+  is_configured: boolean;
+}
+
+export interface OAuthCallbackPayload {
+  provider: string;
+  code: string;
+  state: string;
+  mock_email?: string;
+  mock_username?: string;
 }
 
 export interface SignUpPayload {

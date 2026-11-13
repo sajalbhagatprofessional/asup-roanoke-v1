@@ -6,7 +6,7 @@
     "key_hash": "e2bef8fd319f032547f5d1d6245a34b8f2c3fe190ab5c511c55a7b81bc816d76",
     "role": "ADMIN",
     "created_at": "2026-05-01T00:00:00Z",
-    "last_used_at": "2026-11-13T19:16:56.835427+00:00",
+    "last_used_at": "2026-11-13T20:14:14.836165+00:00",
     "is_active": true,
     "rate_limit_rpm": 300
   },
@@ -524,6 +524,28 @@
     "role": "ANALYST",
     "created_at": "2026-11-13T19:16:56.670813+00:00",
     "last_used_at": "2026-11-13T19:16:56.682959+00:00",
+    "is_active": false,
+    "rate_limit_rpm": 100
+  },
+  {
+    "key_id": "KEY-92ED6876",
+    "name": "Hermes CI/CD Agent",
+    "key_prefix": "asup_live_Tu31...",
+    "key_hash": "e41c30b497624f97310781ca61161392e45800702c6be1c5a8cf98978785cac0",
+    "role": "ANALYST",
+    "created_at": "2026-11-13T20:03:53.265434+00:00",
+    "last_used_at": "2026-11-13T20:03:53.278424+00:00",
+    "is_active": false,
+    "rate_limit_rpm": 100
+  },
+  {
+    "key_id": "KEY-B0A6024F",
+    "name": "Hermes CI/CD Agent",
+    "key_prefix": "asup_live_i2nV...",
+    "key_hash": "b80ce1d0df15a4a3287b465f97f7a3d792a98ed4d0546a6c452a4b6f209ef593",
+    "role": "ANALYST",
+    "created_at": "2026-11-13T20:14:14.655524+00:00",
+    "last_used_at": "2026-11-13T20:14:14.668304+00:00",
     "is_active": false,
     "rate_limit_rpm": 100
   }

@@ -120,6 +120,10 @@ from services.security import (
     decode_access_token,
     get_oauth_providers_status,
     UserSettings,
+    SecurityHeadersMiddleware,
+    AuthRateLimiterMiddleware,
+    AccountLockedError,
+    TokenReuseDetectedError,
 )
 from services.security.auth_service import (
     AuthError,
@@ -308,13 +312,31 @@ app = FastAPI(
     description="Deterministic, air-gapped acquisition sourcing and underwriting platform under Mandate ROA-SMB-01 (SBA SOP 50 10 8.1 & Va. Code §§ 55.1-320 to 55.1-322).",
 )
 
+# Strict CORS Configuration with Environment Override & Safe Defaults
+_cors_env = os.environ.get("ALLOWED_ORIGINS")
+if _cors_env:
+    ALLOWED_CORS_ORIGINS = [o.strip() for o in _cors_env.split(",") if o.strip()]
+else:
+    ALLOWED_CORS_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://argus.150.136.103.204.sslip.io",
+        "https://argus.150.136.103.204.sslip.io",
+        "http://api.argus.150.136.103.204.sslip.io",
+        "https://api.argus.150.136.103.204.sslip.io",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(AuthRateLimiterMiddleware, max_requests_per_minute=60)
 
 
 # Pydantic Request / Response Models
@@ -399,6 +421,22 @@ class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
     confirm_password: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., description="Rotating refresh token")
+
+
+class SignOutRequest(BaseModel):
+    refresh_token: Optional[str] = Field(default=None, description="Optional refresh token to revoke explicitly")
+
+
+class OAuthCallbackRequest(BaseModel):
+    provider: str = Field(default="google", description="OAuth provider: google or microsoft")
+    code: str = Field(..., description="Authorization code from OAuth provider")
+    state: str = Field(..., description="CSRF state parameter")
+    mock_email: Optional[str] = Field(default=None, description="Optional email hint for testing or mock flow")
+    mock_username: Optional[str] = Field(default=None, description="Optional username hint for testing or mock flow")
 
 
 current_mandate_profile = MandateProfileModel()
@@ -2406,7 +2444,7 @@ def update_user_preferences(profile: UserPreferenceProfile) -> UserPreferencePro
 def auth_signup(req: SignUpRequest) -> Dict[str, Any]:
     """
     Registers a new user account with email, username, password, confirm password,
-    and institutional role. Dispatches an email verification token.
+    and institutional role. Validates NIST SP 800-63B complexity. Dispatches an email verification token.
     """
     try:
         user, v_token = auth_store.register_user(
@@ -2415,6 +2453,13 @@ def auth_signup(req: SignUpRequest) -> Dict[str, Any]:
             password=req.password,
             confirm_password=req.confirm_password,
             role=req.role or TeamRole.PRINCIPAL,
+        )
+        audit_ledger.append_event(
+            actor_role=user.role,
+            actor_id=user.user_id,
+            action_type="AUTH_SIGNUP_SUCCESS",
+            deal_id=None,
+            payload={"email": user.email, "username": user.username, "role": user.role.value if isinstance(user.role, TeamRole) else str(user.role)},
         )
         return {
             "status": "success",
@@ -2435,6 +2480,14 @@ def auth_verify_email(req: VerifyEmailRequest) -> Dict[str, Any]:
     success, message, user = auth_store.verify_email(req.token)
     if not success:
         raise HTTPException(status_code=400, detail=message)
+    if user:
+        audit_ledger.append_event(
+            actor_role=user.role,
+            actor_id=user.user_id,
+            action_type="AUTH_EMAIL_VERIFIED",
+            deal_id=None,
+            payload={"email": user.email},
+        )
     return {
         "status": "success",
         "message": message,
@@ -2459,22 +2512,113 @@ def auth_resend_verification(req: ResendVerificationRequest) -> Dict[str, Any]:
 
 
 @app.post("/v1/auth/signin", tags=["Authentication & User Management"])
-def auth_signin(req: SignInRequest) -> Dict[str, Any]:
+def auth_signin(req: SignInRequest, request: Request) -> Dict[str, Any]:
     """
     Signs in a user with username OR email + password.
-    Returns signed RFC-7519 JWT Bearer access token.
+    Enforces brute-force lockout defenses and returns short-lived access token + rotating refresh token.
     """
+    client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "127.0.0.1").split(",")[0].strip()
     try:
-        user = auth_store.authenticate_user(req.username_or_email, req.password)
+        user = auth_store.authenticate_user(req.username_or_email, req.password, client_ip=client_ip)
         access_token = create_access_token(user)
+        refresh_token, _ = auth_store.create_refresh_token(user.user_id)
+        
+        # AAA Accounting to Immutable Merkle Chain
+        audit_ledger.append_event(
+            actor_role=user.role,
+            actor_id=user.user_id,
+            action_type="AUTH_SIGNIN_SUCCESS",
+            deal_id=None,
+            payload={"username": user.username, "email": user.email, "client_ip": client_ip},
+        )
+
         return {
             "status": "success",
             "access_token": access_token,
+            "refresh_token": refresh_token,
             "token_type": "bearer",
+            "expires_in": 900,
             "user": user.to_dict(),
         }
+    except AccountLockedError as e:
+        audit_ledger.append_event(
+            actor_role=TeamRole.PRINCIPAL,
+            actor_id=req.username_or_email,
+            action_type="AUTH_ACCOUNT_LOCKED",
+            deal_id=None,
+            payload={"query": req.username_or_email, "client_ip": client_ip, "retry_after": e.retry_after_seconds},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(e),
+            headers={"Retry-After": str(e.retry_after_seconds)},
+        )
     except InvalidCredentialsError as e:
+        audit_ledger.append_event(
+            actor_role=TeamRole.PRINCIPAL,
+            actor_id=req.username_or_email,
+            action_type="AUTH_SIGNIN_FAILURE",
+            deal_id=None,
+            payload={"query": req.username_or_email, "client_ip": client_ip},
+        )
         raise HTTPException(status_code=401, detail=str(e))
+
+
+@app.post("/v1/auth/refresh", tags=["Authentication & User Management"])
+def auth_refresh_token(req: RefreshTokenRequest) -> Dict[str, Any]:
+    """
+    Exchanges a valid rotating refresh token for a fresh short-lived access token
+    and new rotating refresh token. Detects token reuse attacks and invalidates compromised token families.
+    """
+    try:
+        new_access, new_refresh, user = auth_store.rotate_refresh_token(req.refresh_token)
+        audit_ledger.append_event(
+            actor_role=user.role,
+            actor_id=user.user_id,
+            action_type="AUTH_TOKEN_REFRESH_SUCCESS",
+            deal_id=None,
+            payload={"username": user.username},
+        )
+        return {
+            "status": "success",
+            "access_token": new_access,
+            "refresh_token": new_refresh,
+            "token_type": "bearer",
+            "expires_in": 900,
+            "user": user.to_dict(),
+        }
+    except TokenReuseDetectedError as e:
+        audit_ledger.append_event(
+            actor_role=TeamRole.PRINCIPAL,
+            actor_id="ANONYMOUS_OR_COMPROMISED",
+            action_type="AUTH_TOKEN_FAMILY_REUSE_DETECTED",
+            deal_id=None,
+            payload={"alert": str(e)},
+        )
+        raise HTTPException(status_code=401, detail=str(e))
+    except (TokenExpiredOrInvalidError, InvalidCredentialsError) as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@app.post("/v1/auth/signout", tags=["Authentication & User Management"])
+def auth_signout(req: SignOutRequest, request: Request) -> Dict[str, Any]:
+    """
+    Explicitly revokes the provided refresh token and invalidates active session.
+    """
+    revoked = False
+    if req.refresh_token:
+        revoked = auth_store.revoke_refresh_token(req.refresh_token)
+    audit_ledger.append_event(
+        actor_role=TeamRole.PRINCIPAL,
+        actor_id="SESSION",
+        action_type="AUTH_SIGNOUT",
+        deal_id=None,
+        payload={"revoked": revoked},
+    )
+    return {
+        "status": "success",
+        "message": "Signed out successfully. Session tokens revoked.",
+    }
 
 
 @app.post("/v1/auth/forgot-password", tags=["Authentication & User Management"])
@@ -2494,7 +2638,7 @@ def auth_forgot_password(req: ForgotPasswordRequest) -> Dict[str, Any]:
 @app.post("/v1/auth/reset-password", tags=["Authentication & User Management"])
 def auth_reset_password(req: ResetPasswordRequest) -> Dict[str, Any]:
     """
-    Resets user password with valid reset token.
+    Resets user password with valid reset token and invalidates prior sessions.
     """
     success, message = auth_store.reset_password(
         token=req.token,
@@ -2503,6 +2647,13 @@ def auth_reset_password(req: ResetPasswordRequest) -> Dict[str, Any]:
     )
     if not success:
         raise HTTPException(status_code=400, detail=message)
+    audit_ledger.append_event(
+        actor_role=TeamRole.PRINCIPAL,
+        actor_id="TOKEN_RESET",
+        action_type="AUTH_PASSWORD_RESET_SUCCESS",
+        deal_id=None,
+        payload={"status": "updated"},
+    )
     return {
         "status": "success",
         "message": message,
@@ -2540,6 +2691,54 @@ def auth_oauth_providers() -> Dict[str, Any]:
     Keeps social login optional and plug-and-play.
     """
     return get_oauth_providers_status()
+
+
+@app.get("/v1/auth/oauth/authorize-url", tags=["Authentication & User Management"])
+def auth_oauth_authorize_url(
+    provider: str = Query("google", description="OAuth provider: google or microsoft"),
+    redirect_uri: str = Query(..., description="OAuth redirect URI"),
+    state: Optional[str] = Query(None, description="Optional CSRF state"),
+) -> Dict[str, Any]:
+    """
+    Generates standard RFC-7636 OAuth2 PKCE authorization URL with secure state and challenge.
+    """
+    try:
+        res = auth_store.generate_oauth_authorization_url(provider=provider, redirect_uri=redirect_uri, state=state)
+        return {"status": "success", **res}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/v1/auth/oauth/callback", tags=["Authentication & User Management"])
+def auth_oauth_callback(req: OAuthCallbackRequest) -> Dict[str, Any]:
+    """
+    Exchanges OAuth code and verifies CSRF state. Provisions or signs in verified institutional user.
+    """
+    try:
+        user, access_token, refresh_token = auth_store.process_oauth_callback(
+            provider=req.provider,
+            code=req.code,
+            state=req.state,
+            mock_email=req.mock_email,
+            mock_username=req.mock_username,
+        )
+        audit_ledger.append_event(
+            actor_role=user.role,
+            actor_id=user.user_id,
+            action_type="AUTH_OAUTH_SIGNIN_SUCCESS",
+            deal_id=None,
+            payload={"provider": req.provider, "email": user.email},
+        )
+        return {
+            "status": "success",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "expires_in": 900,
+            "user": user.to_dict(),
+        }
+    except TokenExpiredOrInvalidError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # =========================================================================
