@@ -230,5 +230,5 @@ Any future AI agent or engineer continuing this project should tackle the follow
 
 When implementing any future milestone:
 1. **Never Compromise Underwriting Determinism**: Never replace pure `decimal.Decimal` math with floating-point arithmetic or LLM approximations.
-2. **Never Break Test Suite**: Run `python scripts/run_all_tests.py` and confirm all 167 tests and the 50/50 Golden Suite pass.
+2. **Never Break Test Suite**: Run `python scripts/run_all_tests.py` and confirm all 192 tests and the 50/50 Golden Suite pass.
 3. **Always Update Documentation**: Record your architectural decisions in `docs/ARCHITECTURE.md`, API changes in `docs/API_REFERENCE.md`, and data structures in `docs/DATA_MODELS_AND_SCHEMA.md`.

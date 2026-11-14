@@ -31,10 +31,28 @@ import {
   Copy,
   Check,
   AlertTriangle,
+  Key,
+  ShieldCheck,
+  ShieldAlert,
+  Laptop,
+  LogOut,
+  Eye,
+  EyeOff,
+  History,
+  Globe,
+  Trash2,
 } from "lucide-react";
 import { useSettings } from "../context/SettingsContext";
 import { useAuth } from "../context/AuthContext";
-import { ThemeMode, InterfaceDensity, AutoUpdatePromptMode, TeamRole } from "../lib/types";
+import {
+  ThemeMode,
+  InterfaceDensity,
+  AutoUpdatePromptMode,
+  TeamRole,
+  UserSession,
+  MfaSetupResponse,
+  SecurityAuditEvent,
+} from "../lib/types";
 import McpSettingsPanel from "./McpSettingsPanel";
 import {
   getBrowserNotificationPermission,
@@ -64,9 +82,207 @@ export default function SettingsModal() {
     isStandalone,
   } = useSettings();
 
-  const { user, openAuthModal } = useAuth();
+  const {
+    user,
+    openAuthModal,
+    setupMfa,
+    enableMfa,
+    disableMfa,
+    getActiveSessions,
+    revokeSession,
+    revokeOtherSessions,
+    changePassword,
+    getSecurityAuditLog,
+  } = useAuth();
+
   const [updateFeedback, setUpdateFeedback] = useState<string | null>(null);
   const [copiedMcp, setCopiedMcp] = useState<string | null>(null);
+
+  // Cisco Zero-Trust Fleet Sessions & Security Audit State
+  const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [sessionActionMsg, setSessionActionMsg] = useState<string | null>(null);
+  const [auditLogs, setAuditLogs] = useState<SecurityAuditEvent[]>([]);
+  const [isLoadingAudit, setIsLoadingAudit] = useState(false);
+
+  // Cisco Duo / TOTP RFC 6238 State
+  const [mfaSetupData, setMfaSetupData] = useState<MfaSetupResponse | null>(null);
+  const [isStartingMfa, setIsStartingMfa] = useState(false);
+  const [mfaVerifyCode, setMfaVerifyCode] = useState("");
+  const [mfaVerifyError, setMfaVerifyError] = useState<string | null>(null);
+  const [mfaVerifySuccess, setMfaVerifySuccess] = useState<string | null>(null);
+  const [isVerifyingMfa, setIsVerifyingMfa] = useState(false);
+  const [copiedMfaSecret, setCopiedMfaSecret] = useState(false);
+  const [copiedBackupCodes, setCopiedBackupCodes] = useState(false);
+
+  // Disable MFA confirmation
+  const [showDisableMfa, setShowDisableMfa] = useState(false);
+  const [disablePassword, setDisablePassword] = useState("");
+  const [disableError, setDisableError] = useState<string | null>(null);
+  const [isDisablingMfa, setIsDisablingMfa] = useState(false);
+
+  // NIST SP 800-63B Change Password State
+  const [currPassword, setCurrPassword] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [pwdFeedback, setPwdFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [isSubmittingPwd, setIsSubmittingPwd] = useState(false);
+
+  const loadSessions = async () => {
+    setIsLoadingSessions(true);
+    try {
+      const res = await getActiveSessions();
+      setSessions(res);
+    } catch (err: any) {
+      console.error("Failed to load sessions:", err);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  const loadAuditLogs = async () => {
+    setIsLoadingAudit(true);
+    try {
+      const logs = await getSecurityAuditLog();
+      setAuditLogs(logs.slice(0, 6));
+    } catch (err: any) {
+      console.error("Failed to load security audit logs:", err);
+    } finally {
+      setIsLoadingAudit(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isSettingsOpen && activeSettingsTab === "ACCOUNT" && user) {
+      loadSessions();
+      loadAuditLogs();
+    }
+  }, [isSettingsOpen, activeSettingsTab, user]);
+
+  const handleRevokeSession = async (sessionId: string) => {
+    try {
+      await revokeSession(sessionId);
+      setSessionActionMsg("Session terminated cleanly.");
+      await loadSessions();
+      setTimeout(() => setSessionActionMsg(null), 3000);
+    } catch (err: any) {
+      setSessionActionMsg(err.message || "Failed to terminate session.");
+    }
+  };
+
+  const handleRevokeOtherSessions = async () => {
+    try {
+      const count = await revokeOtherSessions();
+      setSessionActionMsg(`Terminated ${count} other active session(s).`);
+      await loadSessions();
+      setTimeout(() => setSessionActionMsg(null), 3000);
+    } catch (err: any) {
+      setSessionActionMsg(err.message || "Failed to terminate sessions.");
+    }
+  };
+
+  const handleStartMfaSetup = async () => {
+    setIsStartingMfa(true);
+    setMfaVerifyError(null);
+    try {
+      const setup = await setupMfa();
+      setMfaSetupData(setup);
+    } catch (err: any) {
+      setMfaVerifyError(err.message || "Failed to initiate MFA setup.");
+    } finally {
+      setIsStartingMfa(false);
+    }
+  };
+
+  const handleConfirmEnableMfa = async () => {
+    if (!mfaVerifyCode.trim()) {
+      setMfaVerifyError("Please enter the 6-digit TOTP code.");
+      return;
+    }
+    setIsVerifyingMfa(true);
+    setMfaVerifyError(null);
+    try {
+      const msg = await enableMfa(mfaVerifyCode.trim());
+      setMfaVerifySuccess(msg);
+      setMfaVerifyCode("");
+      loadAuditLogs();
+    } catch (err: any) {
+      setMfaVerifyError(err.message || "Invalid TOTP verification code.");
+    } finally {
+      setIsVerifyingMfa(false);
+    }
+  };
+
+  const handleConfirmDisableMfa = async () => {
+    if (!disablePassword) {
+      setDisableError("Please enter your current password.");
+      return;
+    }
+    setIsDisablingMfa(true);
+    setDisableError(null);
+    try {
+      await disableMfa(disablePassword);
+      setShowDisableMfa(false);
+      setDisablePassword("");
+      setMfaSetupData(null);
+      setMfaVerifySuccess(null);
+      loadAuditLogs();
+    } catch (err: any) {
+      setDisableError(err.message || "Failed to disable MFA. Check your password.");
+    } finally {
+      setIsDisablingMfa(false);
+    }
+  };
+
+  const handleCopyBackupCodes = () => {
+    if (!mfaSetupData?.backup_codes) return;
+    navigator.clipboard.writeText(mfaSetupData.backup_codes.join("\n"));
+    setCopiedBackupCodes(true);
+    setTimeout(() => setCopiedBackupCodes(false), 2500);
+  };
+
+  // NIST SP 800-63B validation helpers
+  const pwdHasLength = newPwd.length >= 8;
+  const pwdHasUpper = /[A-Z]/.test(newPwd);
+  const pwdHasLower = /[a-z]/.test(newPwd);
+  const pwdHasNumber = /[0-9]/.test(newPwd);
+  const pwdHasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(newPwd);
+  const isNistCompliant = pwdHasLength && pwdHasUpper && pwdHasLower && pwdHasNumber && pwdHasSymbol;
+  const passwordsMatch = newPwd.length > 0 && newPwd === confirmPwd;
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwdFeedback(null);
+
+    if (!currPassword) {
+      setPwdFeedback({ type: "error", msg: "Please enter your current password." });
+      return;
+    }
+    if (!isNistCompliant) {
+      setPwdFeedback({ type: "error", msg: "New password does not satisfy NIST complexity requirements." });
+      return;
+    }
+    if (!passwordsMatch) {
+      setPwdFeedback({ type: "error", msg: "New passwords do not match." });
+      return;
+    }
+
+    setIsSubmittingPwd(true);
+    try {
+      const msg = await changePassword(currPassword, newPwd, confirmPwd);
+      setPwdFeedback({ type: "success", msg: msg || "Password updated. Security alert dispatched to your email." });
+      setCurrPassword("");
+      setNewPwd("");
+      setConfirmPwd("");
+      loadAuditLogs();
+      loadSessions();
+    } catch (err: any) {
+      setPwdFeedback({ type: "error", msg: err.message || "Failed to update password." });
+    } finally {
+      setIsSubmittingPwd(false);
+    }
+  };
 
   const handleCopyMcp = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -227,15 +443,36 @@ export default function SettingsModal() {
           {/* Right Content Area */}
           <div className="flex-1 p-6 overflow-y-auto custom-scrollbar space-y-6">
             
-            {/* TAB 1: ACCOUNT & PROFILE */}
+            {/* TAB 1: ACCOUNT & PROFILE (CISCO ZERO-TRUST IDENTITY & SECURITY CENTER) */}
             {activeSettingsTab === "ACCOUNT" && (
-              <div className="space-y-5 animate-fade-in">
+              <div className="space-y-6 animate-fade-in pb-4">
                 <div>
-                  <h3 className="text-sm font-bold text-white">Account &amp; Institutional Profile</h3>
-                  <p className="text-xs text-zinc-400">Manage identity, organization name, and sign-in credentials.</p>
+                  <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span>Cisco Zero-Trust Identity &amp; Account Security</span>
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Manage institutional identity, RFC 6238 TOTP two-factor authentication, active device sessions, and cryptographic audit records.
+                  </p>
                 </div>
 
+                {/* 1. Profile & Family Office Identity Card */}
                 <div className="p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 space-y-4">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 flex items-center justify-center font-bold text-sm text-emerald-400 font-mono">
+                        {(user?.display_name || user?.username || settings.display_name || "FO").slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white text-xs">{settings.display_name || user?.display_name || user?.username}</div>
+                        <div className="text-[11px] text-zinc-400">{settings.organization || "Family Office Principal"}</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold">
+                      {settings.role || user?.role || "PRINCIPAL"}
+                    </span>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
@@ -261,54 +498,530 @@ export default function SettingsModal() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                     <div>
-                      <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
-                        Registered Email
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                          Registered Email
+                        </label>
+                        {user?.is_verified && (
+                          <span className="text-[10px] text-emerald-400 flex items-center space-x-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Verified</span>
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="email"
                         value={user?.email || settings.email}
                         disabled
-                        className="w-full px-3 py-2 rounded-xl bg-zinc-950/60 border border-zinc-850 text-xs text-zinc-500 cursor-not-allowed"
+                        className="w-full px-3 py-2 rounded-xl bg-zinc-950/60 border border-zinc-850 text-xs text-zinc-400 cursor-not-allowed font-mono"
                       />
                     </div>
                     <div>
                       <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
                         Team Role (RBAC)
                       </label>
-                      <div className="flex items-center space-x-2">
-                        <select
-                          value={settings.role}
-                          onChange={(e) => updateSettings({ role: e.target.value as TeamRole })}
-                          className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
-                        >
-                          <option value="PRINCIPAL">Principal (Family Office)</option>
-                          <option value="ANALYST">Analyst (GIS &amp; Pipeline)</option>
-                          <option value="COUNSEL">Counsel (Foreclosure &amp; Title)</option>
-                          <option value="CPA">CPA (SBA SOP 50 10 8.1 &amp; Tax)</option>
-                          <option value="LENDER_BROKER">Lender / Broker (Sanitized)</option>
-                        </select>
-                      </div>
+                      <select
+                        value={settings.role}
+                        onChange={(e) => updateSettings({ role: e.target.value as TeamRole })}
+                        className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-emerald-500 transition"
+                      >
+                        <option value="PRINCIPAL">Principal (Family Office)</option>
+                        <option value="ANALYST">Analyst (GIS &amp; Pipeline)</option>
+                        <option value="COUNSEL">Counsel (Foreclosure &amp; Title)</option>
+                        <option value="CPA">CPA (SBA SOP 50 10 8.1 &amp; Tax)</option>
+                        <option value="LENDER_BROKER">Lender / Broker (Sanitized)</option>
+                      </select>
                     </div>
                   </div>
                 </div>
 
-                {/* Password & Security Actions */}
-                <div className="p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-white text-xs">Security &amp; Password</div>
-                    <div className="text-[11px] text-zinc-400">Change your password or request a reset token.</div>
+                {/* 2. Cisco Duo / RFC 6238 TOTP Multi-Factor Authentication Card */}
+                <div className="p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        user?.mfa_enabled
+                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                          : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                      }`}>
+                        {user?.mfa_enabled ? <ShieldCheck className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-bold text-white text-xs">Two-Factor Authentication (TOTP / Cisco Duo)</h4>
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${
+                            user?.mfa_enabled
+                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                              : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                          }`}>
+                            {user?.mfa_enabled ? "ENFORCED & ACTIVE" : "NOT CONFIGURED"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                          Protects all family office sign-ins with standard RFC 6238 6-digit rolling codes from Cisco Duo Mobile, Google Authenticator, 1Password, or Apple Keychain.
+                        </p>
+                      </div>
+                    </div>
+
+                    {!user?.mfa_enabled && !mfaSetupData && (
+                      <button
+                        onClick={handleStartMfaSetup}
+                        disabled={isStartingMfa}
+                        className="apple-press px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition flex items-center space-x-1.5 shrink-0 cursor-pointer shadow-md"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>{isStartingMfa ? "Generating Key..." : "Enable 2FA"}</span>
+                      </button>
+                    )}
+
+                    {user?.mfa_enabled && (
+                      <button
+                        onClick={() => setShowDisableMfa(true)}
+                        className="apple-press px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-red-950/60 text-zinc-300 hover:text-red-400 border border-zinc-700 hover:border-red-800/80 text-xs font-semibold transition cursor-pointer"
+                      >
+                        Disable 2FA
+                      </button>
+                    )}
                   </div>
-                  <button
-                    onClick={() => {
-                      closeSettings();
-                      openAuthModal("FORGOT");
-                    }}
-                    className="apple-press px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-xs font-semibold transition cursor-pointer"
-                  >
-                    Change Password
-                  </button>
+
+                  {/* Inline Modal to Confirm Disabling MFA */}
+                  {showDisableMfa && (
+                    <div className="p-3.5 rounded-xl bg-red-950/20 border border-red-800/50 space-y-3 animate-fade-in">
+                      <div className="text-xs text-red-200 font-semibold flex items-center space-x-2">
+                        <AlertTriangle className="w-4 h-4 text-red-400" />
+                        <span>Confirm Disabling Two-Factor Authentication</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400">
+                        Disabling 2FA lowers account security to password-only authentication. Enter your current password to proceed:
+                      </p>
+                      {disableError && (
+                        <div className="text-[11px] text-red-400 bg-red-950/40 border border-red-800 px-2.5 py-1 rounded-lg">
+                          {disableError}
+                        </div>
+                      )}
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="password"
+                          placeholder="Current account password"
+                          value={disablePassword}
+                          onChange={(e) => setDisablePassword(e.target.value)}
+                          className="flex-1 px-3 py-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-red-500"
+                        />
+                        <button
+                          onClick={handleConfirmDisableMfa}
+                          disabled={isDisablingMfa}
+                          className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                        >
+                          {isDisablingMfa ? "Verifying..." : "Confirm Disable"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowDisableMfa(false);
+                            setDisableError(null);
+                            setDisablePassword("");
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs transition cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Interactive MFA Setup Wizard */}
+                  {mfaSetupData && !user?.mfa_enabled && (
+                    <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-4 animate-fade-in">
+                      <div className="flex items-center justify-between border-b border-zinc-850 pb-2.5">
+                        <span className="text-xs font-bold text-white flex items-center space-x-2">
+                          <Key className="w-4 h-4 text-emerald-400" />
+                          <span>Step 1: Link Authenticator App</span>
+                        </span>
+                        <a
+                          href={mfaSetupData.otpauth_uri}
+                          className="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1"
+                        >
+                          <span>Open in App</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-[11px] text-zinc-400">
+                          Add this manual Base32 setup key into Cisco Duo, Google Authenticator, or your password manager:
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          <code className="flex-1 p-2 rounded-xl bg-zinc-900 border border-zinc-800 font-mono text-xs text-emerald-400 tracking-widest text-center select-all">
+                            {mfaSetupData.secret}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(mfaSetupData.secret);
+                              setCopiedMfaSecret(true);
+                              setTimeout(() => setCopiedMfaSecret(false), 2000);
+                            }}
+                            className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs flex items-center space-x-1 cursor-pointer transition shrink-0"
+                            title="Copy Secret Key"
+                          >
+                            {copiedMfaSecret ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-zinc-850 space-y-2">
+                        <span className="text-xs font-bold text-white block">
+                          Step 2: Enter 6-Digit TOTP Verification Code
+                        </span>
+                        {mfaVerifyError && (
+                          <div className="text-[11px] text-red-400 bg-red-950/40 border border-red-800 px-2.5 py-1 rounded-lg">
+                            {mfaVerifyError}
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            maxLength={6}
+                            placeholder="123456"
+                            value={mfaVerifyCode}
+                            onChange={(e) => setMfaVerifyCode(e.target.value.replace(/\D/g, ""))}
+                            className="w-36 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-center font-mono text-sm tracking-widest text-white focus:outline-none focus:border-emerald-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleConfirmEnableMfa}
+                            disabled={isVerifyingMfa || mfaVerifyCode.length !== 6}
+                            className="apple-press px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                          >
+                            {isVerifyingMfa ? "Verifying..." : "Verify & Activate"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMfaSetupData(null);
+                              setMfaVerifyCode("");
+                              setMfaVerifyError(null);
+                            }}
+                            className="px-3 py-2 rounded-xl bg-zinc-850 hover:bg-zinc-800 text-zinc-400 text-xs transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Step 3: Single-Use Backup Recovery Codes */}
+                      {mfaVerifySuccess && mfaSetupData.backup_codes && (
+                        <div className="pt-3 border-t border-zinc-850 space-y-3 animate-fade-in">
+                          <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-800/60 flex items-center space-x-2 text-xs text-emerald-300 font-semibold">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span>{mfaVerifySuccess} Save your emergency recovery backup codes below:</span>
+                          </div>
+
+                          <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">
+                                8 Single-Use Recovery Codes
+                              </span>
+                              <button
+                                type="button"
+                                onClick={handleCopyBackupCodes}
+                                className="text-[11px] font-mono text-emerald-400 hover:underline flex items-center space-x-1 cursor-pointer"
+                              >
+                                {copiedBackupCodes ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                                <span>{copiedBackupCodes ? "Copied All Codes" : "Copy All Codes"}</span>
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              {mfaSetupData.backup_codes.map((code, idx) => (
+                                <div
+                                  key={idx}
+                                  className="p-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-center font-mono text-xs text-zinc-200 select-all"
+                                >
+                                  {code}
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-[10px] text-zinc-500">
+                              Each code can only be used once if you lose access to your authenticator app. Store these in a safe vault.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Active Sessions Fleet Management (Cisco Device Inventory) */}
+                <div className="p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shrink-0">
+                        <Laptop className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-bold text-white text-xs">Active Session Fleet</h4>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
+                            {sessions.length} {sessions.length === 1 ? "device" : "devices"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                          Real-time device tracking with client IP telemetry, User-Agent identification, and single-click fleet revocation.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={loadSessions}
+                        disabled={isLoadingSessions}
+                        className="p-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition cursor-pointer"
+                        title="Refresh session inventory"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSessions ? "animate-spin" : ""}`} />
+                      </button>
+                      {sessions.length > 1 && (
+                        <button
+                          onClick={handleRevokeOtherSessions}
+                          className="apple-press px-2.5 py-1.5 rounded-xl bg-red-950/40 hover:bg-red-950/70 text-red-300 border border-red-800/80 text-xs font-semibold transition cursor-pointer flex items-center space-x-1"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Revoke Other Sessions</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {sessionActionMsg && (
+                    <div className="text-[11px] text-emerald-400 bg-emerald-950/30 border border-emerald-800 px-3 py-1.5 rounded-xl animate-fade-in flex items-center space-x-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>{sessionActionMsg}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {sessions.map((sess) => (
+                      <div
+                        key={sess.session_id}
+                        className={`p-3 rounded-xl border flex items-center justify-between transition ${
+                          sess.is_current
+                            ? "bg-zinc-950/80 border-emerald-500/40 shadow-sm"
+                            : "bg-zinc-950/40 border-zinc-850 hover:border-zinc-800"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                            sess.device_name.toLowerCase().includes("mobile") || sess.device_name.toLowerCase().includes("iphone")
+                              ? "bg-zinc-800 text-zinc-300"
+                              : "bg-zinc-800 text-zinc-300"
+                          }`}>
+                            {sess.device_name.toLowerCase().includes("mobile") || sess.device_name.toLowerCase().includes("iphone") ? (
+                              <Smartphone className="w-4 h-4 text-cyan-400" />
+                            ) : (
+                              <Monitor className="w-4 h-4 text-cyan-400" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="font-semibold text-xs text-white">{sess.device_name}</span>
+                              {sess.is_current && (
+                                <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold">
+                                  Current Device
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-3 text-[11px] text-zinc-500 font-mono mt-0.5">
+                              <span className="flex items-center space-x-1">
+                                <Globe className="w-3 h-3 text-zinc-600" />
+                                <span>{sess.client_ip}</span>
+                              </span>
+                              <span>•</span>
+                              <span>Active: {new Date(sess.last_active_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {!sess.is_current && (
+                          <button
+                            onClick={() => handleRevokeSession(sess.session_id)}
+                            className="p-1.5 rounded-lg bg-zinc-900 hover:bg-red-950/60 text-zinc-400 hover:text-red-400 border border-zinc-800 hover:border-red-800/80 transition cursor-pointer text-xs"
+                            title="Terminate this device session"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. NIST SP 800-63B Password Management Form */}
+                <form onSubmit={handleChangePassword} className="p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 space-y-4">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center shrink-0">
+                        <Lock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-white text-xs">Update Account Password</h4>
+                        <p className="text-[11px] text-zinc-400">
+                          Enforces NIST SP 800-63B complexity. Changing password triggers an immediate SMTP security alert.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPwd(!showNewPwd)}
+                      className="text-[11px] text-zinc-400 hover:text-zinc-200 flex items-center space-x-1"
+                    >
+                      {showNewPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{showNewPwd ? "Hide" : "Show"}</span>
+                    </button>
+                  </div>
+
+                  {pwdFeedback && (
+                    <div className={`p-2.5 rounded-xl border text-xs flex items-center space-x-2 ${
+                      pwdFeedback.type === "success"
+                        ? "bg-emerald-950/30 border-emerald-800/60 text-emerald-300"
+                        : "bg-red-950/30 border-red-800/60 text-red-300"
+                    }`}>
+                      {pwdFeedback.type === "success" ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                      )}
+                      <span>{pwdFeedback.msg}</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+                        Current Password
+                      </label>
+                      <input
+                        type={showNewPwd ? "text" : "password"}
+                        value={currPassword}
+                        onChange={(e) => setCurrPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-purple-500 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+                        New Password
+                      </label>
+                      <input
+                        type={showNewPwd ? "text" : "password"}
+                        value={newPwd}
+                        onChange={(e) => setNewPwd(e.target.value)}
+                        placeholder="••••••••••••"
+                        className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-purple-500 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+                        Confirm New Password
+                      </label>
+                      <input
+                        type={showNewPwd ? "text" : "password"}
+                        value={confirmPwd}
+                        onChange={(e) => setConfirmPwd(e.target.value)}
+                        placeholder="••••••••••••"
+                        className={`w-full px-3 py-2 rounded-xl bg-zinc-950 border text-xs text-white focus:outline-none transition ${
+                          confirmPwd.length > 0 && !passwordsMatch
+                            ? "border-red-500"
+                            : "border-zinc-800 focus:border-purple-500"
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Interactive NIST SP 800-63B Requirements Checklist */}
+                  {newPwd.length > 0 && (
+                    <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-850 space-y-1.5 animate-fade-in text-[11px]">
+                      <div className="font-semibold text-zinc-300 text-[10px] uppercase tracking-wider">
+                        NIST SP 800-63B Standard Verification
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                        <span className={`flex items-center space-x-1 ${pwdHasLength ? "text-emerald-400 font-medium" : "text-zinc-500"}`}>
+                          <Check className="w-3 h-3" />
+                          <span>8+ Chars</span>
+                        </span>
+                        <span className={`flex items-center space-x-1 ${pwdHasUpper ? "text-emerald-400 font-medium" : "text-zinc-500"}`}>
+                          <Check className="w-3 h-3" />
+                          <span>Uppercase</span>
+                        </span>
+                        <span className={`flex items-center space-x-1 ${pwdHasLower ? "text-emerald-400 font-medium" : "text-zinc-500"}`}>
+                          <Check className="w-3 h-3" />
+                          <span>Lowercase</span>
+                        </span>
+                        <span className={`flex items-center space-x-1 ${pwdHasNumber ? "text-emerald-400 font-medium" : "text-zinc-500"}`}>
+                          <Check className="w-3 h-3" />
+                          <span>Number</span>
+                        </span>
+                        <span className={`flex items-center space-x-1 ${pwdHasSymbol ? "text-emerald-400 font-medium" : "text-zinc-500"}`}>
+                          <Check className="w-3 h-3" />
+                          <span>Symbol</span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isSubmittingPwd || !currPassword || !isNistCompliant || !passwordsMatch}
+                      className="apple-press px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold transition disabled:opacity-40 cursor-pointer border border-zinc-700"
+                    >
+                      {isSubmittingPwd ? "Updating Password..." : "Update Password"}
+                    </button>
+                  </div>
+                </form>
+
+                {/* 5. Recent Security Activity & Merkle AAA Audit Trail */}
+                <div className="p-4 rounded-2xl bg-zinc-900/50 border border-zinc-800/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2.5">
+                      <History className="w-4 h-4 text-zinc-400" />
+                      <h4 className="font-bold text-white text-xs">Security Activity Audit Trail</h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={loadAuditLogs}
+                      className="text-[11px] text-zinc-400 hover:text-white flex items-center space-x-1 transition"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isLoadingAudit ? "animate-spin" : ""}`} />
+                      <span>Refresh</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {auditLogs.length === 0 ? (
+                      <p className="text-[11px] text-zinc-500 italic py-2">No recent security events recorded.</p>
+                    ) : (
+                      auditLogs.map((log) => (
+                        <div
+                          key={log.event_id}
+                          className="px-3 py-2 rounded-xl bg-zinc-950/60 border border-zinc-850 flex items-center justify-between text-xs"
+                        >
+                          <div className="flex items-center space-x-2.5">
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                              {log.action_type}
+                            </span>
+                            <span className="text-[11px] text-zinc-400 font-mono">
+                              {log.actor_role} ({log.actor_id})
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono text-zinc-500">
+                            {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             )}

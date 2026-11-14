@@ -447,6 +447,153 @@ Argus Security Team
             meta={"type": "PASSWORD_RESET", "token": token, "username": username},
         )
 
+    def send_magic_link_email(
+        self,
+        to_email: str,
+        username: str,
+        token: str,
+        base_url: str = "",
+    ) -> Dict[str, Any]:
+        """Dispatches passwordless one-click sign-in magic link via SMTP."""
+        base_url = (
+            base_url
+            or os.environ.get("FRONTEND_BASE_URL")
+            or os.environ.get("NEXT_PUBLIC_APP_URL")
+            or "http://argus.150.136.103.204.sslip.io"
+        ).rstrip("/")
+
+        magic_url = f"{base_url}?magic_token={token}"
+        subject = "Argus Platform — Your One-Click Sign-In Link"
+
+        body_text = f"""
+Hello {username},
+
+We received a request for one-click passwordless sign-in to your Argus account.
+
+Click the link below to authenticate immediately:
+========================================
+{magic_url}
+========================================
+(Valid for 15 minutes. Single use only)
+
+If you did not request this sign-in link, please disregard this email.
+For security assistance, contact compliance@argus.internal.
+
+Argus Security Team
+"""
+
+        body_html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>One-Click Sign-In</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #09090b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f4f4f5;">
+  <div style="background-color: #09090b; padding: 40px 16px;">
+    <div style="max-width: 560px; margin: 0 auto; background-color: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 32px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+      
+      <div style="border-bottom: 1px solid #27272a; padding-bottom: 20px; margin-bottom: 24px;">
+        <span style="font-size: 15px; font-weight: 700; color: #ffffff; letter-spacing: 0.05em; text-transform: uppercase;">Argus Platform</span>
+        <span style="display: block; font-size: 11px; color: #71717a; margin-top: 4px; font-family: monospace;">Zero-Trust Passwordless Authentication</span>
+      </div>
+
+      <h2 style="font-size: 19px; font-weight: 700; color: #ffffff; margin-top: 0;">Instant Sign-In Link</h2>
+      <p style="font-size: 14px; line-height: 1.6; color: #d4d4d8;">Hello <strong>{username}</strong>,</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #a1a1aa;">
+        Click the button below to sign in directly without entering your password:
+      </p>
+
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="{magic_url}" style="background-color: #10b981; color: #ffffff; padding: 13px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 13px; display: inline-block; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+          Sign In to Argus Now
+        </a>
+      </div>
+
+      <p style="font-size: 11px; line-height: 1.5; color: #71717a; border-top: 1px solid #27272a; padding-top: 16px; margin-top: 24px;">
+        This single-use link expires in 15 minutes. If you did not request this, please ignore this email.
+      </p>
+
+    </div>
+  </div>
+</body>
+</html>"""
+
+        return self.dispatch(
+            to_email=to_email,
+            subject=subject,
+            body_text=body_text,
+            body_html=body_html,
+            meta={"type": "MAGIC_LINK", "token": token, "username": username},
+        )
+
+    def send_security_alert_email(
+        self,
+        to_email: str,
+        username: str,
+        event_title: str,
+        event_details: str,
+        base_url: str = "",
+    ) -> Dict[str, Any]:
+        """Dispatches an institutional security alert (e.g. password changed, MFA toggled)."""
+        subject = f"Argus Platform — Security Alert: {event_title}"
+
+        body_text = f"""
+Hello {username},
+
+This is an automated security notification regarding your Argus account:
+
+EVENT:   {event_title}
+DETAILS: {event_details}
+TIME:    {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}
+
+If you authorized this action, no further steps are needed.
+If you did NOT authorize this action, please access your security settings immediately and contact compliance@argus.internal.
+
+Argus Security Team
+"""
+
+        body_html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Security Alert</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #09090b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f4f4f5;">
+  <div style="background-color: #09090b; padding: 40px 16px;">
+    <div style="max-width: 560px; margin: 0 auto; background-color: #18181b; border: 1px solid #dc2626; border-radius: 16px; padding: 32px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+      
+      <div style="border-bottom: 1px solid #27272a; padding-bottom: 20px; margin-bottom: 24px;">
+        <span style="font-size: 15px; font-weight: 700; color: #ef4444; letter-spacing: 0.05em; text-transform: uppercase;">⚠️ Argus Security Alert</span>
+      </div>
+
+      <h2 style="font-size: 18px; font-weight: 700; color: #ffffff; margin-top: 0;">{event_title}</h2>
+      <p style="font-size: 14px; line-height: 1.6; color: #d4d4d8;">Hello <strong>{username}</strong>,</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #a1a1aa;">
+        {event_details}
+      </p>
+
+      <div style="background-color: #09090b; border: 1px solid #3f3f46; border-radius: 8px; padding: 14px; margin: 20px 0; font-size: 12px; color: #94a3b8;">
+        <div><strong>Timestamp:</strong> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</div>
+        <div style="margin-top: 4px;"><strong>Account:</strong> {to_email}</div>
+      </div>
+
+      <p style="font-size: 11px; line-height: 1.5; color: #71717a; border-top: 1px solid #27272a; padding-top: 16px; margin-top: 24px;">
+        If you performed this action, you can safely ignore this alert. If you did not make this change, please contact security@argus.internal immediately.
+      </p>
+
+    </div>
+  </div>
+</body>
+</html>"""
+
+        return self.dispatch(
+            to_email=to_email,
+            subject=subject,
+            body_text=body_text,
+            body_html=body_html,
+            meta={"type": "SECURITY_ALERT", "event_title": event_title, "username": username},
+        )
+
 
 # Global singleton instance
 email_service = EmailDeliveryService()

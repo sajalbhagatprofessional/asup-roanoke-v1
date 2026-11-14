@@ -52,6 +52,7 @@ import tests.unit.test_mcp_connect_hub as u15
 import tests.integration.test_mcp_hub_endpoints as i25
 import tests.unit.test_security_hardening as u16
 import tests.unit.test_email_verification_service as u17
+import tests.unit.test_cisco_enterprise_auth as u18
 
 
 def main() -> int:
@@ -376,6 +377,18 @@ def main() -> int:
 
     print(f"All {email_passed}/{email_passed} Real Email Delivery & 6-Digit Code Verification Tests PASSED!")
 
+    # Milestone 39: Cisco Zero-Trust & Duo Security Authentication Architecture Suite
+    cisco_auth_passed = 0
+    for attr in sorted(dir(u18)):
+        if attr.startswith("test_"):
+            fn = getattr(u18, attr)
+            if callable(fn):
+                fn()
+                cisco_auth_passed += 1
+                print(f"[PASS] {u18.__name__}.{attr}")
+
+    print(f"All {cisco_auth_passed}/{cisco_auth_passed} Cisco Zero-Trust & Duo Security Authentication Tests PASSED!")
+
     total_passed = (
         core_passed
         + api_passed
@@ -402,6 +415,7 @@ def main() -> int:
         + mcp_hub_passed
         + security_passed
         + email_passed
+        + cisco_auth_passed
     )
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 

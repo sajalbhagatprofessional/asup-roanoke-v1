@@ -536,18 +536,72 @@ export interface AuthUser {
   role: TeamRole;
   is_verified: boolean;
   is_active: boolean;
+  display_name?: string;
+  mfa_enabled?: boolean;
   created_at: string;
   updated_at?: string;
   preferences_id?: string;
 }
 
+export interface UserSession {
+  session_id: string;
+  user_id: string;
+  client_ip: string;
+  device_name: string;
+  created_at: string;
+  last_active_at: string;
+  is_current: boolean;
+  is_revoked: boolean;
+}
+
 export interface AuthResponse {
-  status: string;
-  access_token: string;
+  status: "success" | "mfa_required" | string;
+  access_token?: string;
   refresh_token?: string;
-  token_type: string;
+  token_type?: string;
   expires_in?: number;
   user: AuthUser;
+  mfa_session_token?: string;
+  message?: string;
+  session?: UserSession;
+}
+
+export interface MfaSetupResponse {
+  status: string;
+  secret: string;
+  otpauth_uri: string;
+  backup_codes: string[];
+  issuer: string;
+  account: string;
+}
+
+export interface MfaVerifyLoginPayload {
+  mfa_session_token: string;
+  code: string;
+}
+
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}
+
+export interface MagicLinkPayload {
+  email: string;
+}
+
+export interface MagicLinkVerifyPayload {
+  token: string;
+}
+
+export interface SecurityAuditEvent {
+  event_id: string;
+  timestamp: string;
+  action_type: string;
+  actor_role: string;
+  actor_id: string;
+  payload: Record<string, any>;
+  merkle_hash?: string;
 }
 
 export interface OAuthAuthorizeUrlResponse {

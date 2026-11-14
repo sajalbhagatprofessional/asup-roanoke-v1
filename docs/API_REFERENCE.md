@@ -234,16 +234,27 @@ The platform exposes an Anthropic Model Context Protocol (MCP 2024-11-05) gatewa
 
 ---
 
-## 9. User Authentication & Identity Management
+## 9. User Authentication & Identity Management (Cisco Zero-Trust & Duo MFA)
 
 - `POST /v1/auth/signup`: User registration with NIST SP 800-63B password complexity, 6-digit numeric verification code generation, and transactional email dispatch (SMTP/STARTTLS or persistent local outbox).
-- `POST /v1/auth/signin`: Password authentication enforcing 5-attempt sliding lockout and returning short-lived access token + rotating refresh token.
+- `POST /v1/auth/signin`: Password authentication enforcing 5-attempt sliding lockout; intercepts MFA-enabled accounts and issues signed 5-minute MFA challenge tokens.
 - `POST /v1/auth/refresh`: Exchanges valid rotating refresh token for fresh short-lived access token and new refresh token (with automated family reuse attack detection).
 - `POST /v1/auth/signout`: Revokes refresh token and invalidates active session.
 - `POST /v1/auth/verify-email`: Activates user account with either 6-digit verification code or full cryptographic URL token, enforcing single-use anti-replay defense.
 - `POST /v1/auth/resend-verification`: Dispatches fresh 6-digit verification code and token to registered email, invalidating previous codes.
 - `POST /v1/auth/forgot-password`: Generates secure 60-minute password reset token and dispatches email instructions.
 - `POST /v1/auth/reset-password`: Resets user password, enforces NIST complexity, and invalidates all prior sessions.
+- `POST /v1/auth/change-password`: Changes account password after verifying current credentials, enforcing NIST SP 800-63B, terminating other active sessions, and dispatching an email security alert.
+- `POST /v1/auth/magic-link`: Generates and dispatches a 15-minute single-use passwordless sign-in magic link.
+- `POST /v1/auth/magic-link/verify`: Validates magic link token and provisions an authenticated session (single-use anti-replay).
+- `POST /v1/auth/mfa/setup`: Generates Base32 secret key, standard `otpauth://` URI, and 8 single-use emergency backup recovery codes.
+- `POST /v1/auth/mfa/enable`: Verifies live 6-digit TOTP code and activates permanent MFA enforcement on account.
+- `POST /v1/auth/mfa/disable`: Disables MFA after verifying account password and optional TOTP code.
+- `POST /v1/auth/mfa/verify-login`: Verifies MFA challenge step with 6-digit TOTP or burns a single-use backup recovery code.
+- `GET /v1/auth/sessions`: Lists active device session fleet with OS, browser, IP telemetry, and current session flag.
+- `DELETE /v1/auth/sessions/{session_id}`: Revokes an individual device session.
+- `POST /v1/auth/sessions/revoke-others`: Terminates all active sessions across all devices except the current session.
+- `GET /v1/auth/security/audit-log`: Returns user-scoped AAA Merkle security audit events.
 - `GET /v1/auth/me`: Retrieves currently authenticated user profile, claims, and role permissions.
 - `GET /v1/auth/oauth/providers`: Returns configuration and readiness for Google and Microsoft OAuth2 providers.
 - `GET /v1/auth/oauth/authorize-url`: Generates RFC-7636 OAuth2 PKCE authorization URL with secure state and challenge.

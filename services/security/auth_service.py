@@ -84,6 +84,128 @@ class TokenReuseDetectedError(AuthError):
 
 
 @dataclass
+class UserSession:
+    session_id: str
+    user_id: str
+    client_ip: str
+    user_agent: str
+    device_name: str
+    created_at: datetime
+    last_active_at: datetime
+    is_revoked: bool = False
+
+    def to_dict(self, is_current: bool = False) -> Dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "user_id": self.user_id,
+            "client_ip": self.client_ip,
+            "device_name": self.device_name,
+            "created_at": self.created_at.isoformat(),
+            "last_active_at": self.last_active_at.isoformat(),
+            "is_current": is_current,
+            "is_revoked": self.is_revoked,
+        }
+
+
+# =========================================================================
+# RFC 6238 TOTP ENGINE & DEVICE SUMMARY PARSER (ZERO THIRD-PARTY DEP)
+# =========================================================================
+
+def generate_totp_secret() -> str:
+    """Generates a high-entropy 160-bit Base32 secret for RFC 6238 TOTP."""
+    raw_bytes = secrets.token_bytes(20)
+    return base64.b32encode(raw_bytes).decode("utf-8").replace("=", "")
+
+
+def get_totp_uri(secret_b32: str, account_name: str, issuer: str = "Argus Institutional") -> str:
+    """Builds standard RFC-6238 otpauth URI for QR codes and authenticator apps."""
+    import urllib.parse
+    label = urllib.parse.quote(f"{issuer}:{account_name}")
+    issuer_q = urllib.parse.quote(issuer)
+    return f"otpauth://totp/{label}?secret={secret_b32}&issuer={issuer_q}&algorithm=SHA1&digits=6&period=30"
+
+
+def get_totp_code(secret_b32: str, t: Optional[float] = None, interval: int = 30) -> str:
+    """Computes standard 6-digit TOTP code for a given timestamp."""
+    import struct, time
+    if t is None:
+        t = time.time()
+    counter = int(t // interval)
+    secret_clean = secret_b32.strip().upper()
+    padded = secret_clean + "=" * (-len(secret_clean) % 8)
+    key = base64.b32decode(padded)
+    msg = struct.pack(">Q", counter)
+    h = hmac.new(key, msg, hashlib.sha1).digest()
+    offset = h[-1] & 0x0F
+    binary = (
+        ((h[offset] & 0x7F) << 24)
+        | ((h[offset + 1] & 0xFF) << 16)
+        | ((h[offset + 2] & 0xFF) << 8)
+        | (h[offset + 3] & 0xFF)
+    )
+    otp = binary % 1000000
+    return str(otp).zfill(6)
+
+
+def verify_totp(secret_b32: str, code: str, interval: int = 30, window: int = 1) -> bool:
+    """Verifies a 6-digit TOTP code with ±window tolerance for clock drift."""
+    import time
+    code_clean = code.strip().replace(" ", "").replace("-", "")
+    if len(code_clean) != 6 or not code_clean.isdigit():
+        return False
+    now = time.time()
+    for offset in range(-window, window + 1):
+        if get_totp_code(secret_b32, now + (offset * interval), interval) == code_clean:
+            return True
+    return False
+
+
+def generate_backup_codes(count: int = 8) -> Tuple[List[str], List[str]]:
+    """Generates single-use backup recovery codes formatted XXXX-XXXX with SHA-256 hashes."""
+    plain_codes = []
+    hashed_codes = []
+    for _ in range(count):
+        part1 = secrets.token_hex(2).upper()
+        part2 = secrets.token_hex(2).upper()
+        code = f"{part1}-{part2}"
+        plain_codes.append(code)
+        hashed_codes.append(hashlib.sha256(code.encode("utf-8")).hexdigest())
+    return plain_codes, hashed_codes
+
+
+def parse_device_summary(user_agent: str) -> str:
+    """Parses user agent into a clean institutional device descriptor."""
+    if not user_agent:
+        return "Unknown Client / Terminal"
+    ua = user_agent.lower()
+    os_name = "Desktop"
+    if "iphone" in ua or "ipad" in ua:
+        os_name = "iOS"
+    elif "android" in ua:
+        os_name = "Android"
+    elif "windows" in ua:
+        os_name = "Windows"
+    elif "macintosh" in ua or "mac os" in ua:
+        os_name = "macOS"
+    elif "linux" in ua:
+        os_name = "Linux"
+
+    browser = "Browser"
+    if "edg/" in ua:
+        browser = "Edge"
+    elif "chrome" in ua and "safari" in ua:
+        browser = "Chrome"
+    elif "safari" in ua and "chrome" not in ua:
+        browser = "Safari"
+    elif "firefox" in ua:
+        browser = "Firefox"
+    elif "curl" in ua or "python" in ua or "postman" in ua:
+        browser = "API Terminal / CLI"
+
+    return f"{os_name} · {browser}"
+
+
+@dataclass
 class UserRecord:
     user_id: str
     username: str
@@ -100,6 +222,10 @@ class UserRecord:
     reset_token: Optional[str] = None
     reset_token_expires_at: Optional[datetime] = None
     preferences_id: Optional[str] = None
+    mfa_enabled: bool = False
+    mfa_secret: Optional[str] = None
+    mfa_pending_secret: Optional[str] = None
+    mfa_backup_codes: List[str] = field(default_factory=list)
 
     def to_dict(self, include_sensitive: bool = False) -> Dict[str, Any]:
         data = {
@@ -109,6 +235,7 @@ class UserRecord:
             "role": self.role.value if isinstance(self.role, TeamRole) else str(self.role),
             "is_verified": self.is_verified,
             "is_active": self.is_active,
+            "mfa_enabled": self.mfa_enabled,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
             "preferences_id": self.preferences_id,
@@ -256,6 +383,7 @@ def hash_token(raw_token: str) -> str:
 
 def create_access_token(
     user: UserRecord,
+    session_id: Optional[str] = None,
     expires_delta: Optional[timedelta] = None,
 ) -> str:
     """Generates an RFC-7519 compliant signed JWT Bearer access token."""
@@ -267,12 +395,41 @@ def create_access_token(
         "email": user.email,
         "role": user.role.value if isinstance(user.role, TeamRole) else str(user.role),
         "is_verified": user.is_verified,
+        "mfa_enabled": user.mfa_enabled,
+        "sid": session_id,
         "token_type": "access",
         "jti": secrets.token_hex(16),
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
     }
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+def create_mfa_challenge_token(user_id: str) -> str:
+    """Creates a short-lived 5-minute signed JWT token specifically for the MFA challenge step."""
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=5)
+    payload = {
+        "sub": user_id,
+        "token_type": "mfa_challenge",
+        "jti": secrets.token_hex(16),
+        "iat": int(now.timestamp()),
+        "exp": int(expire.timestamp()),
+    }
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+def decode_mfa_challenge_token(token: str) -> str:
+    """Decodes MFA challenge token and returns user_id if valid."""
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        if payload.get("token_type") != "mfa_challenge":
+            raise TokenExpiredOrInvalidError("Invalid token type. Expected MFA challenge token.")
+        return payload["sub"]
+    except jwt.ExpiredSignatureError:
+        raise TokenExpiredOrInvalidError("MFA authentication window expired (5 min). Please sign in again.")
+    except jwt.InvalidTokenError:
+        raise TokenExpiredOrInvalidError("Invalid MFA challenge session.")
 
 
 def decode_access_token(token: str) -> Dict[str, Any]:
@@ -301,6 +458,9 @@ class UserAuthStore:
         self._refresh_tokens: Dict[str, RefreshTokenRecord] = {}  # token_hash -> record
         self._family_tokens: Dict[str, List[str]] = {}  # family_id -> [token_hashes]
         self._oauth_state_cache: Dict[str, Dict[str, Any]] = {}  # state -> {provider, created_at, code_verifier}
+        self._sessions_by_id: Dict[str, UserSession] = {}
+        self._sessions_by_user: Dict[str, List[str]] = {}
+        self._magic_links: Dict[str, Tuple[str, datetime]] = {}  # token -> (user_id, expires_at)
         self._seed_default_institutional_users()
 
     def _seed_default_institutional_users(self):
@@ -679,6 +839,228 @@ class UserAuthStore:
 
     def get_user_by_id(self, user_id: str) -> Optional[UserRecord]:
         return self._users_by_id.get(user_id)
+
+    # =========================================================================
+    # ACTIVE SESSIONS & FLEET DEVICE MANAGEMENT
+    # =========================================================================
+
+    def create_session(
+        self,
+        user_id: str,
+        client_ip: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> UserSession:
+        """Provisions an auditable active session record with device fingerprint."""
+        now = datetime.now(timezone.utc)
+        session_id = f"ses_{secrets.token_hex(16)}"
+        device_name = parse_device_summary(user_agent or "")
+        session = UserSession(
+            session_id=session_id,
+            user_id=user_id,
+            client_ip=client_ip or "127.0.0.1",
+            user_agent=user_agent or "Web Client",
+            device_name=device_name,
+            created_at=now,
+            last_active_at=now,
+            is_revoked=False,
+        )
+        self._sessions_by_id[session_id] = session
+        if user_id not in self._sessions_by_user:
+            self._sessions_by_user[user_id] = []
+        self._sessions_by_user[user_id].append(session_id)
+        return session
+
+    def get_user_sessions(
+        self,
+        user_id: str,
+        current_session_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Returns all non-revoked active sessions for user, flagging current device."""
+        sessions = []
+        s_ids = self._sessions_by_user.get(user_id, [])
+        for sid in s_ids:
+            s = self._sessions_by_id.get(sid)
+            if s and not s.is_revoked:
+                sessions.append(s.to_dict(is_current=(sid == current_session_id)))
+        sessions.sort(key=lambda x: x["last_active_at"], reverse=True)
+        return sessions
+
+    def revoke_session(self, session_id: str, user_id: str) -> bool:
+        """Revokes an individual session."""
+        session = self._sessions_by_id.get(session_id)
+        if session and session.user_id == user_id and not session.is_revoked:
+            session.is_revoked = True
+            return True
+        return False
+
+    def revoke_other_sessions(self, user_id: str, keep_session_id: Optional[str] = None) -> int:
+        """Terminates all sessions for a user except the currently active device session."""
+        count = 0
+        s_ids = self._sessions_by_user.get(user_id, [])
+        for sid in s_ids:
+            if sid != keep_session_id:
+                s = self._sessions_by_id.get(sid)
+                if s and not s.is_revoked:
+                    s.is_revoked = True
+                    count += 1
+        return count
+
+    # =========================================================================
+    # MULTI-FACTOR AUTHENTICATION (MFA / 2FA RFC 6238 TOTP)
+    # =========================================================================
+
+    def setup_mfa(self, user_id: str) -> Tuple[str, str, List[str]]:
+        """
+        Initiates MFA setup: generates Base32 secret, otpauth URI, and 8 backup recovery codes.
+        Codes remain pending until verified with a live 6-digit TOTP code.
+        """
+        user = self._users_by_id.get(user_id)
+        if not user:
+            raise InvalidCredentialsError("User account not found.")
+        secret = generate_totp_secret()
+        user.mfa_pending_secret = secret
+        plain_codes, hashed_codes = generate_backup_codes(8)
+        user.mfa_backup_codes = hashed_codes
+        otpauth_uri = get_totp_uri(secret, user.email, issuer="Argus Institutional")
+        return secret, otpauth_uri, plain_codes
+
+    def enable_mfa(self, user_id: str, code: str) -> Tuple[bool, str]:
+        """Validates first live code and enables MFA permanently on the account."""
+        user = self._users_by_id.get(user_id)
+        if not user or not user.mfa_pending_secret:
+            raise ValueError("MFA enrollment has not been initiated. Please start setup first.")
+        if not verify_totp(user.mfa_pending_secret, code):
+            raise InvalidCredentialsError("Invalid 6-digit TOTP verification code. Please check your authenticator clock.")
+        user.mfa_secret = user.mfa_pending_secret
+        user.mfa_pending_secret = None
+        user.mfa_enabled = True
+        user.updated_at = datetime.now(timezone.utc)
+        return True, "Multi-Factor Authentication (Cisco Duo / TOTP) successfully activated."
+
+    def disable_mfa(self, user_id: str, password: str, code: Optional[str] = None) -> Tuple[bool, str]:
+        """Disables MFA after verifying account password."""
+        user = self._users_by_id.get(user_id)
+        if not user:
+            raise InvalidCredentialsError("User account not found.")
+        if not verify_password(password, user.password_hash):
+            raise InvalidCredentialsError("Current password incorrect. Password required to disable MFA.")
+        if code and user.mfa_secret and not verify_totp(user.mfa_secret, code):
+            raise InvalidCredentialsError("Invalid TOTP verification code.")
+        user.mfa_enabled = False
+        user.mfa_secret = None
+        user.mfa_pending_secret = None
+        user.mfa_backup_codes = []
+        user.updated_at = datetime.now(timezone.utc)
+        return True, "Two-Factor Authentication has been disabled."
+
+    def verify_mfa_login(
+        self,
+        mfa_session_token: str,
+        code_or_backup: str,
+        client_ip: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> Tuple[UserRecord, str, str, UserSession]:
+        """
+        Completes the second step of MFA authentication.
+        Accepts either standard 6-digit TOTP code or single-use 8-character backup recovery code.
+        """
+        user_id = decode_mfa_challenge_token(mfa_session_token)
+        user = self._users_by_id.get(user_id)
+        if not user or not user.mfa_enabled or not user.mfa_secret:
+            raise InvalidCredentialsError("MFA is not configured or user does not exist.")
+
+        clean = code_or_backup.strip().replace(" ", "")
+        is_totp = verify_totp(user.mfa_secret, clean)
+        used_backup = False
+
+        if not is_totp:
+            clean_upper = clean.upper()
+            h = hashlib.sha256(clean_upper.encode("utf-8")).hexdigest()
+            if h in user.mfa_backup_codes:
+                user.mfa_backup_codes.remove(h)
+                used_backup = True
+            else:
+                h2 = hashlib.sha256(clean.encode("utf-8")).hexdigest()
+                if h2 in user.mfa_backup_codes:
+                    user.mfa_backup_codes.remove(h2)
+                    used_backup = True
+
+        if not is_totp and not used_backup:
+            raise InvalidCredentialsError("Invalid 6-digit authenticator code or single-use backup recovery code.")
+
+        session = self.create_session(user.user_id, client_ip, user_agent)
+        access_token = create_access_token(user, session_id=session.session_id)
+        raw_refresh, _ = self.create_refresh_token(user.user_id)
+        return user, access_token, raw_refresh, session
+
+    # =========================================================================
+    # DIRECT PASSWORD CHANGE & PASSWORDLESS MAGIC LINK
+    # =========================================================================
+
+    def change_password(
+        self,
+        user_id: str,
+        current_password: str,
+        new_password: str,
+        confirm_password: str,
+    ) -> Tuple[bool, str, UserRecord]:
+        """Validates current password, checks NIST SP 800-63B complexity, updates hash, revokes sessions."""
+        user = self._users_by_id.get(user_id)
+        if not user:
+            raise InvalidCredentialsError("User account not found.")
+        if not verify_password(current_password, user.password_hash):
+            raise InvalidCredentialsError("Current password is incorrect.")
+        if new_password != confirm_password:
+            raise ValueError("New password and confirmation do not match.")
+        valid, msg = validate_password_strength(new_password)
+        if not valid:
+            raise ValueError(msg)
+        if verify_password(new_password, user.password_hash):
+            raise ValueError("New password cannot be identical to your current password.")
+
+        user.password_hash = hash_password(new_password)
+        user.updated_at = datetime.now(timezone.utc)
+
+        # Invalidate other refresh tokens and sessions for security
+        self.revoke_all_user_sessions(user.user_id)
+        self.revoke_other_sessions(user.user_id)
+        return True, "Password successfully updated. All other active sessions have been terminated.", user
+
+    def request_magic_link(self, email: str) -> Tuple[bool, str, Optional[str], Optional[UserRecord]]:
+        """Generates a 15-minute single-use passwordless sign-in token."""
+        email = email.strip().lower()
+        user_id = self._users_by_email.get(email)
+        if not user_id:
+            return True, "If an account exists with this email, a sign-in link has been dispatched.", None, None
+        user = self._users_by_id[user_id]
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+        self._magic_links[token] = (user_id, expires_at)
+        return True, "Magic sign-in link generated.", token, user
+
+    def verify_magic_link(
+        self,
+        token: str,
+        client_ip: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> Tuple[UserRecord, str, str, UserSession]:
+        """Validates and consumes a single-use magic sign-in link."""
+        entry = self._magic_links.get(token)
+        if not entry:
+            raise TokenExpiredOrInvalidError("Magic sign-in link is invalid or has already been used.")
+        user_id, expires_at = entry
+        if datetime.now(timezone.utc) > expires_at:
+            del self._magic_links[token]
+            raise TokenExpiredOrInvalidError("Magic sign-in link has expired. Please request a new one.")
+        del self._magic_links[token]
+        user = self._users_by_id.get(user_id)
+        if not user or not user.is_active:
+            raise InvalidCredentialsError("Account is inactive or disabled.")
+
+        session = self.create_session(user.user_id, client_ip, user_agent)
+        access_token = create_access_token(user, session_id=session.session_id)
+        raw_refresh, _ = self.create_refresh_token(user.user_id)
+        return user, access_token, raw_refresh, session
 
     # =========================================================================
     # OAUTH2 PKCE AUTHORIZATION & VERIFICATION

@@ -9,7 +9,7 @@ from decimal import Decimal, ROUND_HALF_EVEN
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from dotenv import load_dotenv
@@ -126,9 +126,12 @@ from services.security import (
     UnverifiedLeadPromotionError,
     UserRecord,
     UserAuthStore,
+    UserSession,
     auth_store,
     create_access_token,
     decode_access_token,
+    create_mfa_challenge_token,
+    decode_mfa_challenge_token,
     get_oauth_providers_status,
     UserSettings,
     SecurityHeadersMiddleware,
@@ -449,6 +452,35 @@ class OAuthCallbackRequest(BaseModel):
     state: str = Field(..., description="CSRF state parameter")
     mock_email: Optional[str] = Field(default=None, description="Optional email hint for testing or mock flow")
     mock_username: Optional[str] = Field(default=None, description="Optional username hint for testing or mock flow")
+
+
+# CISCO ZERO-TRUST MFA, SESSION FLEET & PASSWORD SCHEMAS
+class MfaEnableRequest(BaseModel):
+    code: str = Field(..., description="6-digit TOTP code from authenticator app")
+
+
+class MfaDisableRequest(BaseModel):
+    password: str = Field(..., description="Current account password")
+    code: Optional[str] = Field(default=None, description="Optional 6-digit TOTP code")
+
+
+class MfaVerifyLoginRequest(BaseModel):
+    mfa_session_token: str = Field(..., description="Short-lived challenge token issued by /v1/auth/signin")
+    code: str = Field(..., description="6-digit TOTP code or 8-character backup recovery code")
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., description="Current active account password")
+    new_password: str = Field(..., description="New NIST SP 800-63B compliant password")
+    confirm_password: str = Field(..., description="Confirmation of new password")
+
+
+class MagicLinkRequest(BaseModel):
+    email: str = Field(..., description="Institutional account email address")
+
+
+class MagicLinkVerifyRequest(BaseModel):
+    token: str = Field(..., description="15-minute single-use magic sign-in token")
 
 
 current_mandate_profile = MandateProfileModel()
@@ -2583,12 +2615,33 @@ def auth_resend_verification(req: ResendVerificationRequest, request: Request) -
 def auth_signin(req: SignInRequest, request: Request) -> Dict[str, Any]:
     """
     Signs in a user with username OR email + password.
-    Enforces brute-force lockout defenses and returns short-lived access token + rotating refresh token.
+    Enforces brute-force lockout defenses, checks MFA challenge, provisions active session,
+    and returns short-lived access token + rotating refresh token.
     """
     client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "127.0.0.1").split(",")[0].strip()
+    user_agent = request.headers.get("User-Agent", "Web Client")
     try:
         user = auth_store.authenticate_user(req.username_or_email, req.password, client_ip=client_ip)
-        access_token = create_access_token(user)
+
+        # Cisco Zero-Trust MFA Challenge Step
+        if user.mfa_enabled:
+            mfa_challenge_tok = create_mfa_challenge_token(user.user_id)
+            audit_ledger.append_event(
+                actor_role=user.role,
+                actor_id=user.user_id,
+                action_type="AUTH_MFA_CHALLENGE_ISSUED",
+                deal_id=None,
+                payload={"username": user.username, "client_ip": client_ip},
+            )
+            return {
+                "status": "mfa_required",
+                "mfa_session_token": mfa_challenge_tok,
+                "message": "Multi-factor authentication required. Please enter your 6-digit TOTP code.",
+                "user": user.to_dict(),
+            }
+
+        session = auth_store.create_session(user.user_id, client_ip=client_ip, user_agent=user_agent)
+        access_token = create_access_token(user, session_id=session.session_id)
         refresh_token, _ = auth_store.create_refresh_token(user.user_id)
         
         # AAA Accounting to Immutable Merkle Chain
@@ -2597,7 +2650,7 @@ def auth_signin(req: SignInRequest, request: Request) -> Dict[str, Any]:
             actor_id=user.user_id,
             action_type="AUTH_SIGNIN_SUCCESS",
             deal_id=None,
-            payload={"username": user.username, "email": user.email, "client_ip": client_ip},
+            payload={"username": user.username, "email": user.email, "client_ip": client_ip, "device": session.device_name},
         )
 
         return {
@@ -2607,6 +2660,7 @@ def auth_signin(req: SignInRequest, request: Request) -> Dict[str, Any]:
             "token_type": "bearer",
             "expires_in": 900,
             "user": user.to_dict(),
+            "session": session.to_dict(is_current=True),
         }
     except AccountLockedError as e:
         audit_ledger.append_event(
@@ -2830,6 +2884,297 @@ def auth_oauth_callback(req: OAuthCallbackRequest) -> Dict[str, Any]:
         }
     except TokenExpiredOrInvalidError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# =========================================================================
+# CISCO ZERO-TRUST IDENTITY: MFA, SESSIONS, PASSWORD & MAGIC LINK
+# =========================================================================
+
+def _extract_auth_user(request: Request) -> Tuple[UserRecord, Dict[str, Any]]:
+    """Validates Bearer token and returns active UserRecord and token claims."""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Bearer authentication token required.")
+    token = auth_header.split(" ", 1)[1].strip()
+    try:
+        payload = decode_access_token(token)
+        user_id = payload.get("sub")
+        user = auth_store.get_user_by_id(user_id)
+        if not user or not user.is_active:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account not found or disabled.")
+        return user, payload
+    except TokenExpiredOrInvalidError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+
+@app.post("/v1/auth/mfa/setup", tags=["Authentication & User Management"])
+def auth_mfa_setup(request: Request) -> Dict[str, Any]:
+    """Initiates RFC 6238 TOTP enrollment, returns Base32 secret, otpauth URI, and 8 backup codes."""
+    user, _ = _extract_auth_user(request)
+    secret, otpauth_uri, backup_codes = auth_store.setup_mfa(user.user_id)
+    audit_ledger.append_event(
+        actor_role=user.role,
+        actor_id=user.user_id,
+        action_type="AUTH_MFA_SETUP_INITIATED",
+        deal_id=None,
+        payload={"email": user.email},
+    )
+    return {
+        "status": "success",
+        "secret": secret,
+        "otpauth_uri": otpauth_uri,
+        "backup_codes": backup_codes,
+        "issuer": "Argus Institutional",
+        "account": user.email,
+    }
+
+
+@app.post("/v1/auth/mfa/enable", tags=["Authentication & User Management"])
+def auth_mfa_enable(req: MfaEnableRequest, request: Request) -> Dict[str, Any]:
+    """Confirms live TOTP code and permanently activates 2FA on the user's account."""
+    user, _ = _extract_auth_user(request)
+    try:
+        success, message = auth_store.enable_mfa(user.user_id, req.code)
+        audit_ledger.append_event(
+            actor_role=user.role,
+            actor_id=user.user_id,
+            action_type="AUTH_MFA_ENABLED",
+            deal_id=None,
+            payload={"email": user.email},
+        )
+        email_service.send_security_alert_email(
+            to_email=user.email,
+            username=user.username,
+            event_title="Two-Factor Authentication Enabled",
+            event_details="Two-factor authentication (Cisco Duo / TOTP) was successfully enabled on your Argus account.",
+        )
+        return {
+            "status": "success",
+            "message": message,
+            "mfa_enabled": True,
+            "user": user.to_dict(),
+        }
+    except (ValueError, InvalidCredentialsError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/v1/auth/mfa/disable", tags=["Authentication & User Management"])
+def auth_mfa_disable(req: MfaDisableRequest, request: Request) -> Dict[str, Any]:
+    """Disables 2FA on the user's account with current password confirmation."""
+    user, _ = _extract_auth_user(request)
+    try:
+        success, message = auth_store.disable_mfa(user.user_id, req.password, req.code)
+        audit_ledger.append_event(
+            actor_role=user.role,
+            actor_id=user.user_id,
+            action_type="AUTH_MFA_DISABLED",
+            deal_id=None,
+            payload={"email": user.email},
+        )
+        email_service.send_security_alert_email(
+            to_email=user.email,
+            username=user.username,
+            event_title="Two-Factor Authentication Disabled",
+            event_details="Warning: Two-factor authentication was disabled on your Argus account.",
+        )
+        return {
+            "status": "success",
+            "message": message,
+            "mfa_enabled": False,
+            "user": user.to_dict(),
+        }
+    except InvalidCredentialsError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/v1/auth/mfa/verify-login", tags=["Authentication & User Management"])
+def auth_mfa_verify_login(req: MfaVerifyLoginRequest, request: Request) -> Dict[str, Any]:
+    """Exchanges an MFA challenge token + 6-digit TOTP (or backup code) for full session JWT."""
+    client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "127.0.0.1").split(",")[0].strip()
+    user_agent = request.headers.get("User-Agent", "Web Client")
+    try:
+        user, access_token, refresh_token, session = auth_store.verify_mfa_login(
+            mfa_session_token=req.mfa_session_token,
+            code_or_backup=req.code,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
+        audit_ledger.append_event(
+            actor_role=user.role,
+            actor_id=user.user_id,
+            action_type="AUTH_MFA_VERIFY_SUCCESS",
+            deal_id=None,
+            payload={"username": user.username, "email": user.email, "client_ip": client_ip, "device": session.device_name},
+        )
+        return {
+            "status": "success",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "expires_in": 900,
+            "user": user.to_dict(),
+            "session": session.to_dict(is_current=True),
+        }
+    except (TokenExpiredOrInvalidError, InvalidCredentialsError) as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@app.get("/v1/auth/sessions", tags=["Authentication & User Management"])
+def auth_list_sessions(request: Request) -> Dict[str, Any]:
+    """Returns active sessions with device fingerprint for the authenticated user."""
+    user, claims = _extract_auth_user(request)
+    current_sid = claims.get("sid")
+    sessions = auth_store.get_user_sessions(user.user_id, current_session_id=current_sid)
+    return {
+        "status": "success",
+        "sessions": sessions,
+        "count": len(sessions),
+    }
+
+
+@app.delete("/v1/auth/sessions/{session_id}", tags=["Authentication & User Management"])
+def auth_revoke_session(session_id: str, request: Request) -> Dict[str, Any]:
+    """Remotely terminates a specific session."""
+    user, _ = _extract_auth_user(request)
+    revoked = auth_store.revoke_session(session_id, user.user_id)
+    if not revoked:
+        raise HTTPException(status_code=404, detail="Session not found or already terminated.")
+    audit_ledger.append_event(
+        actor_role=user.role,
+        actor_id=user.user_id,
+        action_type="AUTH_SESSION_REVOKED",
+        deal_id=None,
+        payload={"session_id": session_id},
+    )
+    return {
+        "status": "success",
+        "message": "Session terminated successfully.",
+    }
+
+
+@app.post("/v1/auth/sessions/revoke-others", tags=["Authentication & User Management"])
+def auth_revoke_other_sessions(request: Request) -> Dict[str, Any]:
+    """Terminates all other active sessions except the current browser session."""
+    user, claims = _extract_auth_user(request)
+    current_sid = claims.get("sid")
+    count = auth_store.revoke_other_sessions(user.user_id, keep_session_id=current_sid)
+    audit_ledger.append_event(
+        actor_role=user.role,
+        actor_id=user.user_id,
+        action_type="AUTH_SESSIONS_REVOKE_OTHERS",
+        deal_id=None,
+        payload={"revoked_count": count},
+    )
+    return {
+        "status": "success",
+        "message": f"Successfully terminated {count} other session(s).",
+        "revoked_count": count,
+    }
+
+
+@app.post("/v1/auth/change-password", tags=["Authentication & User Management"])
+def auth_change_password(req: ChangePasswordRequest, request: Request) -> Dict[str, Any]:
+    """Validates current password, enforces NIST SP 800-63B complexity, updates password, revokes other sessions."""
+    user, _ = _extract_auth_user(request)
+    try:
+        success, message, updated_user = auth_store.change_password(
+            user_id=user.user_id,
+            current_password=req.current_password,
+            new_password=req.new_password,
+            confirm_password=req.confirm_password,
+        )
+        audit_ledger.append_event(
+            actor_role=updated_user.role,
+            actor_id=updated_user.user_id,
+            action_type="AUTH_PASSWORD_CHANGE_SUCCESS",
+            deal_id=None,
+            payload={"email": updated_user.email},
+        )
+        email_service.send_security_alert_email(
+            to_email=updated_user.email,
+            username=updated_user.username,
+            event_title="Password Changed",
+            event_details="Your account password was updated. All other active sessions have been signed out.",
+        )
+        return {
+            "status": "success",
+            "message": message,
+        }
+    except (ValueError, InvalidCredentialsError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/v1/auth/magic-link", tags=["Authentication & User Management"])
+def auth_request_magic_link(req: MagicLinkRequest, request: Request) -> Dict[str, Any]:
+    """Dispatches a passwordless one-click sign-in link via SMTP."""
+    success, message, token, user = auth_store.request_magic_link(req.email)
+    client_origin = request.headers.get("origin") or str(request.base_url).rstrip("/")
+    if token and user:
+        email_service.send_magic_link_email(
+            to_email=user.email,
+            username=user.username,
+            token=token,
+            base_url=client_origin,
+        )
+        audit_ledger.append_event(
+            actor_role=user.role,
+            actor_id=user.user_id,
+            action_type="AUTH_MAGIC_LINK_DISPATCHED",
+            deal_id=None,
+            payload={"email": user.email},
+        )
+    return {
+        "status": "success",
+        "message": "If an account exists with this email, a sign-in link has been dispatched to your inbox.",
+    }
+
+
+@app.post("/v1/auth/magic-link/verify", tags=["Authentication & User Management"])
+def auth_verify_magic_link(req: MagicLinkVerifyRequest, request: Request) -> Dict[str, Any]:
+    """Validates single-use magic link token and authenticates user."""
+    client_ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "127.0.0.1").split(",")[0].strip()
+    user_agent = request.headers.get("User-Agent", "Web Client")
+    try:
+        user, access_token, refresh_token, session = auth_store.verify_magic_link(
+            token=req.token,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
+        audit_ledger.append_event(
+            actor_role=user.role,
+            actor_id=user.user_id,
+            action_type="AUTH_MAGIC_LINK_SUCCESS",
+            deal_id=None,
+            payload={"email": user.email, "client_ip": client_ip, "device": session.device_name},
+        )
+        return {
+            "status": "success",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer",
+            "expires_in": 900,
+            "user": user.to_dict(),
+            "session": session.to_dict(is_current=True),
+        }
+    except (TokenExpiredOrInvalidError, InvalidCredentialsError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/v1/auth/security/audit-log", tags=["Authentication & User Management"])
+def auth_get_security_audit_log(request: Request) -> Dict[str, Any]:
+    """Returns AAA accounting audit events for the authenticated user from the Merkle chain."""
+    user, _ = _extract_auth_user(request)
+    events = []
+    for ev in reversed(audit_ledger.events):
+        if ev.actor_id == user.user_id or (ev.payload and ev.payload.get("email") == user.email):
+            events.append(ev.to_dict())
+            if len(events) >= 25:
+                break
+    return {
+        "status": "success",
+        "events": events,
+        "count": len(events),
+    }
 
 
 # =========================================================================

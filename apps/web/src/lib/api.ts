@@ -38,6 +38,13 @@ import {
   OwnerOSINTReport,
   PipelineStage,
   ResetPasswordPayload,
+  MfaSetupResponse,
+  MfaVerifyLoginPayload,
+  ChangePasswordPayload,
+  MagicLinkPayload,
+  MagicLinkVerifyPayload,
+  UserSession,
+  SecurityAuditEvent,
   RollUpClusterOpportunity,
   SBALenderPackBundle,
   SensitivityMatrixResponse,
@@ -825,6 +832,178 @@ export async function apiResetPassword(payload: ResetPasswordPayload): Promise<{
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.detail || "Failed to reset password");
+  return data;
+}
+
+// ==========================================
+// CISCO ZERO-TRUST MFA & SESSION MANAGEMENT CLIENT
+// ==========================================
+
+export async function apiMfaSetup(): Promise<MfaSetupResponse> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/mfa/setup`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to initiate MFA setup");
+  return data;
+}
+
+export async function apiMfaEnable(code: string): Promise<{
+  status: string;
+  message: string;
+  mfa_enabled: boolean;
+  user: AuthUser;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/mfa/enable`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ code }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to activate MFA");
+  return data;
+}
+
+export async function apiMfaDisable(password: string, code?: string): Promise<{
+  status: string;
+  message: string;
+  mfa_enabled: boolean;
+  user: AuthUser;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/mfa/disable`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ password, code }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to disable MFA");
+  return data;
+}
+
+export async function apiMfaVerifyLogin(payload: MfaVerifyLoginPayload): Promise<AuthResponse> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/mfa/verify-login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Invalid MFA verification code");
+  if (data.access_token) {
+    setStoredAuthToken(data.access_token);
+  }
+  if (data.refresh_token) {
+    setStoredRefreshToken(data.refresh_token);
+  }
+  return data;
+}
+
+export async function apiGetSessions(): Promise<{
+  status: string;
+  sessions: UserSession[];
+  count: number;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/sessions`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to retrieve sessions");
+  return data;
+}
+
+export async function apiRevokeSession(sessionId: string): Promise<{
+  status: string;
+  message: string;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/sessions/${sessionId}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to revoke session");
+  return data;
+}
+
+export async function apiRevokeOtherSessions(): Promise<{
+  status: string;
+  message: string;
+  revoked_count: number;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/sessions/revoke-others`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to revoke other sessions");
+  return data;
+}
+
+export async function apiChangePassword(payload: ChangePasswordPayload): Promise<{
+  status: string;
+  message: string;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/change-password`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to update password");
+  return data;
+}
+
+export async function apiSendMagicLink(email: string): Promise<{
+  status: string;
+  message: string;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/magic-link`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to send magic link");
+  return data;
+}
+
+export async function apiVerifyMagicLink(token: string): Promise<AuthResponse> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/magic-link/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Magic link verification failed");
+  if (data.access_token) {
+    setStoredAuthToken(data.access_token);
+  }
+  if (data.refresh_token) {
+    setStoredRefreshToken(data.refresh_token);
+  }
+  return data;
+}
+
+export async function apiGetSecurityAuditLog(): Promise<{
+  status: string;
+  events: SecurityAuditEvent[];
+  count: number;
+}> {
+  const base = getApiBase();
+  const res = await fetch(`${base}/v1/auth/security/audit-log`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to retrieve security audit log");
   return data;
 }
 
