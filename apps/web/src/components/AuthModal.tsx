@@ -67,6 +67,7 @@ export default function AuthModal() {
     signUp,
     handleOAuthLogin,
     verifyEmail,
+    resendVerification,
     requestPasswordReset,
     resetPassword,
   } = useAuth();
@@ -95,12 +96,23 @@ export default function AuthModal() {
 
   // Email Verification State
   const [verifyTokenInput, setVerifyTokenInput] = useState("");
+  const [verificationTargetEmail, setVerificationTargetEmail] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendLoading, setResendLoading] = useState(false);
 
   // Shared UI Status
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [generatedVerificationToken, setGeneratedVerificationToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const computePasswordStrength = (pwd: string) => {
     let score = 0;
@@ -197,17 +209,23 @@ export default function AuthModal() {
 
     setLoading(true);
     try {
+      const email = signUpEmail.trim();
       const res = await signUp({
         username: signUpUsername.trim(),
-        email: signUpEmail.trim(),
+        email: email,
         password: signUpPassword,
         confirm_password: signUpConfirmPassword,
         role: signUpRole,
       });
-      setGeneratedVerificationToken(res.verification_token);
-      setVerifyTokenInput(res.verification_token);
-      setSuccessMsg("Account created! Please verify your email with the one-click token below.");
+      // Set target email and DO NOT auto-fill token (user must retrieve from email)
+      setVerificationTargetEmail(email);
+      setVerifyTokenInput("");
+      setGeneratedVerificationToken(null);
+      setSuccessMsg(
+        `Verification code sent to ${email}. Please check your inbox (and spam folder) and enter the 6-digit code below.`
+      );
       setActiveTab("VERIFY");
+      setResendCooldown(60);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to create account.");
     } finally {
@@ -227,14 +245,33 @@ export default function AuthModal() {
     try {
       const res = await requestPasswordReset(forgotEmail.trim());
       setSuccessMsg(res.message);
-      if (res.reset_token) {
-        setResetToken(res.reset_token);
-        setResetStep("SUBMIT");
-      }
+      // Leave reset token empty so user inputs it from their received email
+      setResetToken("");
+      setResetStep("SUBMIT");
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to dispatch reset instructions.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Resend Verification Code Handler
+  const handleResendCode = async () => {
+    const targetEmail = verificationTargetEmail || signUpEmail.trim() || signInInput.trim();
+    if (!targetEmail) {
+      setErrorMsg("Please provide your registered email address.");
+      return;
+    }
+    setResendLoading(true);
+    setErrorMsg(null);
+    try {
+      const msg = await resendVerification(targetEmail);
+      setSuccessMsg(`A fresh 6-digit verification code has been dispatched to ${targetEmail}.`);
+      setResendCooldown(60);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to resend verification code.");
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -769,36 +806,78 @@ export default function AuthModal() {
         {/* ======================================================== */}
         {activeTab === "VERIFY" && (
           <form onSubmit={handleVerifyEmailSubmit} className="space-y-4">
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Paste your email verification token below to mark your account as verified and unlock all institutional underwriting and docket review capabilities.
-            </p>
+            <div className="p-4 rounded-xl bg-zinc-800/50 border border-zinc-700/60 flex items-start gap-3">
+              <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xs font-semibold text-zinc-200">Check Your Email Inbox</h3>
+                <p className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
+                  We dispatched an email containing your 6-digit verification code to:
+                </p>
+                <div className="mt-1.5 inline-block px-2.5 py-1 rounded bg-zinc-900 border border-zinc-700 text-xs font-mono text-emerald-400 font-semibold truncate max-w-full">
+                  {verificationTargetEmail || signUpEmail || signInInput || "your email address"}
+                </div>
+              </div>
+            </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-1">
-                Verification Token
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                  6-Digit Verification Code
+                </label>
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resendCooldown > 0 || resendLoading}
+                  className="text-[11px] text-blue-400 hover:text-blue-300 disabled:text-zinc-500 transition font-medium"
+                >
+                  {resendLoading ? (
+                    "Sending..."
+                  ) : resendCooldown > 0 ? (
+                    `Resend code in ${resendCooldown}s`
+                  ) : (
+                    "Resend code"
+                  )}
+                </button>
+              </div>
               <div className="relative">
-                <KeyRound className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <KeyRound className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={verifyTokenInput}
-                  onChange={(e) => setVerifyTokenInput(e.target.value)}
-                  placeholder="Paste verification token here..."
-                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-zinc-800/80 border border-zinc-700 text-xs text-white font-mono focus:outline-none focus:border-blue-500"
+                  onChange={(e) => setVerifyTokenInput(e.target.value.trim())}
+                  placeholder="e.g. 748291"
+                  maxLength={64}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-zinc-800/80 border border-zinc-700 text-base text-white font-mono tracking-widest text-center focus:outline-none focus:border-emerald-500 shadow-inner"
                   required
+                  autoFocus
                 />
               </div>
+              <p className="text-[10px] text-zinc-400 mt-1.5">
+                Enter the 6-digit code sent to your email, or paste your verification link token.
+              </p>
             </div>
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-sm text-white shadow-lg shadow-emerald-900/30 transition flex items-center justify-center gap-2"
+              disabled={loading || !verifyTokenInput.trim()}
+              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-semibold text-sm text-white shadow-lg shadow-emerald-900/30 transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
               <span>Verify Account Now</span>
               <CheckCircle2 className="w-4 h-4" />
             </button>
+
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={() => handleTabSwitch("SIGNIN")}
+                className="text-xs text-zinc-400 hover:text-zinc-200 transition"
+              >
+                Already verified? Return to Sign In
+              </button>
+            </div>
           </form>
         )}
       </div>

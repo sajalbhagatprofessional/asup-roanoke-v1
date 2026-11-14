@@ -51,6 +51,7 @@ import tests.integration.test_research_links_endpoints as i24
 import tests.unit.test_mcp_connect_hub as u15
 import tests.integration.test_mcp_hub_endpoints as i25
 import tests.unit.test_security_hardening as u16
+import tests.unit.test_email_verification_service as u17
 
 
 def main() -> int:
@@ -363,6 +364,18 @@ def main() -> int:
 
     print(f"All {security_passed}/{security_passed} Defensive Cybersecurity & AAA Architecture Tests PASSED!")
 
+    # Milestone 38: Real Email Delivery & 6-Digit Code Verification Suite
+    email_passed = 0
+    for attr in sorted(dir(u17)):
+        if attr.startswith("test_"):
+            fn = getattr(u17, attr)
+            if callable(fn):
+                fn()
+                email_passed += 1
+                print(f"[PASS] {u17.__name__}.{attr}")
+
+    print(f"All {email_passed}/{email_passed} Real Email Delivery & 6-Digit Code Verification Tests PASSED!")
+
     total_passed = (
         core_passed
         + api_passed
@@ -388,6 +401,7 @@ def main() -> int:
         + research_passed
         + mcp_hub_passed
         + security_passed
+        + email_passed
     )
     print(f"Total Test Suite: {total_passed}/{total_passed} Tests PASSED (100% Coverage)!\n")
 

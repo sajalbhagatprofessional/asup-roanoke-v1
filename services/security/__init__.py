@@ -15,6 +15,10 @@ from .auth_service import (
     InvalidCredentialsError,
     UserAlreadyExistsError,
 )
+from .email_service import (
+    EmailDeliveryService,
+    email_service,
+)
 from .security_middleware import (
     SecurityHeadersMiddleware,
     AuthRateLimiterMiddleware,
@@ -55,6 +59,8 @@ __all__ = [
     "TokenExpiredOrInvalidError",
     "InvalidCredentialsError",
     "UserAlreadyExistsError",
+    "EmailDeliveryService",
+    "email_service",
     "SecurityHeadersMiddleware",
     "AuthRateLimiterMiddleware",
     "UserSettings",

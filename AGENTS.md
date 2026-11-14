@@ -104,7 +104,7 @@ asup-roanoke-v1/
 ## 6. Autonomous Execution Workflow for `agy` (What `agy` Must Do Next)
 Whenever the user invokes `/goal` or asks you to continue building, wiring, or deploying the platform:
 1. **Always Run the Verification Gate First**:
-   Run `python scripts/run_all_tests.py` and confirm all **184/184 tests** and the **50/50 Golden Suite backtest** pass before and after every change.
+   Run `python scripts/run_all_tests.py` and confirm all **187/187 tests** and the **50/50 Golden Suite backtest** pass before and after every change.
 2. **Wire the Live FastAPI Server (`services/api/main.py`) & Next.js 15 5-Role Web UI (`apps/web/`)**:
    - Expose the verified Python modules in `packages/` and `services/` via FastAPI endpoints (`GET /v1/health`, `POST /v1/dockets/ingest`, `GET /v1/deals`, `POST /v1/deals/{id}/verify`, `POST /v1/deals/{id}/memo`, `POST /v1/deals/{id}/outreach`, `GET /v1/deals/{id}/lender-pack`, `POST /v1/mcp/sse`, `GET /v1/system/dependencies`).
    - Build the Next.js 15 App Router views for the 5 roles (`Principal Weekly Digest` with `<= 5` cards and 1-click `Approve / Reject / Send to Counsel`, `Analyst Pipeline & GIS Queue`, `Counsel Title & Notice Review`, `CPA Add-Back & SOP 50 10 8.1 Audit`, and `Lender/Broker Sanitized Pack View`).
@@ -130,7 +130,7 @@ The platform depends on mission-critical open-source GitHub repositories, PyPI p
    - Any newer upstream release automatically transitions the record to `UPDATE_AVAILABLE`.
 4. **Mandatory Air-Gap & SBA SOP 50 10 8.1 Verification Gate**:
    - Prior to merging or applying any upstream dependency update into production, the update MUST be verified via `python scripts/sync_upstream_dependencies.py --verify-tests` (which executes `python scripts/run_all_tests.py`).
-   - The entire test suite (184/184 tests and 50/50 Golden Suite) MUST pass with 100% coverage.
+   - The entire test suite (187/187 tests and 50/50 Golden Suite) MUST pass with 100% coverage.
    - Upstream updates MUST NEVER introduce floating-point math into `packages/underwriting_engine/` or violate SBA SOP 50 10 8.1 and Virginia foreclosure statutes.
 
 ---
@@ -148,4 +148,4 @@ To ensure that any AI agent, subagent, or human engineer can seamlessly step in 
      - A completed milestone or new strategic plan -> update [`docs/ROADMAP_AND_FUTURE_PLANS.md`](docs/ROADMAP_AND_FUTURE_PLANS.md).
    - Never close a task or complete a user goal leaving new code, new tools, or new endpoints undocumented.
 3. **Verification & Metric Consistency**:
-   - Always ensure that test counts (e.g. 184/184 tests), Golden Suite metrics (50/50, 0 false positives), and dependency counts remain 100% consistent across `README.md`, `docs/`, `AGENTS.md`, and `GEMINI.md`.
+   - Always ensure that test counts (e.g. 187/187 tests), Golden Suite metrics (50/50, 0 false positives), and dependency counts remain 100% consistent across `README.md`, `docs/`, `AGENTS.md`, and `GEMINI.md`.

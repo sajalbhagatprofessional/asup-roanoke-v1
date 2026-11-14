@@ -124,6 +124,7 @@ from services.security import (
     AuthRateLimiterMiddleware,
     AccountLockedError,
     TokenReuseDetectedError,
+    email_service,
 )
 from services.security.auth_service import (
     AuthError,
@@ -2441,10 +2442,11 @@ def update_user_preferences(profile: UserPreferenceProfile) -> UserPreferencePro
 # =========================================================================
 
 @app.post("/v1/auth/signup", tags=["Authentication & User Management"])
-def auth_signup(req: SignUpRequest) -> Dict[str, Any]:
+def auth_signup(req: SignUpRequest, request: Request) -> Dict[str, Any]:
     """
     Registers a new user account with email, username, password, confirm password,
-    and institutional role. Validates NIST SP 800-63B complexity. Dispatches an email verification token.
+    and institutional role. Validates NIST SP 800-63B complexity.
+    Dispatches a 6-digit verification code and link via SMTP/email service.
     """
     try:
         user, v_token = auth_store.register_user(
@@ -2454,19 +2456,41 @@ def auth_signup(req: SignUpRequest) -> Dict[str, Any]:
             confirm_password=req.confirm_password,
             role=req.role or TeamRole.PRINCIPAL,
         )
+        v_code = user.verification_code or ""
+
+        # Dispatch real email via SMTP / direct API / outbox fallback
+        client_origin = request.headers.get("origin") or str(request.base_url).rstrip("/")
+        email_res = email_service.send_verification_email(
+            to_email=user.email,
+            username=user.username,
+            code=v_code,
+            token=v_token,
+            base_url=client_origin,
+        )
+
         audit_ledger.append_event(
             actor_role=user.role,
             actor_id=user.user_id,
             action_type="AUTH_SIGNUP_SUCCESS",
             deal_id=None,
-            payload={"email": user.email, "username": user.username, "role": user.role.value if isinstance(user.role, TeamRole) else str(user.role)},
+            payload={
+                "email": user.email,
+                "username": user.username,
+                "role": user.role.value if isinstance(user.role, TeamRole) else str(user.role),
+                "email_channel": email_res.get("channel"),
+            },
         )
         return {
             "status": "success",
-            "message": "Account registered successfully. Please verify your email address.",
+            "message": f"Account registered successfully. A 6-digit verification code has been dispatched to {user.email}.",
             "user": user.to_dict(),
             "verification_token": v_token,
+            "verification_code": v_code,
             "verification_url": f"/verify-email?token={v_token}",
+            "email_delivery": {
+                "channel": email_res.get("channel"),
+                "delivered_smtp": email_res.get("delivered_smtp", False),
+            },
         }
     except (ValueError, UserAlreadyExistsError) as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -2475,7 +2499,7 @@ def auth_signup(req: SignUpRequest) -> Dict[str, Any]:
 @app.post("/v1/auth/verify-email", tags=["Authentication & User Management"])
 def auth_verify_email(req: VerifyEmailRequest) -> Dict[str, Any]:
     """
-    Verifies user's email address using cryptographic token.
+    Verifies user's email address using 6-digit code or cryptographic token.
     """
     success, message, user = auth_store.verify_email(req.token)
     if not success:
@@ -2496,18 +2520,37 @@ def auth_verify_email(req: VerifyEmailRequest) -> Dict[str, Any]:
 
 
 @app.post("/v1/auth/resend-verification", tags=["Authentication & User Management"])
-def auth_resend_verification(req: ResendVerificationRequest) -> Dict[str, Any]:
+def auth_resend_verification(req: ResendVerificationRequest, request: Request) -> Dict[str, Any]:
     """
-    Resends email verification instructions with a fresh token.
+    Resends email verification instructions with a fresh 6-digit code and token.
     """
-    success, message, token = auth_store.resend_verification(req.email)
+    success, message, token, code = auth_store.resend_verification(req.email)
     if not success:
         raise HTTPException(status_code=400, detail=message)
+
+    user_id = auth_store._users_by_email.get(req.email.strip().lower())
+    user_record = auth_store.get_user_by_id(user_id) if user_id else None
+    username = user_record.username if user_record else "Valued Principal"
+    client_origin = request.headers.get("origin") or str(request.base_url).rstrip("/")
+
+    email_res = email_service.send_verification_email(
+        to_email=req.email,
+        username=username,
+        code=code or "",
+        token=token or "",
+        base_url=client_origin,
+    )
+
     return {
         "status": "success",
-        "message": message,
+        "message": f"A fresh 6-digit verification code has been dispatched to {req.email}.",
         "verification_token": token,
+        "verification_code": code,
         "verification_url": f"/verify-email?token={token}",
+        "email_delivery": {
+            "channel": email_res.get("channel"),
+            "delivered_smtp": email_res.get("delivered_smtp", False),
+        },
     }
 
 
@@ -2622,17 +2665,40 @@ def auth_signout(req: SignOutRequest, request: Request) -> Dict[str, Any]:
 
 
 @app.post("/v1/auth/forgot-password", tags=["Authentication & User Management"])
-def auth_forgot_password(req: ForgotPasswordRequest) -> Dict[str, Any]:
+def auth_forgot_password(req: ForgotPasswordRequest, request: Request) -> Dict[str, Any]:
     """
-    Dispatches a secure 60-minute password reset token.
+    Dispatches a secure 60-minute password reset token and email instructions.
     """
     success, message, token = auth_store.request_password_reset(req.email)
+    email_channel = "NONE"
+    if token:
+        user_id = auth_store._users_by_email.get(req.email.strip().lower())
+        user_record = auth_store.get_user_by_id(user_id) if user_id else None
+        username = user_record.username if user_record else "Valued Principal"
+        client_origin = request.headers.get("origin") or str(request.base_url).rstrip("/")
+        email_res = email_service.send_password_reset_email(
+            to_email=req.email,
+            username=username,
+            token=token,
+            base_url=client_origin,
+        )
+        email_channel = email_res.get("channel", "LOCAL_OUTBOX")
+
     return {
         "status": "success",
         "message": message,
         "reset_token": token,
         "reset_url": f"/reset-password?token={token}" if token else None,
+        "email_channel": email_channel,
     }
+
+
+@app.get("/v1/auth/email/status", tags=["Authentication & User Management"])
+def auth_email_status() -> Dict[str, Any]:
+    """
+    Returns email dispatch status, active channel (SMTP vs Local Outbox), and metrics.
+    """
+    return email_service.get_status()
 
 
 @app.post("/v1/auth/reset-password", tags=["Authentication & User Management"])

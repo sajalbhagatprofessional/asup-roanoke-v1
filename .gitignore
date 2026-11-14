@@ -9,6 +9,7 @@ dist/
 *.tsbuildinfo
 *.db
 *.sqlite
+services/persistence/dispatched_emails_log.json
 .env
 .env.*
 !.env.prod.example

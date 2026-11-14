@@ -83,6 +83,7 @@ class UserRecord:
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     verification_token: Optional[str] = None
+    verification_code: Optional[str] = None
     verification_token_expires_at: Optional[datetime] = None
     reset_token: Optional[str] = None
     reset_token_expires_at: Optional[datetime] = None
@@ -102,6 +103,7 @@ class UserRecord:
         }
         if include_sensitive:
             data["verification_token"] = self.verification_token
+            data["verification_code"] = self.verification_code
             data["reset_token"] = self.reset_token
         return data
 
@@ -352,6 +354,7 @@ class UserAuthStore:
         now = datetime.now(timezone.utc)
         user_id = f"usr_{secrets.token_hex(8)}"
         v_token = secrets.token_urlsafe(32)
+        v_code = f"{secrets.randbelow(900000) + 100000}"  # High-entropy 6-digit verification code
         v_expires = now + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
 
         user = UserRecord(
@@ -365,6 +368,7 @@ class UserAuthStore:
             created_at=now,
             updated_at=now,
             verification_token=v_token,
+            verification_code=v_code,
             verification_token_expires_at=v_expires,
             preferences_id=f"pref_{username.lower()}",
         )
@@ -373,51 +377,68 @@ class UserAuthStore:
         self._users_by_email[email] = user_id
         self._users_by_username[username.lower()] = user_id
         self._verification_tokens[v_token] = user_id
+        self._verification_tokens[v_code] = user_id
 
         return user, v_token
 
-    def verify_email(self, token: str) -> Tuple[bool, str, Optional[UserRecord]]:
-        """Verifies a user's email via token."""
-        user_id = self._verification_tokens.get(token)
+    def verify_email(self, token_or_code: str) -> Tuple[bool, str, Optional[UserRecord]]:
+        """
+        Verifies a user's email via 6-digit code or full URL token.
+        Cleans up both identifiers upon successful activation.
+        """
+        cleaned = token_or_code.strip()
+        user_id = self._verification_tokens.get(cleaned)
         if not user_id or user_id not in self._users_by_id:
-            return False, "Verification token is invalid or has already been used.", None
+            return False, "Verification code or token is invalid or has already been used.", None
 
         user = self._users_by_id[user_id]
         now = datetime.now(timezone.utc)
 
         if user.verification_token_expires_at and now > user.verification_token_expires_at:
-            return False, "Verification token has expired. Please request a new verification email.", None
+            return False, "Verification code has expired. Please request a new verification email.", None
 
         user.is_verified = True
+        old_token = user.verification_token
+        old_code = user.verification_code
         user.verification_token = None
+        user.verification_code = None
         user.verification_token_expires_at = None
         user.updated_at = now
-        del self._verification_tokens[token]
+
+        if old_token and old_token in self._verification_tokens:
+            del self._verification_tokens[old_token]
+        if old_code and old_code in self._verification_tokens:
+            del self._verification_tokens[old_code]
 
         return True, "Email successfully verified. You can now access all verified platform features.", user
 
-    def resend_verification(self, email: str) -> Tuple[bool, str, Optional[str]]:
-        """Generates a fresh email verification token."""
+    def resend_verification(self, email: str) -> Tuple[bool, str, Optional[str], Optional[str]]:
+        """Generates a fresh email verification token and 6-digit code."""
         email = email.strip().lower()
         user_id = self._users_by_email.get(email)
         if not user_id:
-            return False, "No account found with this email address.", None
+            return False, "No account found with this email address.", None, None
 
         user = self._users_by_id[user_id]
         if user.is_verified:
-            return False, "Account is already verified. You may sign in directly.", None
+            return False, "Account is already verified. You may sign in directly.", None, None
 
         if user.verification_token and user.verification_token in self._verification_tokens:
             del self._verification_tokens[user.verification_token]
+        if user.verification_code and user.verification_code in self._verification_tokens:
+            del self._verification_tokens[user.verification_code]
 
         now = datetime.now(timezone.utc)
         new_token = secrets.token_urlsafe(32)
+        new_code = f"{secrets.randbelow(900000) + 100000}"
         user.verification_token = new_token
+        user.verification_code = new_code
         user.verification_token_expires_at = now + timedelta(hours=VERIFICATION_TOKEN_EXPIRE_HOURS)
         user.updated_at = now
         self._verification_tokens[new_token] = user_id
+        self._verification_tokens[new_code] = user_id
 
-        return True, "Verification email dispatched.", new_token
+        return True, "Verification email dispatched.", new_token, new_code
 
     def authenticate_user(
         self,
