@@ -78,6 +78,8 @@ services:
       PACER_DAILY_CAP_USD: "3.00"
       KILL_SWITCH_MEMO_DRAFTER: "false"
       OUTREACH_GLOBAL_FREEZE: "0"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     ports:
       - "19001:8000"
     depends_on:

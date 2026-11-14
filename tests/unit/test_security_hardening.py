@@ -195,19 +195,32 @@ def test_aaa_merkle_accounting_on_auth_events():
 
 
 def test_oauth_pkce_authorization_and_callback():
-    """Verifies standard OAuth2 PKCE authorization URL generation and callback."""
+    """Verifies standard OAuth2 PKCE authorization URL generation, RFC-7636 challenge, and callback."""
     client = TestClient(app)
 
-    # 1. Generate Authorize URL with PKCE
+    # 1. Check OAuth providers readiness endpoint
+    res_prov = client.get("/v1/auth/oauth/providers")
+    assert res_prov.status_code == 200
+    prov_data = res_prov.json()
+    assert "google" in prov_data
+    assert prov_data["google"]["provider_name"] == "Google Identity Services"
+
+    # 2. Generate Authorize URL with PKCE
     res_url = client.get("/v1/auth/oauth/authorize-url?provider=google&redirect_uri=http://localhost:3000/auth/callback")
     assert res_url.status_code == 200
     u_data = res_url.json()
     assert "auth_url" in u_data
     assert "accounts.google.com" in u_data["auth_url"]
     assert "code_challenge=" in u_data["auth_url"]
+    assert "code_challenge_method=S256" in u_data["auth_url"]
     assert "state" in u_data
 
-    # 2. Complete Callback with State
+    # RFC-7636 Section 4.2 validation: Base64URL encoded without '=' padding (length 43 chars for SHA256)
+    code_challenge = u_data["code_challenge"]
+    assert len(code_challenge) == 43
+    assert "=" not in code_challenge
+
+    # 3. Complete Callback with State
     res_cb = client.post(
         "/v1/auth/oauth/callback",
         json={
@@ -223,3 +236,17 @@ def test_oauth_pkce_authorization_and_callback():
     assert "access_token" in cb_data
     assert "refresh_token" in cb_data
     assert cb_data["user"]["email"] == "test_principal_sso@asup.internal"
+    assert cb_data["user"]["is_verified"] is True
+
+    # 4. Invalidation of used state: replay of state MUST fail (one-time CSRF token)
+    res_replay = client.post(
+        "/v1/auth/oauth/callback",
+        json={
+            "provider": "google",
+            "code": "test_auth_code_123",
+            "state": u_data["state"],
+            "mock_email": "test_principal_sso@asup.internal",
+        },
+    )
+    assert res_replay.status_code == 400
+    assert "CSRF" in res_replay.json()["detail"]

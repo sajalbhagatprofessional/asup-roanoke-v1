@@ -9,4 +9,7 @@ dist/
 *.tsbuildinfo
 *.db
 *.sqlite
+.env
+.env.*
+!.env.prod.example
 

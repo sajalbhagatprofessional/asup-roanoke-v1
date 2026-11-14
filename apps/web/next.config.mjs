@@ -12,7 +12,7 @@ const nextConfig = {
   output: isStandalone ? "standalone" : undefined,
   outputFileTracingRoot: path.resolve(__dirname),
   async rewrites() {
-    const apiBase = process.env.FASTAPI_URL || (process.env.NODE_ENV === "production" ? "http://argus-api:8000" : "http://127.0.0.1:8000");
+    const apiBase = process.env.FASTAPI_URL || process.env.INTERNAL_API_URL || "http://127.0.0.1:8000";
     return [
       {
         source: "/v1/:path*",
