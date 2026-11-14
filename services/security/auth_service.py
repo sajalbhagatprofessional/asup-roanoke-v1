@@ -12,12 +12,24 @@ import hashlib
 import hmac
 import logging
 import os
+from pathlib import Path
 import re
 import secrets
 from typing import Any, Dict, List, Optional, Tuple
 
 import bcrypt
 import jwt
+
+# Auto-load repository root .env if present
+try:
+    from dotenv import load_dotenv
+    _repo_env = Path(__file__).resolve().parent.parent.parent / ".env"
+    if _repo_env.exists():
+        load_dotenv(dotenv_path=_repo_env)
+    else:
+        load_dotenv()
+except ImportError:
+    pass
 
 from services.security.pii_vault_and_rbac import TeamRole
 

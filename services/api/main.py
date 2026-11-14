@@ -8,7 +8,18 @@ from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_EVEN
 import json
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+try:
+    from dotenv import load_dotenv
+    _repo_env = Path(__file__).resolve().parent.parent.parent / ".env"
+    if _repo_env.exists():
+        load_dotenv(dotenv_path=_repo_env)
+    else:
+        load_dotenv()
+except ImportError:
+    pass
 
 from fastapi import FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -2480,18 +2491,25 @@ def auth_signup(req: SignUpRequest, request: Request) -> Dict[str, Any]:
                 "email_channel": email_res.get("channel"),
             },
         )
-        return {
+        has_smtp = bool(email_res.get("delivered_smtp", False))
+        is_prod = os.environ.get("ENVIRONMENT") == "production"
+
+        resp_payload = {
             "status": "success",
             "message": f"Account registered successfully. A 6-digit verification code has been dispatched to {user.email}.",
             "user": user.to_dict(),
-            "verification_token": v_token,
-            "verification_code": v_code,
-            "verification_url": f"/verify-email?token={v_token}",
             "email_delivery": {
                 "channel": email_res.get("channel"),
-                "delivered_smtp": email_res.get("delivered_smtp", False),
+                "delivered_smtp": has_smtp,
             },
         }
+        # Security & Compliance: In production, never leak verification code/token in API response
+        if not is_prod:
+            resp_payload["verification_token"] = v_token
+            resp_payload["verification_code"] = v_code
+            resp_payload["verification_url"] = f"/verify-email?token={v_token}"
+
+        return resp_payload
     except (ValueError, UserAlreadyExistsError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -2541,17 +2559,24 @@ def auth_resend_verification(req: ResendVerificationRequest, request: Request) -
         base_url=client_origin,
     )
 
-    return {
+    has_smtp = bool(email_res.get("delivered_smtp", False))
+    is_prod = os.environ.get("ENVIRONMENT") == "production"
+
+    resp_payload = {
         "status": "success",
         "message": f"A fresh 6-digit verification code has been dispatched to {req.email}.",
-        "verification_token": token,
-        "verification_code": code,
-        "verification_url": f"/verify-email?token={token}",
         "email_delivery": {
             "channel": email_res.get("channel"),
-            "delivered_smtp": email_res.get("delivered_smtp", False),
+            "delivered_smtp": has_smtp,
         },
     }
+    # Security & Compliance: In production, never leak verification code/token in API response
+    if not is_prod:
+        resp_payload["verification_token"] = token
+        resp_payload["verification_code"] = code
+        resp_payload["verification_url"] = f"/verify-email?token={token}"
+
+    return resp_payload
 
 
 @app.post("/v1/auth/signin", tags=["Authentication & User Management"])

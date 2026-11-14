@@ -21,6 +21,17 @@ logger = logging.getLogger("asup.security.email")
 PERSISTENCE_DIR = Path(__file__).resolve().parent.parent / "persistence"
 OUTBOX_LOG_PATH = PERSISTENCE_DIR / "dispatched_emails_log.json"
 
+# Auto-load repository root .env if present
+try:
+    from dotenv import load_dotenv
+    _repo_env = Path(__file__).resolve().parent.parent.parent / ".env"
+    if _repo_env.exists():
+        load_dotenv(dotenv_path=_repo_env)
+    else:
+        load_dotenv()
+except ImportError:
+    pass
+
 
 class EmailDeliveryService:
     """
@@ -54,7 +65,14 @@ class EmailDeliveryService:
 
     @property
     def smtp_password(self) -> Optional[str]:
-        return os.environ.get("SMTP_PASSWORD") or None
+        raw = os.environ.get("SMTP_PASSWORD")
+        if not raw:
+            return None
+        cleaned = raw.strip().strip('"').strip("'")
+        # For Google App Passwords (16 letters, often formatted with spaces: 'xxxx xxxx xxxx xxxx')
+        if "gmail.com" in (self.smtp_host or "").lower() and len(cleaned.replace(" ", "")) == 16:
+            return cleaned.replace(" ", "")
+        return cleaned
 
     @property
     def smtp_from_email(self) -> str:
